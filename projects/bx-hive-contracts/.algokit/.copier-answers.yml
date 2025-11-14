@@ -1,0 +1,21 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 1.8.1
+_src_path: gh:algorandfoundation/algokit-python-template
+author_email: lempira@gmail.com
+author_name: David Rojas
+code_tours: false
+contract_name: trust_game
+deployment_language: python
+ide_jetbrains: false
+ide_vscode: true
+preset_name: custom
+project_name: bx-hive-contracts
+python_linter: ruff
+use_dispenser: false
+use_github_actions: false
+use_pre_commit: false
+use_python_black: false
+use_python_mypy: true
+use_python_pip_audit: true
+use_python_pytest: true
+
