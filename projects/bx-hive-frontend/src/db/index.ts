@@ -255,3 +255,36 @@ export async function getGameById(id: string): Promise<Game | undefined> {
 export async function updateGame(game: Game): Promise<void> {
   await executeWriteTransaction(STORES.GAMES, (store) => store.put(game))
 }
+
+export async function registerForGame(gameId: string, userId: string, playerCount: 1 | 2): Promise<Game> {
+  const game = await getGameById(gameId)
+  if (!game) {
+    throw new Error('Game not found')
+  }
+
+  if (game.status !== 'open') {
+    throw new Error('Game is not open for registration')
+  }
+
+  if (game.players.some((p) => p.userId === userId)) {
+    throw new Error('Already registered for this game')
+  }
+
+  game.players.push({
+    userId,
+    registeredAt: Date.now(),
+  })
+
+  // For 1-player games, create a match immediately
+  if (playerCount === 1) {
+    game.matches.push({
+      id: crypto.randomUUID(),
+      player1Id: userId,
+      status: 'playing',
+      createdAt: Date.now(),
+    })
+  }
+
+  await updateGame(game)
+  return game
+}
