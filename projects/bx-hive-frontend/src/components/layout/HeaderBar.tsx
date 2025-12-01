@@ -1,6 +1,14 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router-dom'
+import HeaderStatus from '../HeaderStatus'
+import { useActiveUser } from '../../hooks/useActiveUser'
 
 export default function HeaderBar() {
+  const { activeUser } = useActiveUser()
+
+  const dashboardPath = activeUser
+    ? `/dashboard/${activeUser.role}`
+    : '/dashboard/subject'
+
   return (
     <header className="navbar bg-base-100 border-b border-base-300 sticky top-0 z-10 shadow-sm">
       <div className="navbar-start">
@@ -17,9 +25,23 @@ export default function HeaderBar() {
                 Home
               </NavLink>
             </li>
+            {activeUser && (
+              <li>
+                <NavLink
+                  to={dashboardPath}
+                  className={({ isActive }) => (isActive ? 'active font-bold' : '')}
+                >
+                  Dashboard
+                </NavLink>
+              </li>
+            )}
           </ul>
         </nav>
       </div>
+
+      <div className="navbar-end">
+        <HeaderStatus />
+      </div>
     </header>
-  );
+  )
 }
