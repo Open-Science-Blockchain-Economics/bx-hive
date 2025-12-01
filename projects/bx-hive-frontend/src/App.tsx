@@ -48,7 +48,7 @@ export default function App() {
   return (
     <SnackbarProvider maxSnack={3}>
       <WalletProvider manager={walletManager}>
-        <button className="btn">test</button>
+        <button className="btn">test</button>c
       </WalletProvider>
     </SnackbarProvider>
   )
