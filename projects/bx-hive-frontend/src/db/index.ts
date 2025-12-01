@@ -285,6 +285,29 @@ export async function registerForGame(gameId: string, userId: string, playerCoun
     })
   }
 
+  // For 2-player games, use FIFO matching
+  if (playerCount === 2) {
+    // Find players who are not yet in any match
+    const playersInMatches = new Set(
+      game.matches.flatMap((m) => [m.player1Id, m.player2Id].filter(Boolean))
+    )
+    const waitingPlayers = game.players.filter(
+      (p) => p.userId !== userId && !playersInMatches.has(p.userId)
+    )
+
+    if (waitingPlayers.length > 0) {
+      // FIFO: pair with the earliest registered waiting player
+      const partner = waitingPlayers.sort((a, b) => a.registeredAt - b.registeredAt)[0]
+      game.matches.push({
+        id: crypto.randomUUID(),
+        player1Id: partner.userId,
+        player2Id: userId,
+        status: 'playing',
+        createdAt: Date.now(),
+      })
+    }
+  }
+
   await updateGame(game)
   return game
 }
