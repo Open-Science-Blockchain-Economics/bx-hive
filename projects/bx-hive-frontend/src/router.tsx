@@ -3,6 +3,7 @@ import Layout from './components/layout/Layout'
 import Home from './pages/Home'
 import ExperimenterDashboard from './pages/ExperimenterDashboard'
 import SubjectDashboard from './pages/SubjectDashboard'
+import PlayGame from './pages/PlayGame'
 import ProtectedRoute from './components/ProtectedRoute'
 
 export const router = createBrowserRouter([
@@ -24,6 +25,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <SubjectDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'play/:gameId',
+        element: (
+          <ProtectedRoute>
+            <PlayGame />
           </ProtectedRoute>
         ),
       },

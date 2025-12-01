@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getGames, registerForGame } from '../db'
 import { getTemplateById } from '../game/templates'
 import { useActiveUser } from '../hooks/useActiveUser'
@@ -30,6 +31,13 @@ export default function SubjectDashboard() {
   function isRegistered(game: Game): boolean {
     if (!activeUser) return false
     return game.players.some((p) => p.userId === activeUser.id)
+  }
+
+  function hasActiveMatch(game: Game): boolean {
+    if (!activeUser) return false
+    return game.matches.some(
+      (m) => (m.player1Id === activeUser.id || m.player2Id === activeUser.id) && m.status === 'playing'
+    )
   }
 
   async function handleRegister(game: Game, playerCount: 1 | 2) {
@@ -97,8 +105,8 @@ export default function SubjectDashboard() {
                     </div>
                   )}
 
-                  {!registered && template && (
-                    <div className="card-actions justify-end mt-4">
+                  <div className="card-actions justify-end mt-4">
+                    {!registered && template && (
                       <button
                         className="btn btn-primary btn-sm"
                         onClick={() => handleRegister(game, template.playerCount)}
@@ -113,8 +121,18 @@ export default function SubjectDashboard() {
                           'Register'
                         )}
                       </button>
-                    </div>
-                  )}
+                    )}
+
+                    {registered && hasActiveMatch(game) && (
+                      <Link to={`/play/${game.id}`} className="btn btn-success btn-sm">
+                        Play
+                      </Link>
+                    )}
+
+                    {registered && !hasActiveMatch(game) && template?.playerCount === 2 && (
+                      <span className="text-sm text-base-content/60">Waiting for partner...</span>
+                    )}
+                  </div>
                 </div>
               </div>
             )
