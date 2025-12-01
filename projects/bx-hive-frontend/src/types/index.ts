@@ -1,8 +1,58 @@
-export type UserRole = 'experimenter' | 'subject';
+export type UserRole = 'experimenter' | 'subject'
 
 export interface User {
-  id: string;
-  name: string;
-  role: UserRole;
-  createdAt: number;
+  id: string
+  name: string
+  role: UserRole
+  createdAt: number
+}
+
+// Game Templates
+
+export interface ParameterSchema {
+  name: string
+  type: 'number' | 'string'
+  label: string
+  description?: string
+  default?: number | string
+  min?: number
+  max?: number
+}
+
+export interface GameTemplate {
+  id: string
+  name: string
+  description: string
+  playerCount: 1 | 2
+  parameterSchema: ParameterSchema[]
+}
+
+// Game Instance
+
+export type GameStatus = 'open' | 'active' | 'completed'
+export type MatchStatus = 'waiting' | 'playing' | 'completed'
+
+export interface Player {
+  userId: string
+  registeredAt: number
+}
+
+export interface Match {
+  id: string
+  player1Id: string
+  player2Id?: string
+  status: MatchStatus
+  createdAt: number
+}
+
+export interface Game {
+  id: string
+  templateId: string
+  experimenterId: string
+  name: string
+  parameters: Record<string, number | string>
+  status: GameStatus
+  createdAt: number
+  players: Player[]
+  matches: Match[]
 }
