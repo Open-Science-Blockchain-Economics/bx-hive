@@ -1,11 +1,12 @@
-import { User, UserRole } from '../types';
+import { User, UserRole, Game } from '../types'
 
-const DB_NAME = 'bx_hive';
-const DB_VERSION = 1;
+const DB_NAME = 'bx_hive'
+const DB_VERSION = 1
 
 export const STORES = {
   USERS: 'users',
-} as const;
+  GAMES: 'games',
+} as const
 
 let dbInstance: IDBDatabase | null = null;
 
@@ -58,12 +59,19 @@ export async function initDB(): Promise<IDBDatabase> {
       const db = (event.target as IDBOpenDBRequest).result;
 
       if (!db.objectStoreNames.contains(STORES.USERS)) {
-        console.log('[DB] Creating users store');
-        const usersStore = db.createObjectStore(STORES.USERS, { keyPath: 'id' });
-        usersStore.createIndex('role', 'role', { unique: false });
+        console.log('[DB] Creating users store')
+        const usersStore = db.createObjectStore(STORES.USERS, { keyPath: 'id' })
+        usersStore.createIndex('role', 'role', { unique: false })
       }
-    };
-  });
+
+      if (!db.objectStoreNames.contains(STORES.GAMES)) {
+        console.log('[DB] Creating games store')
+        const gamesStore = db.createObjectStore(STORES.GAMES, { keyPath: 'id' })
+        gamesStore.createIndex('experimenterId', 'experimenterId', { unique: false })
+        gamesStore.createIndex('status', 'status', { unique: false })
+      }
+    }
+  })
 }
 
 export function clearDBInstance(): void {
@@ -204,5 +212,46 @@ export async function getUserById(id: string): Promise<User | undefined> {
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  await executeWriteTransaction(STORES.USERS, (store) => store.delete(id));
+  await executeWriteTransaction(STORES.USERS, (store) => store.delete(id))
+}
+
+// Game operations
+
+export async function createGame(
+  templateId: string,
+  experimenterId: string,
+  name: string,
+  parameters: Record<string, number | string>
+): Promise<Game> {
+  const game: Game = {
+    id: crypto.randomUUID(),
+    templateId,
+    experimenterId,
+    name,
+    parameters,
+    status: 'open',
+    createdAt: Date.now(),
+    players: [],
+    matches: [],
+  }
+
+  await executeWriteTransaction(STORES.GAMES, (store) => store.add(game))
+  return game
+}
+
+export async function getGames(): Promise<Game[]> {
+  return executeReadArrayTransaction<Game>(STORES.GAMES, (store) => store.getAll())
+}
+
+export async function getGamesByExperimenter(experimenterId: string): Promise<Game[]> {
+  const allGames = await getGames()
+  return allGames.filter((game) => game.experimenterId === experimenterId)
+}
+
+export async function getGameById(id: string): Promise<Game | undefined> {
+  return executeReadTransaction<Game>(STORES.GAMES, (store) => store.get(id))
+}
+
+export async function updateGame(game: Game): Promise<void> {
+  await executeWriteTransaction(STORES.GAMES, (store) => store.put(game))
 }
