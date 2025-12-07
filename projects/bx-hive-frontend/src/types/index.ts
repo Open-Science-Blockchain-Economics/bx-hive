@@ -32,6 +32,17 @@ export interface GameTemplate {
 export type GameStatus = 'open' | 'active' | 'completed'
 export type MatchStatus = 'waiting' | 'playing' | 'completed'
 
+// Game-specific state stored in Match
+export type TrustGamePhase = 'investor_decision' | 'trustee_decision' | 'completed'
+
+export interface TrustGameState {
+  phase: TrustGamePhase
+  investorDecision?: number // Amount invested (s)
+  trusteeDecision?: number // Amount returned (r)
+  investorPayout?: number
+  trusteePayout?: number
+}
+
 export interface Player {
   userId: string
   registeredAt: number
@@ -43,6 +54,7 @@ export interface Match {
   player2Id?: string
   status: MatchStatus
   createdAt: number
+  state?: TrustGameState // Game-specific state
 }
 
 export interface Game {
