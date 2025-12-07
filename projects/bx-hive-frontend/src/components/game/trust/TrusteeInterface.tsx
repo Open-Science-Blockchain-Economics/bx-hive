@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { submitTrusteeDecision } from '../../db'
-import { calculateTrusteeReceived } from '../../game/trustGame'
+import { submitTrusteeDecision } from '../../../db'
+import { calculateTrusteeReceived } from '../../../game/trustGame'
 
 interface TrusteeInterfaceProps {
   gameId: string
@@ -13,16 +13,7 @@ interface TrusteeInterfaceProps {
   onDecisionMade: () => void
 }
 
-export default function TrusteeInterface({
-  gameId,
-  matchId,
-  E1,
-  E2,
-  m,
-  UNIT,
-  investorDecision,
-  onDecisionMade,
-}: TrusteeInterfaceProps) {
+export default function TrusteeInterface({ gameId, matchId, E1, E2, m, UNIT, investorDecision, onDecisionMade }: TrusteeInterfaceProps) {
   const received = calculateTrusteeReceived(investorDecision, m)
 
   const [returnAmount, setReturnAmount] = useState(0)
@@ -58,11 +49,19 @@ export default function TrusteeInterface({
 
         <div className="alert alert-info">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
           </svg>
           <div>
             <p className="font-medium">You are the Trustee</p>
-            <p className="text-sm">The Investor sent you {investorDecision.toLocaleString()}. After multiplication (x{m}), you received {received.toLocaleString()}.</p>
+            <p className="text-sm">
+              The Investor sent you {investorDecision.toLocaleString()}. After multiplication (x{m}), you received{' '}
+              {received.toLocaleString()}.
+            </p>
           </div>
         </div>
 
@@ -168,11 +167,7 @@ export default function TrusteeInterface({
           )}
 
           <div className="card-actions justify-end">
-            <button
-              className="btn btn-primary btn-lg"
-              onClick={handleSubmit}
-              disabled={submitting}
-            >
+            <button className="btn btn-primary btn-lg" onClick={handleSubmit} disabled={submitting}>
               {submitting ? (
                 <>
                   <span className="loading loading-spinner loading-sm"></span>

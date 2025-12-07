@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { submitInvestorDecision } from '../../db'
-import { calculateInvestorRefund, calculateTrusteeReceived } from '../../game/trustGame'
+import { submitInvestorDecision } from '../../../db'
+import { calculateInvestorRefund, calculateTrusteeReceived } from '../../../game/trustGame'
 
 interface InvestorInterfaceProps {
   gameId: string
@@ -11,14 +11,7 @@ interface InvestorInterfaceProps {
   onDecisionMade: () => void
 }
 
-export default function InvestorInterface({
-  gameId,
-  matchId,
-  E1,
-  m,
-  UNIT,
-  onDecisionMade,
-}: InvestorInterfaceProps) {
+export default function InvestorInterface({ gameId, matchId, E1, m, UNIT, onDecisionMade }: InvestorInterfaceProps) {
   const [investment, setInvestment] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -53,7 +46,12 @@ export default function InvestorInterface({
 
         <div className="alert alert-info">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
           </svg>
           <div>
             <p className="font-medium">You are the Investor</p>
@@ -135,9 +133,7 @@ export default function InvestorInterface({
                 <span>Trustee receives (x{m}):</span>
                 <span className="font-medium text-secondary">{trusteeReceives.toLocaleString()}</span>
               </div>
-              <p className="text-xs text-base-content/60 mt-2">
-                The Trustee will then decide how much to return to you.
-              </p>
+              <p className="text-xs text-base-content/60 mt-2">The Trustee will then decide how much to return to you.</p>
             </div>
           </div>
 
@@ -148,11 +144,7 @@ export default function InvestorInterface({
           )}
 
           <div className="card-actions justify-end">
-            <button
-              className="btn btn-primary btn-lg"
-              onClick={handleSubmit}
-              disabled={submitting}
-            >
+            <button className="btn btn-primary btn-lg" onClick={handleSubmit} disabled={submitting}>
               {submitting ? (
                 <>
                   <span className="loading loading-spinner loading-sm"></span>
