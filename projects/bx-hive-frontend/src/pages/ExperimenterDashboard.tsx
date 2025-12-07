@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { GAME_RESULTS_COMPONENTS } from '../components/experimenter/results'
-import { createGame, getGamesByExperimenter, getUsers } from '../db'
+import { Link } from 'react-router-dom'
+import { createGame, getGamesByExperimenter } from '../db'
 import { gameTemplates, getTemplateById } from '../game/templates'
 import { useActiveUser } from '../hooks/useActiveUser'
-import type { Game, User } from '../types'
+import type { Game } from '../types'
 
 type TabType = 'games' | 'create'
 
@@ -11,9 +11,7 @@ export default function ExperimenterDashboard() {
   const { activeUser } = useActiveUser()
   const [activeTab, setActiveTab] = useState<TabType>('games')
   const [games, setGames] = useState<Game[]>([])
-  const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const [expandedGameId, setExpandedGameId] = useState<string | null>(null)
 
   // Create game form state
   const [selectedTemplateId, setSelectedTemplateId] = useState(gameTemplates[0]?.id || '')
@@ -46,18 +44,13 @@ export default function ExperimenterDashboard() {
     if (!activeUser) return
     try {
       setLoading(true)
-      const [experimenterGames, allUsers] = await Promise.all([getGamesByExperimenter(activeUser.id), getUsers()])
+      const experimenterGames = await getGamesByExperimenter(activeUser.id)
       setGames(experimenterGames)
-      setUsers(allUsers)
     } catch (err) {
       console.error('Failed to load games:', err)
     } finally {
       setLoading(false)
     }
-  }
-
-  function getUserName(userId: string): string {
-    return users.find((u) => u.id === userId)?.name || 'Unknown'
   }
 
   async function handleCreateGame() {
@@ -127,7 +120,6 @@ export default function ExperimenterDashboard() {
             <div className="grid gap-4">
               {games.map((game) => {
                 const template = getTemplateById(game.templateId)
-                const isExpanded = expandedGameId === game.id
                 const playingMatches = game.matches.filter((m) => m.status === 'playing')
                 const completedMatches = game.matches.filter((m) => m.status === 'completed')
 
@@ -136,8 +128,10 @@ export default function ExperimenterDashboard() {
                     <div className="card-body">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="card-title">{game.name}</h3>
-                          <p className="text-sm text-base-content/70">{template?.name || game.templateId}</p>
+                          <Link to={`/experimenter/game/${game.id}`}>
+                            <h3 className="card-title hover:text-primary transition-colors cursor-pointer">{game.name}</h3>
+                          </Link>
+                          <p className="text-sm text-base-content/70">{template?.label || template?.name || game.templateId}</p>
                         </div>
                         <span
                           className={`badge ${
@@ -167,24 +161,6 @@ export default function ExperimenterDashboard() {
                           </>
                         )}
                       </div>
-
-                      {/* Expand button for games with matches */}
-                      {game.matches.length > 0 && (
-                        <button
-                          className="btn btn-ghost btn-sm mt-2 self-start"
-                          onClick={() => setExpandedGameId(isExpanded ? null : game.id)}
-                        >
-                          {isExpanded ? '▼ Hide Matches' : '▶ Show Matches'}
-                        </button>
-                      )}
-
-                      {/* Expanded results - game-specific */}
-                      {isExpanded &&
-                        game.matches.length > 0 &&
-                        (() => {
-                          const ResultsComponent = GAME_RESULTS_COMPONENTS[game.templateId as keyof typeof GAME_RESULTS_COMPONENTS]
-                          return ResultsComponent ? <ResultsComponent game={game} users={users} /> : null
-                        })()}
                     </div>
                   </div>
                 )
