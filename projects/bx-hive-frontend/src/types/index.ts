@@ -44,6 +44,16 @@ export interface TrustGameState {
   trusteePayout?: number
 }
 
+export type BRETPhase = 'decision' | 'completed'
+
+export interface BRETState {
+  phase: BRETPhase
+  boxesCollected?: number // Number of boxes player chose to collect
+  bombLocation?: number // Index of bomb in flattened grid (0 to rows*cols-1)
+  hitBomb?: boolean // Whether the bomb was in collected boxes
+  payout?: number // Final payout amount
+}
+
 export interface Player {
   userId: string
   registeredAt: number
@@ -55,7 +65,7 @@ export interface Match {
   player2Id?: string
   status: MatchStatus
   createdAt: number
-  state?: TrustGameState // Game-specific state
+  state?: TrustGameState | BRETState // Game-specific state
 }
 
 export interface Game {
