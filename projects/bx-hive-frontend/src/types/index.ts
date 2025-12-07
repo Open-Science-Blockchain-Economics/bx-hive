@@ -22,6 +22,7 @@ export interface ParameterSchema {
 export interface GameTemplate {
   id: string
   name: string
+  label: string
   description: string
   playerCount: 1 | 2
   parameterSchema: ParameterSchema[]

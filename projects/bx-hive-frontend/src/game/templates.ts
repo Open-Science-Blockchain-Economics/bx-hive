@@ -3,6 +3,7 @@ import type { GameTemplate } from '../types'
 export const trustGameTemplate: GameTemplate = {
   id: 'trust-game',
   name: 'Trust Game',
+  label: 'Trust Game',
   description:
     'A two-player game where Player 1 (Investor) sends money to Player 2 (Trustee). The amount is multiplied, and the Trustee decides how much to return.',
   playerCount: 2,
@@ -43,34 +44,44 @@ export const trustGameTemplate: GameTemplate = {
   ],
 }
 
-export const minesweeperTemplate: GameTemplate = {
-  id: 'minesweeper',
-  name: 'Minesweeper',
-  description: 'A single-player game where you clear a grid without hitting mines.',
+export const bretTemplate: GameTemplate = {
+  id: 'bret',
+  name: 'BRET',
+  label: 'Minesweeper',
+  description:
+    'Bomb Risk Elicitation Task: A single-player risk preference game where you collect boxes from a grid. One box contains a bomb. Collect boxes to earn money, but if you collect the bomb, you earn nothing.',
   playerCount: 1,
   parameterSchema: [
     {
-      name: 'gridSize',
+      name: 'rows',
       type: 'number',
-      label: 'Grid Size',
-      description: 'Size of the grid (gridSize x gridSize)',
-      default: 8,
+      label: 'Number of Rows',
+      description: 'Number of rows in the grid',
+      default: 10,
       min: 5,
       max: 20,
     },
     {
-      name: 'mineCount',
+      name: 'cols',
       type: 'number',
-      label: 'Mine Count',
-      description: 'Number of mines hidden in the grid',
+      label: 'Number of Columns',
+      description: 'Number of columns in the grid',
       default: 10,
-      min: 1,
-      max: 50,
+      min: 5,
+      max: 20,
+    },
+    {
+      name: 'paymentPerBox',
+      type: 'number',
+      label: 'Payment Per Box',
+      description: 'Amount earned for each box collected (γ)',
+      default: 1,
+      min: 0.1,
     },
   ],
 }
 
-export const gameTemplates: GameTemplate[] = [trustGameTemplate, minesweeperTemplate]
+export const gameTemplates: GameTemplate[] = [trustGameTemplate, bretTemplate]
 
 export function getTemplateById(id: string): GameTemplate | undefined {
   return gameTemplates.find((t) => t.id === id)
