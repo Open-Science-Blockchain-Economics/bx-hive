@@ -1,10 +1,11 @@
 import { createBrowserRouter } from 'react-router-dom'
 import Layout from './components/layout/Layout'
-import Home from './pages/Home'
-import ExperimenterDashboard from './pages/ExperimenterDashboard'
-import SubjectDashboard from './pages/SubjectDashboard'
-import PlayGame from './pages/PlayGame'
 import ProtectedRoute from './components/ProtectedRoute'
+import ExperimenterDashboard from './pages/ExperimenterDashboard'
+import GameDetails from './pages/GameDetails'
+import Home from './pages/Home'
+import PlayGame from './pages/PlayGame'
+import SubjectDashboard from './pages/SubjectDashboard'
 
 export const router = createBrowserRouter([
   {
@@ -17,6 +18,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <ExperimenterDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'experimenter/game/:gameId',
+        element: (
+          <ProtectedRoute>
+            <GameDetails />
           </ProtectedRoute>
         ),
       },
