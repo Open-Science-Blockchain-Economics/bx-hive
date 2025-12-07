@@ -14,7 +14,7 @@ export async function createGame(
     experimenterId,
     name,
     parameters,
-    status: 'open',
+    status: 'active',
     createdAt: Date.now(),
     players: [],
     matches: [],
@@ -47,8 +47,8 @@ export async function registerForGame(gameId: string, userId: string, playerCoun
     throw new Error('Game not found')
   }
 
-  if (game.status !== 'open') {
-    throw new Error('Game is not open for registration')
+  if (game.status !== 'active') {
+    throw new Error('Registration is closed for this game')
   }
 
   if (game.players.some((p) => p.userId === userId)) {

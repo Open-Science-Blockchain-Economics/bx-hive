@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
+import GameCard from '../components/subject/GameCard'
 import { getGames, registerForGame } from '../db'
 import { useActiveUser } from '../hooks/useActiveUser'
-import GameCard from '../components/subject/GameCard'
 import type { Game } from '../types'
 
 export default function SubjectDashboard() {
@@ -18,7 +18,7 @@ export default function SubjectDashboard() {
     try {
       setLoading(true)
       const allGames = await getGames()
-      const openGames = allGames.filter((game) => game.status === 'open')
+      const openGames = allGames.filter((game) => game.status === 'active')
       setGames(openGames)
     } catch (err) {
       console.error('Failed to load games:', err)

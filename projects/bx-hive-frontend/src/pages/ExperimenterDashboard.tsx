@@ -141,7 +141,7 @@ export default function ExperimenterDashboard() {
                         </div>
                         <span
                           className={`badge ${
-                            game.status === 'open' ? 'badge-success' : game.status === 'active' ? 'badge-warning' : 'badge-neutral'
+                            game.status === 'active' ? 'badge-success' : game.status === 'closed' ? 'badge-warning' : 'badge-neutral'
                           }`}
                         >
                           {game.status}

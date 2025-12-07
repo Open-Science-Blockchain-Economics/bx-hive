@@ -30,7 +30,7 @@ export interface GameTemplate {
 
 // Game Instance
 
-export type GameStatus = 'open' | 'active' | 'completed'
+export type GameStatus = 'active' | 'closed' | 'completed'
 export type MatchStatus = 'waiting' | 'playing' | 'completed'
 
 // Game-specific state stored in Match
