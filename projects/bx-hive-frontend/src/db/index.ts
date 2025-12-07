@@ -1,5 +1,4 @@
-import { User, UserRole, Game, TrustGameState, Match } from '../types'
-import { validateInvestment, validateReturn, calculatePayouts } from '../game/trustGame'
+// Core database utilities and configuration
 
 const DB_NAME = 'bx_hive'
 const DB_VERSION = 1
@@ -9,55 +8,55 @@ export const STORES = {
   GAMES: 'games',
 } as const
 
-let dbInstance: IDBDatabase | null = null;
+let dbInstance: IDBDatabase | null = null
 
 export async function initDB(): Promise<IDBDatabase> {
   if (dbInstance) {
-    console.log('[DB] Using cached database instance');
-    return dbInstance;
+    console.log('[DB] Using cached database instance')
+    return dbInstance
   }
 
-  console.log('[DB] Opening database:', DB_NAME, 'version:', DB_VERSION);
+  console.log('[DB] Opening database:', DB_NAME, 'version:', DB_VERSION)
 
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(DB_NAME, DB_VERSION)
 
-    let isResolved = false;
+    let isResolved = false
 
     request.onerror = () => {
-      console.error('[DB] Error opening database:', request.error);
+      console.error('[DB] Error opening database:', request.error)
       if (!isResolved) {
-        isResolved = true;
-        reject(request.error);
+        isResolved = true
+        reject(request.error)
       }
-    };
+    }
 
     request.onsuccess = () => {
-      console.log('[DB] Database opened successfully');
-      dbInstance = request.result;
-      console.log('[DB] Available stores:', Array.from(dbInstance.objectStoreNames));
+      console.log('[DB] Database opened successfully')
+      dbInstance = request.result
+      console.log('[DB] Available stores:', Array.from(dbInstance.objectStoreNames))
 
       if (!isResolved) {
-        isResolved = true;
-        resolve(request.result);
+        isResolved = true
+        resolve(request.result)
       }
-    };
+    }
 
     request.onblocked = (event) => {
-      console.error('[DB] Database open BLOCKED! Close all other tabs or wait for pending operations.');
-      console.error('[DB] Blocked event:', event);
-    };
+      console.error('[DB] Database open BLOCKED! Close all other tabs or wait for pending operations.')
+      console.error('[DB] Blocked event:', event)
+    }
 
     setTimeout(() => {
       if (!isResolved) {
-        console.error('[DB] Database open timed out after 10 seconds - likely blocked by another connection');
-        console.error('[DB] Try closing all tabs and reopening, or manually delete the database via DevTools > Application > IndexedDB');
+        console.error('[DB] Database open timed out after 10 seconds - likely blocked by another connection')
+        console.error('[DB] Try closing all tabs and reopening, or manually delete the database via DevTools > Application > IndexedDB')
       }
-    }, 10000);
+    }, 10000)
 
     request.onupgradeneeded = (event) => {
-      console.log('[DB] Upgrading database schema');
-      const db = (event.target as IDBOpenDBRequest).result;
+      console.log('[DB] Upgrading database schema')
+      const db = (event.target as IDBOpenDBRequest).result
 
       if (!db.objectStoreNames.contains(STORES.USERS)) {
         console.log('[DB] Creating users store')
@@ -77,329 +76,121 @@ export async function initDB(): Promise<IDBDatabase> {
 
 export function clearDBInstance(): void {
   if (dbInstance) {
-    console.log('[DB] Closing and clearing database instance');
-    dbInstance.close();
-    dbInstance = null;
+    console.log('[DB] Closing and clearing database instance')
+    dbInstance.close()
+    dbInstance = null
   } else {
-    console.log('[DB] No database instance to clear');
+    console.log('[DB] No database instance to clear')
   }
 }
 
 export async function executeReadTransaction<T>(
   storeName: string,
-  operation: (store: IDBObjectStore) => IDBRequest<T | undefined>
+  operation: (store: IDBObjectStore) => IDBRequest<T | undefined>,
 ): Promise<T | undefined> {
-  const db = await initDB();
+  const db = await initDB()
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([storeName], 'readonly');
-    const store = transaction.objectStore(storeName);
-    const request = operation(store);
+    const transaction = db.transaction([storeName], 'readonly')
+    const store = transaction.objectStore(storeName)
+    const request = operation(store)
 
-    let result: T | undefined;
+    let result: T | undefined
 
     request.onsuccess = () => {
-      result = request.result;
-    };
+      result = request.result
+    }
 
     request.onerror = () => {
-      reject(request.error);
-    };
+      reject(request.error)
+    }
 
     transaction.oncomplete = () => {
-      db.close();
-      dbInstance = null;
-      resolve(result);
-    };
+      db.close()
+      dbInstance = null
+      resolve(result)
+    }
 
     transaction.onerror = () => {
-      db.close();
-      dbInstance = null;
-      reject(transaction.error);
-    };
-  });
+      db.close()
+      dbInstance = null
+      reject(transaction.error)
+    }
+  })
 }
 
 export async function executeReadArrayTransaction<T>(
   storeName: string,
-  operation: (store: IDBObjectStore) => IDBRequest<T[]>
+  operation: (store: IDBObjectStore) => IDBRequest<T[]>,
 ): Promise<T[]> {
-  const db = await initDB();
+  const db = await initDB()
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([storeName], 'readonly');
-    const store = transaction.objectStore(storeName);
-    const request = operation(store);
+    const transaction = db.transaction([storeName], 'readonly')
+    const store = transaction.objectStore(storeName)
+    const request = operation(store)
 
-    let result: T[] = [];
+    let result: T[] = []
 
     request.onsuccess = () => {
-      result = request.result || [];
-    };
+      result = request.result || []
+    }
 
     request.onerror = () => {
-      reject(request.error);
-    };
+      reject(request.error)
+    }
 
     transaction.oncomplete = () => {
-      db.close();
-      dbInstance = null;
-      resolve(result);
-    };
+      db.close()
+      dbInstance = null
+      resolve(result)
+    }
 
     transaction.onerror = () => {
-      db.close();
-      dbInstance = null;
-      reject(transaction.error);
-    };
-  });
+      db.close()
+      dbInstance = null
+      reject(transaction.error)
+    }
+  })
 }
 
 export async function executeWriteTransaction<T = void>(
   storeName: string,
-  operation: (store: IDBObjectStore) => IDBRequest<T>
+  operation: (store: IDBObjectStore) => IDBRequest<T>,
 ): Promise<T> {
-  const db = await initDB();
+  const db = await initDB()
 
   return new Promise((resolve, reject) => {
-    const transaction = db.transaction([storeName], 'readwrite');
-    const store = transaction.objectStore(storeName);
-    const request = operation(store);
+    const transaction = db.transaction([storeName], 'readwrite')
+    const store = transaction.objectStore(storeName)
+    const request = operation(store)
 
-    let result: T;
+    let result: T
 
     request.onsuccess = () => {
-      result = request.result;
-    };
+      result = request.result
+    }
 
     request.onerror = () => {
-      reject(request.error);
-    };
+      reject(request.error)
+    }
 
     transaction.oncomplete = () => {
-      db.close();
-      dbInstance = null;
-      resolve(result);
-    };
+      db.close()
+      dbInstance = null
+      resolve(result)
+    }
 
     transaction.onerror = () => {
-      db.close();
-      dbInstance = null;
-      reject(transaction.error);
-    };
-  });
-}
-
-// User operations
-
-export async function createUser(name: string, role: UserRole): Promise<User> {
-  const user: User = {
-    id: crypto.randomUUID(),
-    name,
-    role,
-    createdAt: Date.now(),
-  };
-
-  await executeWriteTransaction(STORES.USERS, (store) => store.add(user));
-  return user;
-}
-
-export async function getUsers(): Promise<User[]> {
-  return executeReadArrayTransaction<User>(STORES.USERS, (store) => store.getAll());
-}
-
-export async function getUserById(id: string): Promise<User | undefined> {
-  return executeReadTransaction<User>(STORES.USERS, (store) => store.get(id));
-}
-
-export async function deleteUser(id: string): Promise<void> {
-  await executeWriteTransaction(STORES.USERS, (store) => store.delete(id))
-}
-
-// Game operations
-
-export async function createGame(
-  templateId: string,
-  experimenterId: string,
-  name: string,
-  parameters: Record<string, number | string>
-): Promise<Game> {
-  const game: Game = {
-    id: crypto.randomUUID(),
-    templateId,
-    experimenterId,
-    name,
-    parameters,
-    status: 'open',
-    createdAt: Date.now(),
-    players: [],
-    matches: [],
-  }
-
-  await executeWriteTransaction(STORES.GAMES, (store) => store.add(game))
-  return game
-}
-
-export async function getGames(): Promise<Game[]> {
-  return executeReadArrayTransaction<Game>(STORES.GAMES, (store) => store.getAll())
-}
-
-export async function getGamesByExperimenter(experimenterId: string): Promise<Game[]> {
-  const allGames = await getGames()
-  return allGames.filter((game) => game.experimenterId === experimenterId)
-}
-
-export async function getGameById(id: string): Promise<Game | undefined> {
-  return executeReadTransaction<Game>(STORES.GAMES, (store) => store.get(id))
-}
-
-export async function updateGame(game: Game): Promise<void> {
-  await executeWriteTransaction(STORES.GAMES, (store) => store.put(game))
-}
-
-export async function registerForGame(gameId: string, userId: string, playerCount: 1 | 2): Promise<Game> {
-  const game = await getGameById(gameId)
-  if (!game) {
-    throw new Error('Game not found')
-  }
-
-  if (game.status !== 'open') {
-    throw new Error('Game is not open for registration')
-  }
-
-  if (game.players.some((p) => p.userId === userId)) {
-    throw new Error('Already registered for this game')
-  }
-
-  game.players.push({
-    userId,
-    registeredAt: Date.now(),
-  })
-
-  // For 1-player games, create a match immediately
-  if (playerCount === 1) {
-    game.matches.push({
-      id: crypto.randomUUID(),
-      player1Id: userId,
-      status: 'playing',
-      createdAt: Date.now(),
-    })
-  }
-
-  // For 2-player games, use FIFO matching
-  if (playerCount === 2) {
-    // Find players who are not yet in any match
-    const playersInMatches = new Set(
-      game.matches.flatMap((m) => [m.player1Id, m.player2Id].filter(Boolean))
-    )
-    const waitingPlayers = game.players.filter(
-      (p) => p.userId !== userId && !playersInMatches.has(p.userId)
-    )
-
-    if (waitingPlayers.length > 0) {
-      // FIFO: pair with the earliest registered waiting player
-      const partner = waitingPlayers.sort((a, b) => a.registeredAt - b.registeredAt)[0]
-
-      // Initialize game-specific state for Trust Game
-      const initialState: TrustGameState | undefined =
-        game.templateId === 'trust-game'
-          ? { phase: 'investor_decision' }
-          : undefined
-
-      game.matches.push({
-        id: crypto.randomUUID(),
-        player1Id: partner.userId,
-        player2Id: userId,
-        status: 'playing',
-        createdAt: Date.now(),
-        state: initialState,
-      })
+      db.close()
+      dbInstance = null
+      reject(transaction.error)
     }
-  }
-
-  await updateGame(game)
-  return game
+  })
 }
 
-// Trust Game decision operations
-
-export async function submitInvestorDecision(
-  gameId: string,
-  matchId: string,
-  investment: number
-): Promise<Match> {
-  const game = await getGameById(gameId)
-  if (!game) {
-    throw new Error('Game not found')
-  }
-
-  const match = game.matches.find((m) => m.id === matchId)
-  if (!match) {
-    throw new Error('Match not found')
-  }
-
-  if (!match.state || match.state.phase !== 'investor_decision') {
-    throw new Error('Not in investor decision phase')
-  }
-
-  const E1 = game.parameters.E1 as number
-  const UNIT = game.parameters.UNIT as number
-
-  if (!validateInvestment(investment, E1, UNIT)) {
-    throw new Error('Invalid investment amount')
-  }
-
-  match.state = {
-    ...match.state,
-    phase: 'trustee_decision',
-    investorDecision: investment,
-  }
-
-  await updateGame(game)
-  return match
-}
-
-export async function submitTrusteeDecision(
-  gameId: string,
-  matchId: string,
-  returnAmount: number
-): Promise<Match> {
-  const game = await getGameById(gameId)
-  if (!game) {
-    throw new Error('Game not found')
-  }
-
-  const match = game.matches.find((m) => m.id === matchId)
-  if (!match) {
-    throw new Error('Match not found')
-  }
-
-  if (!match.state || match.state.phase !== 'trustee_decision') {
-    throw new Error('Not in trustee decision phase')
-  }
-
-  const E1 = game.parameters.E1 as number
-  const E2 = game.parameters.E2 as number
-  const m = game.parameters.m as number
-  const UNIT = game.parameters.UNIT as number
-  const investment = match.state.investorDecision!
-  const received = investment * m
-
-  if (!validateReturn(returnAmount, received, UNIT)) {
-    throw new Error('Invalid return amount')
-  }
-
-  const { investorPayout, trusteePayout } = calculatePayouts(E1, E2, m, investment, returnAmount)
-
-  match.state = {
-    ...match.state,
-    phase: 'completed',
-    trusteeDecision: returnAmount,
-    investorPayout,
-    trusteePayout,
-  }
-  match.status = 'completed'
-
-  await updateGame(game)
-  return match
-}
+// Re-export all domain-specific operations
+export * from './bret'
+export * from './games'
+export * from './trustGame'
+export * from './users'
