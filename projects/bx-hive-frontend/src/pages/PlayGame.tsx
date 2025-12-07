@@ -3,6 +3,9 @@ import { useParams, Link } from 'react-router-dom'
 import { getGameById, getUserById } from '../db'
 import { getTemplateById } from '../game/templates'
 import { useActiveUser } from '../hooks/useActiveUser'
+import InvestorInterface from '../components/game/InvestorInterface'
+import TrusteeInterface from '../components/game/TrusteeInterface'
+import ResultsDisplay from '../components/game/ResultsDisplay'
 import type { Game, Match, User } from '../types'
 
 export default function PlayGame() {
@@ -67,7 +70,7 @@ export default function PlayGame() {
     )
   }
 
-  if (error || !game || !match) {
+  if (error || !game || !match || !activeUser) {
     return (
       <div className="text-center py-12">
         <p className="text-error">{error || 'Something went wrong'}</p>
@@ -80,6 +83,119 @@ export default function PlayGame() {
 
   const template = getTemplateById(game.templateId)
 
+  // Trust Game specific logic
+  const isTrustGame = game.templateId === 'trust-game'
+  const isInvestor = match.player1Id === activeUser.id
+  const E1 = game.parameters.E1 as number
+  const E2 = game.parameters.E2 as number
+  const m = game.parameters.m as number
+  const UNIT = game.parameters.UNIT as number
+
+  function renderTrustGameUI() {
+    if (!game || !match || !match.state) {
+      return (
+        <div className="text-center py-8 text-base-content/60">
+          <p>Game state not initialized</p>
+        </div>
+      )
+    }
+
+    const { phase, investorDecision, trusteeDecision, investorPayout, trusteePayout } = match.state
+
+    // Completed - show results
+    if (phase === 'completed' && investorDecision !== undefined && trusteeDecision !== undefined && investorPayout !== undefined && trusteePayout !== undefined) {
+      return (
+        <ResultsDisplay
+          E1={E1}
+          E2={E2}
+          m={m}
+          investorDecision={investorDecision}
+          trusteeDecision={trusteeDecision}
+          investorPayout={investorPayout}
+          trusteePayout={trusteePayout}
+          isInvestor={isInvestor}
+        />
+      )
+    }
+
+    // Investor decision phase
+    if (phase === 'investor_decision') {
+      if (isInvestor) {
+        return (
+          <InvestorInterface
+            gameId={game.id}
+            matchId={match.id}
+            E1={E1}
+            m={m}
+            UNIT={UNIT}
+            onDecisionMade={loadGame}
+          />
+        )
+      } else {
+        return (
+          <div className="card bg-base-100 border border-base-300">
+            <div className="card-body text-center">
+              <h2 className="card-title justify-center">Waiting for Investor</h2>
+              <p className="text-base-content/70 mt-2">
+                The Investor is deciding how much to send you.
+              </p>
+              <p className="text-sm text-base-content/50 mt-4">
+                Refresh the page to check for updates.
+              </p>
+              <button className="btn btn-outline mt-4" onClick={loadGame}>
+                Refresh
+              </button>
+            </div>
+          </div>
+        )
+      }
+    }
+
+    // Trustee decision phase
+    if (phase === 'trustee_decision' && investorDecision !== undefined) {
+      if (!isInvestor) {
+        return (
+          <TrusteeInterface
+            gameId={game.id}
+            matchId={match.id}
+            E1={E1}
+            E2={E2}
+            m={m}
+            UNIT={UNIT}
+            investorDecision={investorDecision}
+            onDecisionMade={loadGame}
+          />
+        )
+      } else {
+        return (
+          <div className="card bg-base-100 border border-base-300">
+            <div className="card-body text-center">
+              <h2 className="card-title justify-center">Waiting for Trustee</h2>
+              <p className="text-base-content/70 mt-2">
+                You invested <span className="font-bold">{investorDecision.toLocaleString()}</span>.
+              </p>
+              <p className="text-base-content/70">
+                The Trustee received <span className="font-bold">{(investorDecision * m).toLocaleString()}</span> and is deciding how much to return.
+              </p>
+              <p className="text-sm text-base-content/50 mt-4">
+                Refresh the page to check for updates.
+              </p>
+              <button className="btn btn-outline mt-4" onClick={loadGame}>
+                Refresh
+              </button>
+            </div>
+          </div>
+        )
+      }
+    }
+
+    return (
+      <div className="text-center py-8 text-base-content/60">
+        <p>Unknown game state</p>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -87,55 +203,31 @@ export default function PlayGame() {
           ← Back to Dashboard
         </Link>
         <h1 className="text-2xl font-bold">{game.name}</h1>
-        <p className="text-base-content/70 mt-1">{template?.name || game.templateId}</p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-base-content/70">{template?.name || game.templateId}</span>
+          {isTrustGame && (
+            <span className="badge badge-sm">
+              You are the {isInvestor ? 'Investor' : 'Trustee'}
+            </span>
+          )}
+        </div>
+        {partner && (
+          <p className="text-sm text-base-content/50 mt-1">
+            Playing with: {partner.name}
+          </p>
+        )}
       </div>
 
-      <div className="card bg-base-100 border border-base-300">
-        <div className="card-body">
-          <h2 className="card-title">Match Info</h2>
-
-          <div className="space-y-2 mt-4">
-            <div className="flex justify-between">
-              <span className="text-base-content/70">Status:</span>
-              <span className={`badge ${match.status === 'playing' ? 'badge-success' : match.status === 'completed' ? 'badge-neutral' : 'badge-warning'}`}>
-                {match.status}
-              </span>
-            </div>
-
-            {template?.playerCount === 2 && (
-              <div className="flex justify-between">
-                <span className="text-base-content/70">Partner:</span>
-                <span>{partner?.name || 'Unknown'}</span>
-              </div>
-            )}
-
-            {template && (
-              <div className="divider"></div>
-            )}
-
-            {template && (
-              <div className="text-sm">
-                <span className="font-medium">Game Parameters:</span>
-                <div className="mt-2 space-y-1">
-                  {template.parameterSchema.map((param) => (
-                    <div key={param.name} className="flex justify-between text-base-content/70">
-                      <span>{param.label}:</span>
-                      <span>{game.parameters[param.name]}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="divider"></div>
-
-          <div className="text-center py-8 text-base-content/60">
+      {isTrustGame ? (
+        renderTrustGameUI()
+      ) : (
+        <div className="card bg-base-100 border border-base-300">
+          <div className="card-body text-center py-8 text-base-content/60">
             <p className="text-lg">Game play coming soon</p>
             <p className="text-sm mt-2">The {template?.name || 'game'} interface will be implemented here.</p>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
