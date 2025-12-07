@@ -1,5 +1,5 @@
 import { initializeBRETState } from '../game/bret'
-import type { Game, TrustGameState } from '../types'
+import type { Game, GameStatus, TrustGameState } from '../types'
 import { executeReadArrayTransaction, executeReadTransaction, executeWriteTransaction, STORES } from './index'
 
 export async function createGame(
@@ -101,4 +101,31 @@ export async function registerForGame(gameId: string, userId: string, playerCoun
 
   await updateGame(game)
   return game
+}
+
+/**
+ * Update game status
+ * @param gameId - Game ID
+ * @param newStatus - New status to set
+ * @returns Updated game
+ */
+export async function updateGameStatus(gameId: string, newStatus: GameStatus): Promise<Game> {
+  const game = await getGameById(gameId)
+  if (!game) {
+    throw new Error('Game not found')
+  }
+
+  game.status = newStatus
+  await updateGame(game)
+  return game
+}
+
+/**
+ * Close registration for a game (sets status to 'closed')
+ * Existing registered players can still complete their matches
+ * @param gameId - Game ID
+ * @returns Updated game
+ */
+export async function closeGameRegistration(gameId: string): Promise<Game> {
+  return updateGameStatus(gameId, 'closed')
 }
