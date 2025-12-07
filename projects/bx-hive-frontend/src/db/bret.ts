@@ -1,8 +1,8 @@
-import { processDecision, validateBoxesCollected } from '../game/bret'
+import { processDecision } from '../game/bret'
 import type { BRETState, Match } from '../types'
 import { getGameById, updateGame } from './games'
 
-export async function submitBRETDecision(gameId: string, matchId: string, boxesCollected: number): Promise<Match> {
+export async function submitBRETDecision(gameId: string, matchId: string, selectedBoxes: number[]): Promise<Match> {
   const game = await getGameById(gameId)
   if (!game) {
     throw new Error('Game not found')
@@ -20,12 +20,26 @@ export async function submitBRETDecision(gameId: string, matchId: string, boxesC
   const rows = game.parameters.rows as number
   const cols = game.parameters.cols as number
   const paymentPerBox = game.parameters.paymentPerBox as number
+  const totalBoxes = rows * cols
 
-  if (!validateBoxesCollected(boxesCollected, rows, cols)) {
-    throw new Error('Invalid number of boxes')
+  // Validate selected boxes
+  if (selectedBoxes.length < 1 || selectedBoxes.length >= totalBoxes) {
+    throw new Error('Invalid number of boxes selected')
   }
 
-  const updatedState = processDecision(match.state as BRETState, boxesCollected, paymentPerBox)
+  // Validate all indices are within range and unique
+  const uniqueBoxes = new Set(selectedBoxes)
+  if (uniqueBoxes.size !== selectedBoxes.length) {
+    throw new Error('Duplicate boxes selected')
+  }
+
+  for (const box of selectedBoxes) {
+    if (box < 0 || box >= totalBoxes) {
+      throw new Error(`Invalid box index: ${box}`)
+    }
+  }
+
+  const updatedState = processDecision(match.state as BRETState, selectedBoxes, paymentPerBox)
 
   match.state = updatedState
   match.status = 'completed'

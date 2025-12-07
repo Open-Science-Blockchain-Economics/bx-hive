@@ -21,18 +21,21 @@ export function initializeBRETState(rows: number, cols: number): BRETState {
 
 /**
  * Calculate whether the bomb was hit and the resulting payout
- * Boxes are collected sequentially from index 0 (row-by-row, left-to-right)
- * @param boxesCollected - Number of boxes the player chose to collect
+ * @param selectedBoxes - Array of box indices the player selected
  * @param bombLocation - Index of the bomb in the flattened grid
  * @param paymentPerBox - Amount earned per box (γ)
  * @returns Object with hitBomb flag and payout amount
  */
-export function calculatePayout(boxesCollected: number, bombLocation: number, paymentPerBox: number): { hitBomb: boolean; payout: number } {
-  // If player collected enough boxes to include the bomb location
-  const hitBomb = boxesCollected > bombLocation
+export function calculatePayout(
+  selectedBoxes: number[],
+  bombLocation: number,
+  paymentPerBox: number,
+): { hitBomb: boolean; payout: number } {
+  // Check if bomb is in the selected boxes
+  const hitBomb = selectedBoxes.includes(bombLocation)
 
   // If bomb was hit, payout is 0; otherwise, payout = boxes × payment
-  const payout = hitBomb ? 0 : boxesCollected * paymentPerBox
+  const payout = hitBomb ? 0 : selectedBoxes.length * paymentPerBox
 
   return { hitBomb, payout }
 }
@@ -40,21 +43,22 @@ export function calculatePayout(boxesCollected: number, bombLocation: number, pa
 /**
  * Process the player's decision and return the completed game state
  * @param state - Current BRET state
- * @param boxesCollected - Number of boxes the player chose to collect
+ * @param selectedBoxes - Array of box indices the player selected
  * @param paymentPerBox - Amount earned per box (γ)
  * @returns Updated BRETState with results
  */
-export function processDecision(state: BRETState, boxesCollected: number, paymentPerBox: number): BRETState {
+export function processDecision(state: BRETState, selectedBoxes: number[], paymentPerBox: number): BRETState {
   if (!state.bombLocation && state.bombLocation !== 0) {
     throw new Error('Bomb location not initialized')
   }
 
-  const { hitBomb, payout } = calculatePayout(boxesCollected, state.bombLocation, paymentPerBox)
+  const { hitBomb, payout } = calculatePayout(selectedBoxes, state.bombLocation, paymentPerBox)
 
   return {
     ...state,
     phase: 'completed',
-    boxesCollected,
+    boxesCollected: selectedBoxes.length,
+    selectedBoxes,
     hitBomb,
     payout,
   }
