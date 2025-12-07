@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { GAME_RESULTS_COMPONENTS } from '../components/experimenter/results'
 import { createGame, getGamesByExperimenter, getUsers } from '../db'
 import { gameTemplates, getTemplateById } from '../game/templates'
 import { useActiveUser } from '../hooks/useActiveUser'
@@ -45,10 +46,7 @@ export default function ExperimenterDashboard() {
     if (!activeUser) return
     try {
       setLoading(true)
-      const [experimenterGames, allUsers] = await Promise.all([
-        getGamesByExperimenter(activeUser.id),
-        getUsers(),
-      ])
+      const [experimenterGames, allUsers] = await Promise.all([getGamesByExperimenter(activeUser.id), getUsers()])
       setGames(experimenterGames)
       setUsers(allUsers)
     } catch (err) {
@@ -132,7 +130,6 @@ export default function ExperimenterDashboard() {
                 const isExpanded = expandedGameId === game.id
                 const playingMatches = game.matches.filter((m) => m.status === 'playing')
                 const completedMatches = game.matches.filter((m) => m.status === 'completed')
-                const isTrustGame = game.templateId === 'trust-game'
 
                 return (
                   <div key={game.id} className="card bg-base-100 border border-base-300">
@@ -181,69 +178,13 @@ export default function ExperimenterDashboard() {
                         </button>
                       )}
 
-                      {/* Expanded match details */}
-                      {isExpanded && game.matches.length > 0 && (
-                        <div className="mt-4 space-y-3">
-                          <div className="divider my-0"></div>
-                          <h4 className="font-semibold">Match Details</h4>
-                          <div className="overflow-x-auto">
-                            <table className="table table-sm">
-                              <thead>
-                                <tr>
-                                  <th>Investor</th>
-                                  <th>Trustee</th>
-                                  <th>Status</th>
-                                  {isTrustGame && (
-                                    <>
-                                      <th>Invested</th>
-                                      <th>Returned</th>
-                                      <th>Inv. Payout</th>
-                                      <th>Tru. Payout</th>
-                                    </>
-                                  )}
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {game.matches.map((match) => (
-                                  <tr key={match.id}>
-                                    <td>{getUserName(match.player1Id)}</td>
-                                    <td>{match.player2Id ? getUserName(match.player2Id) : '-'}</td>
-                                    <td>
-                                      <span
-                                        className={`badge badge-sm ${
-                                          match.status === 'completed'
-                                            ? 'badge-success'
-                                            : match.status === 'playing'
-                                              ? 'badge-warning'
-                                              : 'badge-neutral'
-                                        }`}
-                                      >
-                                        {match.state?.phase === 'investor_decision'
-                                          ? 'Waiting: Investor'
-                                          : match.state?.phase === 'trustee_decision'
-                                            ? 'Waiting: Trustee'
-                                            : match.status}
-                                      </span>
-                                    </td>
-                                    {isTrustGame && (
-                                      <>
-                                        <td>{match.state?.investorDecision ?? '-'}</td>
-                                        <td>{match.state?.trusteeDecision ?? '-'}</td>
-                                        <td className={match.state?.investorPayout !== undefined ? 'text-success font-medium' : ''}>
-                                          {match.state?.investorPayout ?? '-'}
-                                        </td>
-                                        <td className={match.state?.trusteePayout !== undefined ? 'text-success font-medium' : ''}>
-                                          {match.state?.trusteePayout ?? '-'}
-                                        </td>
-                                      </>
-                                    )}
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        </div>
-                      )}
+                      {/* Expanded results - game-specific */}
+                      {isExpanded &&
+                        game.matches.length > 0 &&
+                        (() => {
+                          const ResultsComponent = GAME_RESULTS_COMPONENTS[game.templateId as keyof typeof GAME_RESULTS_COMPONENTS]
+                          return ResultsComponent ? <ResultsComponent game={game} users={users} /> : null
+                        })()}
                     </div>
                   </div>
                 )
