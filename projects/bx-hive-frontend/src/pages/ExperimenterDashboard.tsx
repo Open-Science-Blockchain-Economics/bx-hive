@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { createGame, getGamesByExperimenter } from '../db'
+import { createGame, getGamesByExperimenter, getUsers } from '../db'
 import { gameTemplates, getTemplateById } from '../game/templates'
 import { useActiveUser } from '../hooks/useActiveUser'
-import type { Game } from '../types'
+import type { Game, User } from '../types'
 
 type TabType = 'games' | 'create'
 
@@ -10,7 +10,9 @@ export default function ExperimenterDashboard() {
   const { activeUser } = useActiveUser()
   const [activeTab, setActiveTab] = useState<TabType>('games')
   const [games, setGames] = useState<Game[]>([])
+  const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
+  const [expandedGameId, setExpandedGameId] = useState<string | null>(null)
 
   // Create game form state
   const [selectedTemplateId, setSelectedTemplateId] = useState(gameTemplates[0]?.id || '')
@@ -43,13 +45,21 @@ export default function ExperimenterDashboard() {
     if (!activeUser) return
     try {
       setLoading(true)
-      const experimenterGames = await getGamesByExperimenter(activeUser.id)
+      const [experimenterGames, allUsers] = await Promise.all([
+        getGamesByExperimenter(activeUser.id),
+        getUsers(),
+      ])
       setGames(experimenterGames)
+      setUsers(allUsers)
     } catch (err) {
       console.error('Failed to load games:', err)
     } finally {
       setLoading(false)
     }
+  }
+
+  function getUserName(userId: string): string {
+    return users.find((u) => u.id === userId)?.name || 'Unknown'
   }
 
   async function handleCreateGame() {
@@ -119,6 +129,11 @@ export default function ExperimenterDashboard() {
             <div className="grid gap-4">
               {games.map((game) => {
                 const template = getTemplateById(game.templateId)
+                const isExpanded = expandedGameId === game.id
+                const playingMatches = game.matches.filter((m) => m.status === 'playing')
+                const completedMatches = game.matches.filter((m) => m.status === 'completed')
+                const isTrustGame = game.templateId === 'trust-game'
+
                 return (
                   <div key={game.id} className="card bg-base-100 border border-base-300">
                     <div className="card-body">
@@ -135,16 +150,100 @@ export default function ExperimenterDashboard() {
                           {game.status}
                         </span>
                       </div>
-                      <div className="text-sm mt-2">
-                        <span className="text-base-content/70">Players: </span>
-                        {game.players.length}
+
+                      {/* Stats row */}
+                      <div className="flex flex-wrap gap-4 text-sm mt-2">
+                        <div>
+                          <span className="text-base-content/70">Players: </span>
+                          <span className="font-medium">{game.players.length}</span>
+                        </div>
                         {template?.playerCount === 2 && (
                           <>
-                            <span className="text-base-content/70 ml-4">Matches: </span>
-                            {game.matches.length}
+                            <div>
+                              <span className="text-base-content/70">Playing: </span>
+                              <span className="font-medium text-warning">{playingMatches.length}</span>
+                            </div>
+                            <div>
+                              <span className="text-base-content/70">Completed: </span>
+                              <span className="font-medium text-success">{completedMatches.length}</span>
+                            </div>
                           </>
                         )}
                       </div>
+
+                      {/* Expand button for games with matches */}
+                      {game.matches.length > 0 && (
+                        <button
+                          className="btn btn-ghost btn-sm mt-2 self-start"
+                          onClick={() => setExpandedGameId(isExpanded ? null : game.id)}
+                        >
+                          {isExpanded ? '▼ Hide Matches' : '▶ Show Matches'}
+                        </button>
+                      )}
+
+                      {/* Expanded match details */}
+                      {isExpanded && game.matches.length > 0 && (
+                        <div className="mt-4 space-y-3">
+                          <div className="divider my-0"></div>
+                          <h4 className="font-semibold">Match Details</h4>
+                          <div className="overflow-x-auto">
+                            <table className="table table-sm">
+                              <thead>
+                                <tr>
+                                  <th>Investor</th>
+                                  <th>Trustee</th>
+                                  <th>Status</th>
+                                  {isTrustGame && (
+                                    <>
+                                      <th>Invested</th>
+                                      <th>Returned</th>
+                                      <th>Inv. Payout</th>
+                                      <th>Tru. Payout</th>
+                                    </>
+                                  )}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {game.matches.map((match) => (
+                                  <tr key={match.id}>
+                                    <td>{getUserName(match.player1Id)}</td>
+                                    <td>{match.player2Id ? getUserName(match.player2Id) : '-'}</td>
+                                    <td>
+                                      <span
+                                        className={`badge badge-sm ${
+                                          match.status === 'completed'
+                                            ? 'badge-success'
+                                            : match.status === 'playing'
+                                              ? 'badge-warning'
+                                              : 'badge-neutral'
+                                        }`}
+                                      >
+                                        {match.state?.phase === 'investor_decision'
+                                          ? 'Waiting: Investor'
+                                          : match.state?.phase === 'trustee_decision'
+                                            ? 'Waiting: Trustee'
+                                            : match.status}
+                                      </span>
+                                    </td>
+                                    {isTrustGame && (
+                                      <>
+                                        <td>{match.state?.investorDecision ?? '-'}</td>
+                                        <td>{match.state?.trusteeDecision ?? '-'}</td>
+                                        <td className={match.state?.investorPayout !== undefined ? 'text-success font-medium' : ''}>
+                                          {match.state?.investorPayout ?? '-'}
+                                        </td>
+                                        <td className={match.state?.trusteePayout !== undefined ? 'text-success font-medium' : ''}>
+                                          {match.state?.trusteePayout ?? '-'}
+                                        </td>
+                                      </>
+                                    )}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
