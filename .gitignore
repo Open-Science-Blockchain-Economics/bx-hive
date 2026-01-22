@@ -168,3 +168,7 @@ cython_debug/
 # NPM
 node_modules
 
+# Claude Code
+.claude/
+.mcp.json
+
