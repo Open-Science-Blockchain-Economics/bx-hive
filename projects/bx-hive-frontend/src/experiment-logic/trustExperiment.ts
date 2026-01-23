@@ -1,4 +1,4 @@
-// Trust Game calculation and validation logic
+// Trust Experiment calculation and validation logic
 
 /**
  * Calculate the refund Investor receives after investing

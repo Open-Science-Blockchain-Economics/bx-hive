@@ -7,7 +7,7 @@ export interface User {
   createdAt: number
 }
 
-// Game Templates
+// Experiment Templates
 
 export interface ParameterSchema {
   name: string
@@ -19,7 +19,7 @@ export interface ParameterSchema {
   max?: number
 }
 
-export interface GameTemplate {
+export interface ExperimentTemplate {
   id: string
   name: string
   label: string
@@ -28,16 +28,16 @@ export interface GameTemplate {
   parameterSchema: ParameterSchema[]
 }
 
-// Game Instance
+// Experiment Instance
 
-export type GameStatus = 'active' | 'closed' | 'completed'
+export type ExperimentStatus = 'active' | 'closed' | 'completed'
 export type MatchStatus = 'waiting' | 'playing' | 'completed'
 
-// Game-specific state stored in Match
-export type TrustGamePhase = 'investor_decision' | 'trustee_decision' | 'completed'
+// Experiment-specific state stored in Match
+export type TrustExperimentPhase = 'investor_decision' | 'trustee_decision' | 'completed'
 
-export interface TrustGameState {
-  phase: TrustGamePhase
+export interface TrustExperimentState {
+  phase: TrustExperimentPhase
   investorDecision?: number // Amount invested (s)
   trusteeDecision?: number // Amount returned (r)
   investorPayout?: number
@@ -66,16 +66,16 @@ export interface Match {
   player2Id?: string
   status: MatchStatus
   createdAt: number
-  state?: TrustGameState | BRETState // Game-specific state
+  state?: TrustExperimentState | BRETState // Experiment-specific state
 }
 
-export interface Game {
+export interface Experiment {
   id: string
   templateId: string
   experimenterId: string
   name: string
   parameters: Record<string, number | string>
-  status: GameStatus
+  status: ExperimentStatus
   createdAt: number
   players: Player[]
   matches: Match[]

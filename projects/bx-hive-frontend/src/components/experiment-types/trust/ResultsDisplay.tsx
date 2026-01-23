@@ -26,7 +26,7 @@ export default function ResultsDisplay({
   return (
     <div className="card bg-base-100 border border-base-300">
       <div className="card-body">
-        <h2 className="card-title">Game Complete</h2>
+        <h2 className="card-title">Experiment Complete</h2>
 
         <div className="alert alert-success">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
@@ -34,7 +34,7 @@ export default function ResultsDisplay({
           </svg>
           <div>
             <p className="font-medium">You were the {isInvestor ? 'Investor' : 'Trustee'}</p>
-            <p className="text-sm">The game has ended. See results below.</p>
+            <p className="text-sm">The experiment has ended. See results below.</p>
           </div>
         </div>
 
@@ -54,7 +54,7 @@ export default function ResultsDisplay({
           </div>
 
           <div className="bg-base-200 p-4 rounded-lg">
-            <h3 className="font-semibold text-sm mb-3">Game Summary</h3>
+            <h3 className="font-semibold text-sm mb-3">Experiment Summary</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span>Investor endowment (E1):</span>

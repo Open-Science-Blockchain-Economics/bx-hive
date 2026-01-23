@@ -1,9 +1,9 @@
-// BRET (Bomb Risk Elicitation Task) game logic
+// BRET (Bomb Risk Elicitation Task) experiment logic
 
 import type { BRETState } from '../types'
 
 /**
- * Initialize a new BRET game state with a randomly placed bomb
+ * Initialize a new BRET experiment state with a randomly placed bomb
  * @param rows - Number of rows in the grid
  * @param cols - Number of columns in the grid
  * @returns Initial BRETState with random bomb location
@@ -41,7 +41,7 @@ export function calculatePayout(
 }
 
 /**
- * Process the player's decision and return the completed game state
+ * Process the player's decision and return the completed experiment state
  * @param state - Current BRET state
  * @param selectedBoxes - Array of box indices the player selected
  * @param paymentPerBox - Amount earned per box (γ)

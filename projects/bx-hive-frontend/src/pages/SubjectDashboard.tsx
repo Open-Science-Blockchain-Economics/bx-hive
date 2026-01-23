@@ -1,54 +1,54 @@
 import { useEffect, useState } from 'react'
-import GameCard from '../components/subject/GameCard'
-import { getGames, registerForGame } from '../db'
+import ExperimentCard from '../components/subject/ExperimentCard'
+import { getExperiments, registerForExperiment } from '../db'
 import { useActiveUser } from '../hooks/useActiveUser'
-import type { Game } from '../types'
+import type { Experiment } from '../types'
 
 export default function SubjectDashboard() {
   const { activeUser } = useActiveUser()
-  const [games, setGames] = useState<Game[]>([])
+  const [experiments, setExperiments] = useState<Experiment[]>([])
   const [loading, setLoading] = useState(true)
   const [registering, setRegistering] = useState<string | null>(null)
 
   useEffect(() => {
-    loadGames()
+    loadExperiments()
   }, [])
 
-  async function loadGames() {
+  async function loadExperiments() {
     try {
       setLoading(true)
-      const allGames = await getGames()
-      const openGames = allGames.filter((game) => game.status === 'active')
-      setGames(openGames)
+      const allExperiments = await getExperiments()
+      const openExperiments = allExperiments.filter((experiment) => experiment.status === 'active')
+      setExperiments(openExperiments)
     } catch (err) {
-      console.error('Failed to load games:', err)
+      console.error('Failed to load experiments:', err)
     } finally {
       setLoading(false)
     }
   }
 
-  function isRegistered(game: Game): boolean {
+  function isRegistered(experiment: Experiment): boolean {
     if (!activeUser) return false
-    return game.players.some((p) => p.userId === activeUser.id)
+    return experiment.players.some((p) => p.userId === activeUser.id)
   }
 
-  function hasActiveMatch(game: Game): boolean {
+  function hasActiveMatch(experiment: Experiment): boolean {
     if (!activeUser) return false
-    return game.matches.some((m) => (m.player1Id === activeUser.id || m.player2Id === activeUser.id) && m.status === 'playing')
+    return experiment.matches.some((m) => (m.player1Id === activeUser.id || m.player2Id === activeUser.id) && m.status === 'playing')
   }
 
-  function hasCompletedMatch(game: Game): boolean {
+  function hasCompletedMatch(experiment: Experiment): boolean {
     if (!activeUser) return false
-    return game.matches.some((m) => (m.player1Id === activeUser.id || m.player2Id === activeUser.id) && m.status === 'completed')
+    return experiment.matches.some((m) => (m.player1Id === activeUser.id || m.player2Id === activeUser.id) && m.status === 'completed')
   }
 
-  async function handleRegister(gameId: string, playerCount: 1 | 2) {
+  async function handleRegister(experimentId: string, playerCount: 1 | 2) {
     if (!activeUser) return
 
     try {
-      setRegistering(gameId)
-      await registerForGame(gameId, activeUser.id, playerCount)
-      await loadGames()
+      setRegistering(experimentId)
+      await registerForExperiment(experimentId, activeUser.id, playerCount)
+      await loadExperiments()
     } catch (err) {
       console.error('Failed to register:', err)
     } finally {
@@ -56,15 +56,15 @@ export default function SubjectDashboard() {
     }
   }
 
-  // Split games into available and completed
-  const availableGames = games.filter((game) => !hasCompletedMatch(game))
-  const completedGames = games.filter((game) => hasCompletedMatch(game))
+  // Split experiments into available and completed
+  const availableExperiments = experiments.filter((experiment) => !hasCompletedMatch(experiment))
+  const completedExperiments = experiments.filter((experiment) => hasCompletedMatch(experiment))
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Subject Dashboard</h1>
-        <p className="text-base-content/70 mt-2">View and register for available games</p>
+        <p className="text-base-content/70 mt-2">View and register for available experiments</p>
       </div>
 
       {loading ? (
@@ -73,40 +73,40 @@ export default function SubjectDashboard() {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Available Games Section */}
+          {/* Available Experiments Section */}
           <section>
-            <h2 className="text-lg font-semibold mb-4">Available Games</h2>
-            {availableGames.length === 0 ? (
+            <h2 className="text-lg font-semibold mb-4">Available Experiments</h2>
+            {availableExperiments.length === 0 ? (
               <div className="text-center py-8 text-base-content/70 bg-base-200 rounded-lg">
-                <p>No games available at the moment.</p>
-                <p className="text-sm mt-2">Check back later for new games.</p>
+                <p>No experiments available at the moment.</p>
+                <p className="text-sm mt-2">Check back later for new experiments.</p>
               </div>
             ) : (
               <div className="grid gap-4">
-                {availableGames.map((game) => (
-                  <GameCard
-                    key={game.id}
-                    game={game}
+                {availableExperiments.map((experiment) => (
+                  <ExperimentCard
+                    key={experiment.id}
+                    experiment={experiment}
                     isCompleted={false}
-                    isRegistered={isRegistered(game)}
-                    hasActiveMatch={hasActiveMatch(game)}
-                    isRegistering={registering === game.id}
-                    onRegister={(playerCount) => handleRegister(game.id, playerCount)}
+                    isRegistered={isRegistered(experiment)}
+                    hasActiveMatch={hasActiveMatch(experiment)}
+                    isRegistering={registering === experiment.id}
+                    onRegister={(playerCount) => handleRegister(experiment.id, playerCount)}
                   />
                 ))}
               </div>
             )}
           </section>
 
-          {/* Completed Games Section */}
-          {completedGames.length > 0 && (
+          {/* Completed Experiments Section */}
+          {completedExperiments.length > 0 && (
             <section>
-              <h2 className="text-lg font-semibold mb-4">Completed Games</h2>
+              <h2 className="text-lg font-semibold mb-4">Completed Experiments</h2>
               <div className="grid gap-4">
-                {completedGames.map((game) => (
-                  <GameCard
-                    key={game.id}
-                    game={game}
+                {completedExperiments.map((experiment) => (
+                  <ExperimentCard
+                    key={experiment.id}
+                    experiment={experiment}
                     isCompleted={true}
                     isRegistered={true}
                     hasActiveMatch={false}

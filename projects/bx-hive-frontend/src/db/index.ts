@@ -5,7 +5,7 @@ const DB_VERSION = 1
 
 export const STORES = {
   USERS: 'users',
-  GAMES: 'games',
+  EXPERIMENTS: 'experiments',
 } as const
 
 let dbInstance: IDBDatabase | null = null
@@ -64,11 +64,11 @@ export async function initDB(): Promise<IDBDatabase> {
         usersStore.createIndex('role', 'role', { unique: false })
       }
 
-      if (!db.objectStoreNames.contains(STORES.GAMES)) {
-        console.log('[DB] Creating games store')
-        const gamesStore = db.createObjectStore(STORES.GAMES, { keyPath: 'id' })
-        gamesStore.createIndex('experimenterId', 'experimenterId', { unique: false })
-        gamesStore.createIndex('status', 'status', { unique: false })
+      if (!db.objectStoreNames.contains(STORES.EXPERIMENTS)) {
+        console.log('[DB] Creating experiments store')
+        const experimentsStore = db.createObjectStore(STORES.EXPERIMENTS, { keyPath: 'id' })
+        experimentsStore.createIndex('experimenterId', 'experimenterId', { unique: false })
+        experimentsStore.createIndex('status', 'status', { unique: false })
       }
     }
   })
@@ -191,6 +191,6 @@ export async function executeWriteTransaction<T = void>(
 
 // Re-export all domain-specific operations
 export * from './bret'
-export * from './games'
-export * from './trustGame'
+export * from './experiments'
+export * from './trustExperiment'
 export * from './users'

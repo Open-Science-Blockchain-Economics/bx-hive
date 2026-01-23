@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { submitTrusteeDecision } from '../../../db'
-import { calculateTrusteeReceived } from '../../../game/trustGame'
+import { calculateTrusteeReceived } from '../../../experiment-logic/trustExperiment'
 
 interface TrusteeInterfaceProps {
-  gameId: string
+  experimentId: string
   matchId: string
   E1: number
   E2: number
@@ -13,7 +13,7 @@ interface TrusteeInterfaceProps {
   onDecisionMade: () => void
 }
 
-export default function TrusteeInterface({ gameId, matchId, E1, E2, m, UNIT, investorDecision, onDecisionMade }: TrusteeInterfaceProps) {
+export default function TrusteeInterface({ experimentId, matchId, E1, E2, m, UNIT, investorDecision, onDecisionMade }: TrusteeInterfaceProps) {
   const received = calculateTrusteeReceived(investorDecision, m)
 
   const [returnAmount, setReturnAmount] = useState(0)
@@ -27,7 +27,7 @@ export default function TrusteeInterface({ gameId, matchId, E1, E2, m, UNIT, inv
 
     try {
       setSubmitting(true)
-      await submitTrusteeDecision(gameId, matchId, returnAmount)
+      await submitTrusteeDecision(experimentId, matchId, returnAmount)
       onDecisionMade()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit decision')

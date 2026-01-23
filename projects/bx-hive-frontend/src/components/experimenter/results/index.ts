@@ -1,9 +1,9 @@
 import BRETResults from './BRETResults'
-import TrustGameResults from './TrustGameResults'
+import TrustExperimentResults from './TrustExperimentResults'
 
-export const GAME_RESULTS_COMPONENTS = {
-  'trust-game': TrustGameResults,
+export const EXPERIMENT_RESULTS_COMPONENTS = {
+  'trust-game': TrustExperimentResults,
   bret: BRETResults,
 } as const
 
-export { BRETResults, TrustGameResults }
+export { BRETResults, TrustExperimentResults }

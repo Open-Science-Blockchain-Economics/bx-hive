@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { submitInvestorDecision } from '../../../db'
-import { calculateInvestorRefund, calculateTrusteeReceived } from '../../../game/trustGame'
+import { calculateInvestorRefund, calculateTrusteeReceived } from '../../../experiment-logic/trustExperiment'
 
 interface InvestorInterfaceProps {
-  gameId: string
+  experimentId: string
   matchId: string
   E1: number
   m: number
@@ -11,7 +11,7 @@ interface InvestorInterfaceProps {
   onDecisionMade: () => void
 }
 
-export default function InvestorInterface({ gameId, matchId, E1, m, UNIT, onDecisionMade }: InvestorInterfaceProps) {
+export default function InvestorInterface({ experimentId, matchId, E1, m, UNIT, onDecisionMade }: InvestorInterfaceProps) {
   const [investment, setInvestment] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -24,7 +24,7 @@ export default function InvestorInterface({ gameId, matchId, E1, m, UNIT, onDeci
 
     try {
       setSubmitting(true)
-      await submitInvestorDecision(gameId, matchId, investment)
+      await submitInvestorDecision(experimentId, matchId, investment)
       onDecisionMade()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit decision')

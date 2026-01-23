@@ -1,14 +1,14 @@
-import { processDecision } from '../game/bret'
+import { processDecision } from '../experiment-logic/bret'
 import type { BRETState, Match } from '../types'
-import { getGameById, updateGame } from './games'
+import { getExperimentById, updateExperiment } from './experiments'
 
-export async function submitBRETDecision(gameId: string, matchId: string, selectedBoxes: number[]): Promise<Match> {
-  const game = await getGameById(gameId)
-  if (!game) {
-    throw new Error('Game not found')
+export async function submitBRETDecision(experimentId: string, matchId: string, selectedBoxes: number[]): Promise<Match> {
+  const experiment = await getExperimentById(experimentId)
+  if (!experiment) {
+    throw new Error('Experiment not found')
   }
 
-  const match = game.matches.find((m) => m.id === matchId)
+  const match = experiment.matches.find((m) => m.id === matchId)
   if (!match) {
     throw new Error('Match not found')
   }
@@ -17,9 +17,9 @@ export async function submitBRETDecision(gameId: string, matchId: string, select
     throw new Error('Not in decision phase')
   }
 
-  const rows = game.parameters.rows as number
-  const cols = game.parameters.cols as number
-  const paymentPerBox = game.parameters.paymentPerBox as number
+  const rows = experiment.parameters.rows as number
+  const cols = experiment.parameters.cols as number
+  const paymentPerBox = experiment.parameters.paymentPerBox as number
   const totalBoxes = rows * cols
 
   // Validate selected boxes
@@ -44,6 +44,6 @@ export async function submitBRETDecision(gameId: string, matchId: string, select
   match.state = updatedState
   match.status = 'completed'
 
-  await updateGame(game)
+  await updateExperiment(experiment)
   return match
 }

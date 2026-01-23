@@ -1,21 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { createGame, getGamesByExperimenter } from '../db'
-import { gameTemplates, getTemplateById } from '../game/templates'
+import { createExperiment, getExperimentsByExperimenter } from '../db'
+import { experimentTemplates, getTemplateById } from '../experiment-logic/templates'
 import { useActiveUser } from '../hooks/useActiveUser'
-import type { Game } from '../types'
+import type { Experiment } from '../types'
 
-type TabType = 'games' | 'create'
+type TabType = 'experiments' | 'create'
 
 export default function ExperimenterDashboard() {
   const { activeUser } = useActiveUser()
-  const [activeTab, setActiveTab] = useState<TabType>('games')
-  const [games, setGames] = useState<Game[]>([])
+  const [activeTab, setActiveTab] = useState<TabType>('experiments')
+  const [experiments, setExperiments] = useState<Experiment[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Create game form state
-  const [selectedTemplateId, setSelectedTemplateId] = useState(gameTemplates[0]?.id || '')
-  const [gameName, setGameName] = useState('')
+  // Create experiment form state
+  const [selectedTemplateId, setSelectedTemplateId] = useState(experimentTemplates[0]?.id || '')
+  const [experimentName, setExperimentName] = useState('')
   const [parameters, setParameters] = useState<Record<string, number | string>>({})
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -24,7 +24,7 @@ export default function ExperimenterDashboard() {
 
   useEffect(() => {
     if (activeUser) {
-      loadGames()
+      loadExperiments()
     }
   }, [activeUser])
 
@@ -40,24 +40,24 @@ export default function ExperimenterDashboard() {
     }
   }, [selectedTemplate])
 
-  async function loadGames() {
+  async function loadExperiments() {
     if (!activeUser) return
     try {
       setLoading(true)
-      const experimenterGames = await getGamesByExperimenter(activeUser.id)
-      setGames(experimenterGames)
+      const experimenterExperiments = await getExperimentsByExperimenter(activeUser.id)
+      setExperiments(experimenterExperiments)
     } catch (err) {
-      console.error('Failed to load games:', err)
+      console.error('Failed to load experiments:', err)
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleCreateGame() {
+  async function handleCreateExperiment() {
     setError(null)
 
-    if (!gameName.trim()) {
-      setError('Game name is required')
+    if (!experimentName.trim()) {
+      setError('Experiment name is required')
       return
     }
 
@@ -65,12 +65,12 @@ export default function ExperimenterDashboard() {
 
     try {
       setCreating(true)
-      await createGame(selectedTemplateId, activeUser.id, gameName.trim(), parameters)
-      setGameName('')
-      await loadGames()
-      setActiveTab('games')
+      await createExperiment(selectedTemplateId, activeUser.id, experimentName.trim(), parameters)
+      setExperimentName('')
+      await loadExperiments()
+      setActiveTab('experiments')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create game')
+      setError(err instanceof Error ? err.message : 'Failed to create experiment')
     } finally {
       setCreating(false)
     }
@@ -91,54 +91,54 @@ export default function ExperimenterDashboard() {
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Experimenter Dashboard</h1>
-        <p className="text-base-content/70 mt-2">Create and manage games</p>
+        <p className="text-base-content/70 mt-2">Create and manage experiments</p>
       </div>
 
       <div role="tablist" className="tabs tabs-boxed mb-6">
-        <a role="tab" className={`tab ${activeTab === 'games' ? 'tab-active' : ''}`} onClick={() => setActiveTab('games')}>
-          My Games
+        <a role="tab" className={`tab ${activeTab === 'experiments' ? 'tab-active' : ''}`} onClick={() => setActiveTab('experiments')}>
+          My Experiments
         </a>
         <a role="tab" className={`tab ${activeTab === 'create' ? 'tab-active' : ''}`} onClick={() => setActiveTab('create')}>
           Create New
         </a>
       </div>
 
-      {activeTab === 'games' && (
+      {activeTab === 'experiments' && (
         <div>
           {loading ? (
             <div className="flex justify-center py-12">
               <span className="loading loading-spinner loading-lg"></span>
             </div>
-          ) : games.length === 0 ? (
+          ) : experiments.length === 0 ? (
             <div className="text-center py-12 text-base-content/70">
-              <p>No games yet. Create your first game!</p>
+              <p>No experiments yet. Create your first experiment!</p>
               <button className="btn btn-primary mt-4" onClick={() => setActiveTab('create')}>
-                Create Game
+                Create Experiment
               </button>
             </div>
           ) : (
             <div className="grid gap-4">
-              {games.map((game) => {
-                const template = getTemplateById(game.templateId)
-                const playingMatches = game.matches.filter((m) => m.status === 'playing')
-                const completedMatches = game.matches.filter((m) => m.status === 'completed')
+              {experiments.map((experiment) => {
+                const template = getTemplateById(experiment.templateId)
+                const playingMatches = experiment.matches.filter((m) => m.status === 'playing')
+                const completedMatches = experiment.matches.filter((m) => m.status === 'completed')
 
                 return (
-                  <div key={game.id} className="card bg-base-100 border border-base-300">
+                  <div key={experiment.id} className="card bg-base-100 border border-base-300">
                     <div className="card-body">
                       <div className="flex justify-between items-start">
                         <div>
-                          <Link to={`/experimenter/game/${game.id}`}>
-                            <h3 className="card-title hover:text-primary transition-colors cursor-pointer">{game.name}</h3>
+                          <Link to={`/experimenter/experiment/${experiment.id}`}>
+                            <h3 className="card-title hover:text-primary transition-colors cursor-pointer">{experiment.name}</h3>
                           </Link>
-                          <p className="text-sm text-base-content/70">{template?.label || template?.name || game.templateId}</p>
+                          <p className="text-sm text-base-content/70">{template?.label || template?.name || experiment.templateId}</p>
                         </div>
                         <span
                           className={`badge ${
-                            game.status === 'active' ? 'badge-success' : game.status === 'closed' ? 'badge-warning' : 'badge-neutral'
+                            experiment.status === 'active' ? 'badge-success' : experiment.status === 'closed' ? 'badge-warning' : 'badge-neutral'
                           }`}
                         >
-                          {game.status}
+                          {experiment.status}
                         </span>
                       </div>
 
@@ -146,7 +146,7 @@ export default function ExperimenterDashboard() {
                       <div className="flex flex-wrap gap-4 text-sm mt-2">
                         <div>
                           <span className="text-base-content/70">Players: </span>
-                          <span className="font-medium">{game.players.length}</span>
+                          <span className="font-medium">{experiment.players.length}</span>
                         </div>
                         {template?.playerCount === 2 && (
                           <>
@@ -173,14 +173,14 @@ export default function ExperimenterDashboard() {
       {activeTab === 'create' && (
         <div className="card bg-base-100 shadow-xl">
           <div className="card-body">
-            <h2 className="card-title text-2xl mb-4">Create New Game</h2>
+            <h2 className="card-title text-2xl mb-4">Create New Experiment</h2>
 
             <div className="space-y-3">
               {/* Step 1: Template Selection */}
               <div>
                 <h3 className="font-semibold text-lg mb-2">1. Select Template</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {gameTemplates.map((template) => (
+                  {experimentTemplates.map((template) => (
                     <div
                       key={template.id}
                       className={`card bg-base-100 border-2 cursor-pointer transition-all ${
@@ -205,18 +205,18 @@ export default function ExperimenterDashboard() {
                 </div>
               </div>
 
-              {/* Step 2: Game Details */}
+              {/* Step 2: Experiment Details */}
               <div className="divider"></div>
               <div>
-                <h3 className="font-semibold text-lg mb-4">2. Game Details</h3>
+                <h3 className="font-semibold text-lg mb-4">2. Experiment Details</h3>
                 <div className="form-control">
-                  <span className="label-text font-medium mb-2">Game Name</span>
+                  <span className="label-text font-medium mb-2">Experiment Name</span>
                   <input
                     type="text"
                     className="input input-bordered"
-                    value={gameName}
-                    onChange={(e) => setGameName(e.target.value)}
-                    placeholder="e.g., Trust Game - Spring 2025"
+                    value={experimentName}
+                    onChange={(e) => setExperimentName(e.target.value)}
+                    placeholder="e.g., Trust Experiment - Spring 2025"
                   />
                 </div>
               </div>
@@ -276,14 +276,14 @@ export default function ExperimenterDashboard() {
 
             {/* Actions */}
             <div className="card-actions justify-end mt-6">
-              <button className="btn btn-primary" onClick={handleCreateGame} disabled={creating || !gameName.trim()}>
+              <button className="btn btn-primary" onClick={handleCreateExperiment} disabled={creating || !experimentName.trim()}>
                 {creating ? (
                   <>
                     <span className="loading loading-spinner loading-sm"></span>
                     Creating...
                   </>
                 ) : (
-                  'Create Game'
+                  'Create Experiment'
                 )}
               </button>
             </div>

@@ -1,10 +1,10 @@
 import { createBrowserRouter } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import ExperimentDetails from './pages/ExperimentDetails'
 import ExperimenterDashboard from './pages/ExperimenterDashboard'
-import GameDetails from './pages/GameDetails'
 import Home from './pages/Home'
-import PlayGame from './pages/PlayGame'
+import PlayExperiment from './pages/PlayExperiment'
 import SubjectDashboard from './pages/SubjectDashboard'
 
 export const router = createBrowserRouter([
@@ -22,10 +22,10 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'experimenter/game/:gameId',
+        path: 'experimenter/experiment/:experimentId',
         element: (
           <ProtectedRoute>
-            <GameDetails />
+            <ExperimentDetails />
           </ProtectedRoute>
         ),
       },
@@ -38,10 +38,10 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'play/:gameId',
+        path: 'play/:experimentId',
         element: (
           <ProtectedRoute>
-            <PlayGame />
+            <PlayExperiment />
           </ProtectedRoute>
         ),
       },

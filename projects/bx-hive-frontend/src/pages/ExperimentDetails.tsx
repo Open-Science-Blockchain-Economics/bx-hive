@@ -1,57 +1,57 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { GAME_RESULTS_COMPONENTS } from '../components/experimenter/results'
-import { closeGameRegistration, getGameById, getUsers, updateGameStatus } from '../db'
-import { getTemplateById } from '../game/templates'
+import { EXPERIMENT_RESULTS_COMPONENTS } from '../components/experimenter/results'
+import { closeExperimentRegistration, getExperimentById, getUsers, updateExperimentStatus } from '../db'
+import { getTemplateById } from '../experiment-logic/templates'
 import { useActiveUser } from '../hooks/useActiveUser'
-import type { Game, User } from '../types'
+import type { Experiment, User } from '../types'
 
-export default function GameDetails() {
-  const { gameId } = useParams<{ gameId: string }>()
+export default function ExperimentDetails() {
+  const { experimentId } = useParams<{ experimentId: string }>()
   const { activeUser } = useActiveUser()
-  const [game, setGame] = useState<Game | null>(null)
+  const [experiment, setExperiment] = useState<Experiment | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [actionInProgress, setActionInProgress] = useState(false)
 
   useEffect(() => {
-    if (gameId && activeUser) {
-      loadGameData()
+    if (experimentId && activeUser) {
+      loadExperimentData()
     }
-  }, [gameId, activeUser])
+  }, [experimentId, activeUser])
 
-  async function loadGameData() {
-    if (!gameId) return
+  async function loadExperimentData() {
+    if (!experimentId) return
 
     try {
       setLoading(true)
       setError(null)
 
-      const [gameData, allUsers] = await Promise.all([getGameById(gameId), getUsers()])
+      const [experimentData, allUsers] = await Promise.all([getExperimentById(experimentId), getUsers()])
 
-      if (!gameData) {
-        setError('Game not found')
+      if (!experimentData) {
+        setError('Experiment not found')
         return
       }
 
-      setGame(gameData)
+      setExperiment(experimentData)
       setUsers(allUsers)
     } catch (err) {
-      console.error('Failed to load game:', err)
-      setError('Failed to load game data')
+      console.error('Failed to load experiment:', err)
+      setError('Failed to load experiment data')
     } finally {
       setLoading(false)
     }
   }
 
   async function handleCloseRegistration() {
-    if (!gameId) return
+    if (!experimentId) return
 
     try {
       setActionInProgress(true)
-      await closeGameRegistration(gameId)
-      await loadGameData()
+      await closeExperimentRegistration(experimentId)
+      await loadExperimentData()
     } catch (err) {
       console.error('Failed to close registration:', err)
       setError(err instanceof Error ? err.message : 'Failed to close registration')
@@ -61,12 +61,12 @@ export default function GameDetails() {
   }
 
   async function handleReopenRegistration() {
-    if (!gameId) return
+    if (!experimentId) return
 
     try {
       setActionInProgress(true)
-      await updateGameStatus(gameId, 'active')
-      await loadGameData()
+      await updateExperimentStatus(experimentId, 'active')
+      await loadExperimentData()
     } catch (err) {
       console.error('Failed to reopen registration:', err)
       setError(err instanceof Error ? err.message : 'Failed to reopen registration')
@@ -83,7 +83,7 @@ export default function GameDetails() {
     )
   }
 
-  if (error || !game || !activeUser) {
+  if (error || !experiment || !activeUser) {
     return (
       <div className="text-center py-12">
         <p className="text-error">{error || 'Something went wrong'}</p>
@@ -94,9 +94,9 @@ export default function GameDetails() {
     )
   }
 
-  const template = getTemplateById(game.templateId)
-  const playingMatches = game.matches.filter((m) => m.status === 'playing')
-  const completedMatches = game.matches.filter((m) => m.status === 'completed')
+  const template = getTemplateById(experiment.templateId)
+  const playingMatches = experiment.matches.filter((m) => m.status === 'playing')
+  const completedMatches = experiment.matches.filter((m) => m.status === 'completed')
 
   return (
     <div className="space-y-6">
@@ -107,32 +107,32 @@ export default function GameDetails() {
         </Link>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold">{game.name}</h1>
+            <h1 className="text-3xl font-bold">{experiment.name}</h1>
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-base-content/70">{template?.label || template?.name || game.templateId}</span>
+              <span className="text-base-content/70">{template?.label || template?.name || experiment.templateId}</span>
               <span className="text-base-content/50">•</span>
-              <span className="text-sm text-base-content/50">Created {new Date(game.createdAt).toLocaleDateString()}</span>
+              <span className="text-sm text-base-content/50">Created {new Date(experiment.createdAt).toLocaleDateString()}</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <span
               className={`badge badge-lg ${
-                game.status === 'active' ? 'badge-success' : game.status === 'closed' ? 'badge-warning' : 'badge-neutral'
+                experiment.status === 'active' ? 'badge-success' : experiment.status === 'closed' ? 'badge-warning' : 'badge-neutral'
               }`}
             >
-              {game.status === 'active' && '🟢 Active'}
-              {game.status === 'closed' && '🔒 Closed'}
-              {game.status === 'completed' && '✓ Completed'}
+              {experiment.status === 'active' && '🟢 Active'}
+              {experiment.status === 'closed' && '🔒 Closed'}
+              {experiment.status === 'completed' && '✓ Completed'}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Game Configuration */}
+      {/* Experiment Configuration */}
       <div className="card bg-base-100 border border-base-300">
         <div className="card-body">
-          <h2 className="card-title">Game Configuration</h2>
-          <p className="text-sm text-base-content/60 mb-4">Parameters cannot be changed after game creation</p>
+          <h2 className="card-title">Experiment Configuration</h2>
+          <p className="text-sm text-base-content/60 mb-4">Parameters cannot be changed after experiment creation</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {template?.parameterSchema.map((param) => (
@@ -141,7 +141,7 @@ export default function GameDetails() {
                   <span className="label-text font-medium text-base-content/70">{param.label}</span>
                 </label>
                 <div className="p-3 bg-base-200 rounded-lg">
-                  <span className="font-semibold">{game.parameters[param.name]}</span>
+                  <span className="font-semibold">{experiment.parameters[param.name]}</span>
                 </div>
                 {param.description && (
                   <label className="label">
@@ -154,23 +154,23 @@ export default function GameDetails() {
         </div>
       </div>
 
-      {/* Game Management */}
+      {/* Experiment Management */}
       <div className="card bg-base-100 border border-base-300">
         <div className="card-body">
-          <h2 className="card-title">Game Management</h2>
+          <h2 className="card-title">Experiment Management</h2>
 
           <div className="flex items-start gap-4">
             <div className="flex-1">
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-base-content/70">Registration Status:</span>
-                  <span className={`font-semibold ${game.status === 'active' ? 'text-success' : 'text-warning'}`}>
-                    {game.status === 'active' ? 'Open' : 'Closed'}
+                  <span className={`font-semibold ${experiment.status === 'active' ? 'text-success' : 'text-warning'}`}>
+                    {experiment.status === 'active' ? 'Open' : 'Closed'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-base-content/70">Total Players:</span>
-                  <span className="font-semibold">{game.players.length}</span>
+                  <span className="font-semibold">{experiment.players.length}</span>
                 </div>
                 {template?.playerCount === 2 && (
                   <>
@@ -188,7 +188,7 @@ export default function GameDetails() {
             </div>
 
             <div className="flex flex-col gap-2">
-              {game.status === 'active' && (
+              {experiment.status === 'active' && (
                 <button className="btn btn-warning" onClick={handleCloseRegistration} disabled={actionInProgress}>
                   {actionInProgress ? (
                     <>
@@ -201,7 +201,7 @@ export default function GameDetails() {
                 </button>
               )}
 
-              {game.status === 'closed' && (
+              {experiment.status === 'closed' && (
                 <button className="btn btn-success" onClick={handleReopenRegistration} disabled={actionInProgress}>
                   {actionInProgress ? (
                     <>
@@ -216,7 +216,7 @@ export default function GameDetails() {
             </div>
           </div>
 
-          {game.status === 'active' && (
+          {experiment.status === 'active' && (
             <div className="alert alert-info mt-4">
               <span className="text-sm">
                 Closing registration will prevent new players from joining. Existing players can still complete their matches.
@@ -227,10 +227,10 @@ export default function GameDetails() {
       </div>
 
       {/* Registered Players */}
-      {game.players.length > 0 && (
+      {experiment.players.length > 0 && (
         <div className="card bg-base-100 border border-base-300">
           <div className="card-body">
-            <h2 className="card-title">Registered Players ({game.players.length})</h2>
+            <h2 className="card-title">Registered Players ({experiment.players.length})</h2>
             <div className="overflow-x-auto">
               <table className="table table-sm">
                 <thead>
@@ -240,7 +240,7 @@ export default function GameDetails() {
                   </tr>
                 </thead>
                 <tbody>
-                  {game.players.map((player) => {
+                  {experiment.players.map((player) => {
                     const user = users.find((u) => u.id === player.userId)
                     return (
                       <tr key={player.userId}>
@@ -256,11 +256,11 @@ export default function GameDetails() {
         </div>
       )}
 
-      {/* Game Results */}
-      {game.matches.length > 0 &&
+      {/* Experiment Results */}
+      {experiment.matches.length > 0 &&
         (() => {
-          const ResultsComponent = GAME_RESULTS_COMPONENTS[game.templateId as keyof typeof GAME_RESULTS_COMPONENTS]
-          return ResultsComponent ? <ResultsComponent game={game} users={users} /> : null
+          const ResultsComponent = EXPERIMENT_RESULTS_COMPONENTS[experiment.templateId as keyof typeof EXPERIMENT_RESULTS_COMPONENTS]
+          return ResultsComponent ? <ResultsComponent experiment={experiment} users={users} /> : null
         })()}
     </div>
   )

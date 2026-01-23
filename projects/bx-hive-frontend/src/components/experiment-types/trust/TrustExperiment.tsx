@@ -1,21 +1,21 @@
-import type { Game, Match, TrustGameState } from '../../../types'
+import type { Experiment, Match, TrustExperimentState } from '../../../types'
 import InvestorInterface from './InvestorInterface'
 import ResultsDisplay from './ResultsDisplay'
 import TrusteeInterface from './TrusteeInterface'
 
-interface TrustGameProps {
-  game: Game
+interface TrustExperimentProps {
+  experiment: Experiment
   match: Match
   activeUserId: string
-  onGameUpdate: () => void
+  onExperimentUpdate: () => void
 }
 
-export default function TrustGame({ game, match, activeUserId, onGameUpdate }: TrustGameProps) {
-  // Extract Trust Game parameters
-  const E1 = game.parameters.E1 as number
-  const E2 = game.parameters.E2 as number
-  const m = game.parameters.m as number
-  const UNIT = game.parameters.UNIT as number
+export default function TrustExperiment({ experiment, match, activeUserId, onExperimentUpdate }: TrustExperimentProps) {
+  // Extract Trust Experiment parameters
+  const E1 = experiment.parameters.E1 as number
+  const E2 = experiment.parameters.E2 as number
+  const m = experiment.parameters.m as number
+  const UNIT = experiment.parameters.UNIT as number
 
   // Determine player role
   const isInvestor = match.player1Id === activeUserId
@@ -24,12 +24,12 @@ export default function TrustGame({ game, match, activeUserId, onGameUpdate }: T
   if (!match.state) {
     return (
       <div className="text-center py-8 text-base-content/60">
-        <p>Game state not initialized</p>
+        <p>Experiment state not initialized</p>
       </div>
     )
   }
 
-  const state = match.state as TrustGameState
+  const state = match.state as TrustExperimentState
   const { phase, investorDecision, trusteeDecision, investorPayout, trusteePayout } = state
 
   // Completed - show results
@@ -57,7 +57,7 @@ export default function TrustGame({ game, match, activeUserId, onGameUpdate }: T
   // Investor decision phase
   if (phase === 'investor_decision') {
     if (isInvestor) {
-      return <InvestorInterface gameId={game.id} matchId={match.id} E1={E1} m={m} UNIT={UNIT} onDecisionMade={onGameUpdate} />
+      return <InvestorInterface experimentId={experiment.id} matchId={match.id} E1={E1} m={m} UNIT={UNIT} onDecisionMade={onExperimentUpdate} />
     } else {
       return (
         <div className="card bg-base-100 border border-base-300">
@@ -65,7 +65,7 @@ export default function TrustGame({ game, match, activeUserId, onGameUpdate }: T
             <h2 className="card-title justify-center">Waiting for Investor</h2>
             <p className="text-base-content/70 mt-2">The Investor is deciding how much to send you.</p>
             <p className="text-sm text-base-content/50 mt-4">Refresh the page to check for updates.</p>
-            <button className="btn btn-outline mt-4" onClick={onGameUpdate}>
+            <button className="btn btn-outline mt-4" onClick={onExperimentUpdate}>
               Refresh
             </button>
           </div>
@@ -79,14 +79,14 @@ export default function TrustGame({ game, match, activeUserId, onGameUpdate }: T
     if (!isInvestor) {
       return (
         <TrusteeInterface
-          gameId={game.id}
+          experimentId={experiment.id}
           matchId={match.id}
           E1={E1}
           E2={E2}
           m={m}
           UNIT={UNIT}
           investorDecision={investorDecision}
-          onDecisionMade={onGameUpdate}
+          onDecisionMade={onExperimentUpdate}
         />
       )
     } else {
@@ -102,7 +102,7 @@ export default function TrustGame({ game, match, activeUserId, onGameUpdate }: T
               return.
             </p>
             <p className="text-sm text-base-content/50 mt-4">Refresh the page to check for updates.</p>
-            <button className="btn btn-outline mt-4" onClick={onGameUpdate}>
+            <button className="btn btn-outline mt-4" onClick={onExperimentUpdate}>
               Refresh
             </button>
           </div>
@@ -114,7 +114,7 @@ export default function TrustGame({ game, match, activeUserId, onGameUpdate }: T
   // Unknown state
   return (
     <div className="text-center py-8 text-base-content/60">
-      <p>Unknown game state</p>
+      <p>Unknown experiment state</p>
     </div>
   )
 }

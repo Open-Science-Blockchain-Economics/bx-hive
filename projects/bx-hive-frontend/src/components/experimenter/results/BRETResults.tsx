@@ -1,25 +1,25 @@
 import { useState } from 'react'
-import type { BRETState, Game, User } from '../../../types'
-import BRETBox from '../../game/bret/BRETBox'
+import type { BRETState, Experiment, User } from '../../../types'
+import BRETBox from '../../experiment-types/bret/BRETBox'
 
 interface BRETResultsProps {
-  game: Game
+  experiment: Experiment
   users: User[]
 }
 
-export default function BRETResults({ game, users }: BRETResultsProps) {
+export default function BRETResults({ experiment, users }: BRETResultsProps) {
   const [viewingMatchId, setViewingMatchId] = useState<string | null>(null)
 
-  const rows = game.parameters.rows as number
-  const cols = game.parameters.cols as number
-  const paymentPerBox = game.parameters.paymentPerBox as number
+  const rows = experiment.parameters.rows as number
+  const cols = experiment.parameters.cols as number
+  const paymentPerBox = experiment.parameters.paymentPerBox as number
   const totalBoxes = rows * cols
 
   function getUserName(userId: string): string {
     return users.find((u) => u.id === userId)?.name || 'Unknown'
   }
 
-  const viewingMatch = viewingMatchId ? game.matches.find((m) => m.id === viewingMatchId) : null
+  const viewingMatch = viewingMatchId ? experiment.matches.find((m) => m.id === viewingMatchId) : null
   const viewingState = viewingMatch?.state as BRETState | undefined
 
   return (
@@ -41,7 +41,7 @@ export default function BRETResults({ game, users }: BRETResultsProps) {
               </tr>
             </thead>
             <tbody>
-              {game.matches.map((match) => {
+              {experiment.matches.map((match) => {
                 const state = match.state as BRETState | undefined
                 const boxesSelected = state?.boxesCollected ?? '-'
                 const riskPercentage = state?.boxesCollected ? `${((state.boxesCollected / totalBoxes) * 100).toFixed(1)}%` : '-'

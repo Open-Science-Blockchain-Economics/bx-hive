@@ -1,11 +1,11 @@
-import type { Game, TrustGameState, User } from '../../../types'
+import type { Experiment, TrustExperimentState, User } from '../../../types'
 
-interface TrustGameResultsProps {
-  game: Game
+interface TrustExperimentResultsProps {
+  experiment: Experiment
   users: User[]
 }
 
-export default function TrustGameResults({ game, users }: TrustGameResultsProps) {
+export default function TrustExperimentResults({ experiment, users }: TrustExperimentResultsProps) {
   function getUserName(userId: string): string {
     return users.find((u) => u.id === userId)?.name || 'Unknown'
   }
@@ -28,8 +28,8 @@ export default function TrustGameResults({ game, users }: TrustGameResultsProps)
             </tr>
           </thead>
           <tbody>
-            {game.matches.map((match) => {
-              const state = match.state as TrustGameState | undefined
+            {experiment.matches.map((match) => {
+              const state = match.state as TrustExperimentState | undefined
 
               return (
                 <tr key={match.id}>

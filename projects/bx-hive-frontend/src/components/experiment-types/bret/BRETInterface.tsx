@@ -4,7 +4,7 @@ import type { BRETState } from '../../../types'
 import BRETBox from './BRETBox'
 
 interface BRETInterfaceProps {
-  gameId: string
+  experimentId: string
   matchId: string
   rows: number
   cols: number
@@ -13,7 +13,7 @@ interface BRETInterfaceProps {
   onDecisionMade: () => void
 }
 
-export default function BRETInterface({ gameId, matchId, rows, cols, paymentPerBox, state, onDecisionMade }: BRETInterfaceProps) {
+export default function BRETInterface({ experimentId, matchId, rows, cols, paymentPerBox, state, onDecisionMade }: BRETInterfaceProps) {
   const [boxesInput, setBoxesInput] = useState<string>('')
   const [targetCount, setTargetCount] = useState<number | null>(null)
   const [selectedBoxes, setSelectedBoxes] = useState<Set<number>>(new Set())
@@ -63,7 +63,7 @@ export default function BRETInterface({ gameId, matchId, rows, cols, paymentPerB
     setError(null)
 
     try {
-      await submitBRETDecision(gameId, matchId, Array.from(selectedBoxes))
+      await submitBRETDecision(experimentId, matchId, Array.from(selectedBoxes))
       onDecisionMade()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit decision')
@@ -305,7 +305,7 @@ export default function BRETInterface({ gameId, matchId, rows, cols, paymentPerB
   // Fallback for unexpected state
   return (
     <div className="alert alert-warning">
-      <span>Unexpected game state</span>
+      <span>Unexpected experiment state</span>
     </div>
   )
 }

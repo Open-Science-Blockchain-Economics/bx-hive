@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
-import { getTemplateById } from '../../game/templates'
-import type { Game } from '../../types'
+import { getTemplateById } from '../../experiment-logic/templates'
+import type { Experiment } from '../../types'
 
-interface GameCardProps {
-  game: Game
+interface ExperimentCardProps {
+  experiment: Experiment
   isCompleted: boolean
   isRegistered: boolean
   hasActiveMatch: boolean
@@ -11,23 +11,23 @@ interface GameCardProps {
   onRegister: (playerCount: 1 | 2) => void
 }
 
-export default function GameCard({
-  game,
+export default function ExperimentCard({
+  experiment,
   isCompleted,
   isRegistered,
   hasActiveMatch,
   isRegistering,
   onRegister,
-}: GameCardProps) {
-  const template = getTemplateById(game.templateId)
+}: ExperimentCardProps) {
+  const template = getTemplateById(experiment.templateId)
 
   return (
     <div className="card bg-base-100 border border-base-300">
       <div className="card-body">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="card-title">{game.name}</h3>
-            <p className="text-sm text-base-content/70">{template?.name || game.templateId}</p>
+            <h3 className="card-title">{experiment.name}</h3>
+            <p className="text-sm text-base-content/70">{template?.name || experiment.templateId}</p>
           </div>
           <div className="flex gap-2">
             {isCompleted ? (
@@ -42,7 +42,7 @@ export default function GameCard({
         {!isCompleted && (
           <div className="text-sm mt-2">
             <span className="text-base-content/70">Players registered: </span>
-            {game.players.length}
+            {experiment.players.length}
           </div>
         )}
 
@@ -50,7 +50,7 @@ export default function GameCard({
           <div className="text-xs text-base-content/60 mt-2">
             {template.parameterSchema.map((param) => (
               <span key={param.name} className="mr-4">
-                {param.label}: {game.parameters[param.name]}
+                {param.label}: {experiment.parameters[param.name]}
               </span>
             ))}
           </div>
@@ -75,13 +75,13 @@ export default function GameCard({
           )}
 
           {!isCompleted && isRegistered && hasActiveMatch && (
-            <Link to={`/play/${game.id}`} className="btn btn-success btn-sm">
+            <Link to={`/play/${experiment.id}`} className="btn btn-success btn-sm">
               Play
             </Link>
           )}
 
           {isCompleted && (
-            <Link to={`/play/${game.id}`} className="btn btn-ghost btn-sm">
+            <Link to={`/play/${experiment.id}`} className="btn btn-ghost btn-sm">
               View Results
             </Link>
           )}

@@ -1,11 +1,11 @@
-import type { GameTemplate } from '../types'
+import type { ExperimentTemplate } from '../types'
 
-export const trustGameTemplate: GameTemplate = {
+export const trustExperimentTemplate: ExperimentTemplate = {
   id: 'trust-game',
   name: 'Trust Game',
   label: 'Trust Game',
   description:
-    'A two-player game where Player 1 (Investor) sends money to Player 2 (Trustee). The amount is multiplied, and the Trustee decides how much to return.',
+    'A two-player experiment where Player 1 (Investor) sends money to Player 2 (Trustee). The amount is multiplied, and the Trustee decides how much to return.',
   playerCount: 2,
   parameterSchema: [
     {
@@ -44,12 +44,12 @@ export const trustGameTemplate: GameTemplate = {
   ],
 }
 
-export const bretTemplate: GameTemplate = {
+export const bretTemplate: ExperimentTemplate = {
   id: 'bret',
   name: 'BRET',
   label: 'Minesweeper',
   description:
-    'Bomb Risk Elicitation Task: A single-player risk preference game where you collect boxes from a grid. One box contains a bomb. Collect boxes to earn money, but if you collect the bomb, you earn nothing.',
+    'Bomb Risk Elicitation Task: A single-player risk preference experiment where you collect boxes from a grid. One box contains a bomb. Collect boxes to earn money, but if you collect the bomb, you earn nothing.',
   playerCount: 1,
   parameterSchema: [
     {
@@ -81,8 +81,8 @@ export const bretTemplate: GameTemplate = {
   ],
 }
 
-export const gameTemplates: GameTemplate[] = [trustGameTemplate, bretTemplate]
+export const experimentTemplates: ExperimentTemplate[] = [trustExperimentTemplate, bretTemplate]
 
-export function getTemplateById(id: string): GameTemplate | undefined {
-  return gameTemplates.find((t) => t.id === id)
+export function getTemplateById(id: string): ExperimentTemplate | undefined {
+  return experimentTemplates.find((t) => t.id === id)
 }
