@@ -79,4 +79,29 @@ export interface Experiment {
   createdAt: number
   players: Player[]
   matches: Match[]
+  batchId?: string // Links to parent batch (if part of a batch)
+  variationIndex?: number // Index within batch (0, 1, 2, ...)
+}
+
+// Batch Experiment Types
+
+export type AssignmentStrategy = 'fill_sequential' | 'round_robin'
+
+export interface ParameterVariation {
+  parameterName: string // e.g., "m"
+  values: (number | string)[] // e.g., [3, 4, 5]
+}
+
+export interface ExperimentBatch {
+  id: string
+  name: string // Display name for participants
+  templateId: string
+  experimenterId: string
+  baseParameters: Record<string, number | string> // Non-varied parameters
+  variations: ParameterVariation[] // Multiple parameters can be varied
+  assignmentStrategy: AssignmentStrategy
+  maxPerVariation?: number // Optional cap per variation
+  experimentIds: string[] // IDs of actual experiments
+  createdAt: number
+  status: ExperimentStatus
 }

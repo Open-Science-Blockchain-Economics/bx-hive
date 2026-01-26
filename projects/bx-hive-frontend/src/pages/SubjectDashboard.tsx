@@ -1,12 +1,23 @@
 import { useEffect, useState } from 'react'
 import ExperimentCard from '../components/subject/ExperimentCard'
-import { getExperiments, registerForExperiment } from '../db'
+import { getBatches, getExperiments, getExperimentsByBatchId, registerForBatch, registerForExperiment } from '../db'
 import { useActiveUser } from '../hooks/useActiveUser'
-import type { Experiment } from '../types'
+import type { Experiment, ExperimentBatch } from '../types'
+
+// Unified view for displaying experiments to subjects
+interface SubjectExperimentView {
+  id: string
+  isBatch: boolean
+  experiment: Experiment // For batches, this is a "representative" experiment
+  totalPlayers: number
+  displayParameters: Record<string, number | string>
+  // If user is registered in a batch, track which specific experiment
+  userExperimentId?: string
+}
 
 export default function SubjectDashboard() {
   const { activeUser } = useActiveUser()
-  const [experiments, setExperiments] = useState<Experiment[]>([])
+  const [experimentViews, setExperimentViews] = useState<SubjectExperimentView[]>([])
   const [loading, setLoading] = useState(true)
   const [registering, setRegistering] = useState<string | null>(null)
 
@@ -18,8 +29,63 @@ export default function SubjectDashboard() {
     try {
       setLoading(true)
       const allExperiments = await getExperiments()
-      const openExperiments = allExperiments.filter((experiment) => experiment.status === 'active')
-      setExperiments(openExperiments)
+      const allBatches = await getBatches()
+
+      const views: SubjectExperimentView[] = []
+
+      // Add standalone experiments (not part of a batch)
+      const standaloneExperiments = allExperiments.filter((exp) => !exp.batchId && exp.status === 'active')
+      for (const exp of standaloneExperiments) {
+        views.push({
+          id: exp.id,
+          isBatch: false,
+          experiment: exp,
+          totalPlayers: exp.players.length,
+          displayParameters: exp.parameters,
+        })
+      }
+
+      // Add batches as single entries
+      for (const batch of allBatches) {
+        if (batch.status !== 'active') continue
+
+        const batchExperiments = await getExperimentsByBatchId(batch.id)
+        if (batchExperiments.length === 0) continue
+
+        // Aggregate player count across all variations
+        const totalPlayers = batchExperiments.reduce((sum, exp) => sum + exp.players.length, 0)
+
+        // Find if user is registered in any variation
+        let userExperimentId: string | undefined
+        if (activeUser) {
+          for (const exp of batchExperiments) {
+            if (exp.players.some((p) => p.userId === activeUser.id)) {
+              userExperimentId = exp.id
+              break
+            }
+          }
+        }
+
+        // Use first experiment as representative (they all have same name, template, etc.)
+        // But override parameters with base parameters (hide variations)
+        const representative = batchExperiments[0]
+        const representativeWithBaseParams: Experiment = {
+          ...representative,
+          players: batchExperiments.flatMap((e) => e.players), // Aggregate players for checking
+          matches: batchExperiments.flatMap((e) => e.matches), // Aggregate matches for checking
+        }
+
+        views.push({
+          id: batch.id,
+          isBatch: true,
+          experiment: representativeWithBaseParams,
+          totalPlayers,
+          displayParameters: batch.baseParameters,
+          userExperimentId,
+        })
+      }
+
+      setExperimentViews(views)
     } catch (err) {
       console.error('Failed to load experiments:', err)
     } finally {
@@ -27,27 +93,31 @@ export default function SubjectDashboard() {
     }
   }
 
-  function isRegistered(experiment: Experiment): boolean {
+  function isRegistered(view: SubjectExperimentView): boolean {
     if (!activeUser) return false
-    return experiment.players.some((p) => p.userId === activeUser.id)
+    return view.experiment.players.some((p) => p.userId === activeUser.id)
   }
 
-  function hasActiveMatch(experiment: Experiment): boolean {
+  function hasActiveMatch(view: SubjectExperimentView): boolean {
     if (!activeUser) return false
-    return experiment.matches.some((m) => (m.player1Id === activeUser.id || m.player2Id === activeUser.id) && m.status === 'playing')
+    return view.experiment.matches.some((m) => (m.player1Id === activeUser.id || m.player2Id === activeUser.id) && m.status === 'playing')
   }
 
-  function hasCompletedMatch(experiment: Experiment): boolean {
+  function hasCompletedMatch(view: SubjectExperimentView): boolean {
     if (!activeUser) return false
-    return experiment.matches.some((m) => (m.player1Id === activeUser.id || m.player2Id === activeUser.id) && m.status === 'completed')
+    return view.experiment.matches.some((m) => (m.player1Id === activeUser.id || m.player2Id === activeUser.id) && m.status === 'completed')
   }
 
-  async function handleRegister(experimentId: string, playerCount: 1 | 2) {
+  async function handleRegister(view: SubjectExperimentView, playerCount: 1 | 2) {
     if (!activeUser) return
 
     try {
-      setRegistering(experimentId)
-      await registerForExperiment(experimentId, activeUser.id, playerCount)
+      setRegistering(view.id)
+      if (view.isBatch) {
+        await registerForBatch(view.id, activeUser.id, playerCount)
+      } else {
+        await registerForExperiment(view.id, activeUser.id, playerCount)
+      }
       await loadExperiments()
     } catch (err) {
       console.error('Failed to register:', err)
@@ -56,9 +126,9 @@ export default function SubjectDashboard() {
     }
   }
 
-  // Split experiments into available and completed
-  const availableExperiments = experiments.filter((experiment) => !hasCompletedMatch(experiment))
-  const completedExperiments = experiments.filter((experiment) => hasCompletedMatch(experiment))
+  // Split views into available and completed
+  const availableViews = experimentViews.filter((view) => !hasCompletedMatch(view))
+  const completedViews = experimentViews.filter((view) => hasCompletedMatch(view))
 
   return (
     <div>
@@ -76,22 +146,26 @@ export default function SubjectDashboard() {
           {/* Available Experiments Section */}
           <section>
             <h2 className="text-lg font-semibold mb-4">Available Experiments</h2>
-            {availableExperiments.length === 0 ? (
+            {availableViews.length === 0 ? (
               <div className="text-center py-8 text-base-content/70 bg-base-200 rounded-lg">
                 <p>No experiments available at the moment.</p>
                 <p className="text-sm mt-2">Check back later for new experiments.</p>
               </div>
             ) : (
               <div className="grid gap-4">
-                {availableExperiments.map((experiment) => (
+                {availableViews.map((view) => (
                   <ExperimentCard
-                    key={experiment.id}
-                    experiment={experiment}
+                    key={view.id}
+                    experiment={view.experiment}
                     isCompleted={false}
-                    isRegistered={isRegistered(experiment)}
-                    hasActiveMatch={hasActiveMatch(experiment)}
-                    isRegistering={registering === experiment.id}
-                    onRegister={(playerCount) => handleRegister(experiment.id, playerCount)}
+                    isRegistered={isRegistered(view)}
+                    hasActiveMatch={hasActiveMatch(view)}
+                    isRegistering={registering === view.id}
+                    onRegister={(playerCount) => handleRegister(view, playerCount)}
+                    isBatch={view.isBatch}
+                    totalPlayers={view.totalPlayers}
+                    playExperimentId={view.userExperimentId ?? view.experiment.id}
+                    displayParameters={view.displayParameters}
                   />
                 ))}
               </div>
@@ -99,19 +173,23 @@ export default function SubjectDashboard() {
           </section>
 
           {/* Completed Experiments Section */}
-          {completedExperiments.length > 0 && (
+          {completedViews.length > 0 && (
             <section>
               <h2 className="text-lg font-semibold mb-4">Completed Experiments</h2>
               <div className="grid gap-4">
-                {completedExperiments.map((experiment) => (
+                {completedViews.map((view) => (
                   <ExperimentCard
-                    key={experiment.id}
-                    experiment={experiment}
+                    key={view.id}
+                    experiment={view.experiment}
                     isCompleted={true}
                     isRegistered={true}
                     hasActiveMatch={false}
                     isRegistering={false}
                     onRegister={() => {}}
+                    isBatch={view.isBatch}
+                    totalPlayers={view.totalPlayers}
+                    playExperimentId={view.userExperimentId ?? view.experiment.id}
+                    displayParameters={view.displayParameters}
                   />
                 ))}
               </div>

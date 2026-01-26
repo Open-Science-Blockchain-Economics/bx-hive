@@ -9,6 +9,11 @@ interface ExperimentCardProps {
   hasActiveMatch: boolean
   isRegistering: boolean
   onRegister: (playerCount: 1 | 2) => void
+  // Batch-specific props
+  isBatch?: boolean
+  totalPlayers?: number // Override for batch aggregate count
+  playExperimentId?: string // Specific experiment to play (for batches)
+  displayParameters?: Record<string, number | string> // Override parameters to display
 }
 
 export default function ExperimentCard({
@@ -18,8 +23,15 @@ export default function ExperimentCard({
   hasActiveMatch,
   isRegistering,
   onRegister,
+  isBatch = false,
+  totalPlayers,
+  playExperimentId,
+  displayParameters,
 }: ExperimentCardProps) {
   const template = getTemplateById(experiment.templateId)
+  const playerCount = totalPlayers ?? experiment.players.length
+  const paramsToDisplay = displayParameters ?? experiment.parameters
+  const experimentIdForPlay = playExperimentId ?? experiment.id
 
   return (
     <div className="card bg-base-100 border border-base-300">
@@ -42,17 +54,19 @@ export default function ExperimentCard({
         {!isCompleted && (
           <div className="text-sm mt-2">
             <span className="text-base-content/70">Players registered: </span>
-            {experiment.players.length}
+            {playerCount}
           </div>
         )}
 
         {template && (
           <div className="text-xs text-base-content/60 mt-2">
-            {template.parameterSchema.map((param) => (
-              <span key={param.name} className="mr-4">
-                {param.label}: {experiment.parameters[param.name]}
-              </span>
-            ))}
+            {template.parameterSchema
+              .filter((param) => paramsToDisplay[param.name] !== undefined)
+              .map((param) => (
+                <span key={param.name} className="mr-4">
+                  {param.label}: {paramsToDisplay[param.name]}
+                </span>
+              ))}
           </div>
         )}
 
@@ -75,13 +89,13 @@ export default function ExperimentCard({
           )}
 
           {!isCompleted && isRegistered && hasActiveMatch && (
-            <Link to={`/play/${experiment.id}`} className="btn btn-success btn-sm">
+            <Link to={`/play/${experimentIdForPlay}`} className="btn btn-success btn-sm">
               Play
             </Link>
           )}
 
           {isCompleted && (
-            <Link to={`/play/${experiment.id}`} className="btn btn-ghost btn-sm">
+            <Link to={`/play/${experimentIdForPlay}`} className="btn btn-ghost btn-sm">
               View Results
             </Link>
           )}

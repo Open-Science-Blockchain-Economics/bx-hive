@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import BatchDetails from './pages/BatchDetails'
 import ExperimentDetails from './pages/ExperimentDetails'
 import ExperimenterDashboard from './pages/ExperimenterDashboard'
 import Home from './pages/Home'
@@ -26,6 +27,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <ExperimentDetails />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'experimenter/batch/:batchId',
+        element: (
+          <ProtectedRoute>
+            <BatchDetails />
           </ProtectedRoute>
         ),
       },

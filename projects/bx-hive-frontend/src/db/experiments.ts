@@ -1,6 +1,210 @@
 import { initializeBRETState } from '../experiment-logic/bret'
-import type { Experiment, ExperimentStatus, TrustExperimentState } from '../types'
+import type { AssignmentStrategy, Experiment, ExperimentBatch, ExperimentStatus, ParameterVariation, TrustExperimentState } from '../types'
 import { executeReadArrayTransaction, executeReadTransaction, executeWriteTransaction, STORES } from './index'
+
+// ==========================================
+// Batch Operations
+// ==========================================
+
+/**
+ * Generate all variation combinations using cartesian product (factorial design)
+ */
+function generateVariationCombinations(
+  baseParams: Record<string, number | string>,
+  variations: ParameterVariation[],
+): Record<string, number | string>[] {
+  if (variations.length === 0) {
+    return [{ ...baseParams }]
+  }
+
+  // Start with base parameters
+  let combinations: Record<string, number | string>[] = [{ ...baseParams }]
+
+  // For each varied parameter, expand the combinations
+  for (const variation of variations) {
+    const newCombinations: Record<string, number | string>[] = []
+    for (const combo of combinations) {
+      for (const value of variation.values) {
+        newCombinations.push({
+          ...combo,
+          [variation.parameterName]: value,
+        })
+      }
+    }
+    combinations = newCombinations
+  }
+
+  return combinations
+}
+
+/**
+ * Generate a human-readable label for a variation
+ */
+export function getVariationLabel(params: Record<string, number | string>, variations: ParameterVariation[]): string {
+  return variations.map((v) => `${v.parameterName}=${params[v.parameterName]}`).join(', ')
+}
+
+/**
+ * Create a batch experiment with multiple variations
+ */
+export async function createExperimentBatch(
+  templateId: string,
+  experimenterId: string,
+  name: string,
+  baseParameters: Record<string, number | string>,
+  variations: ParameterVariation[],
+  assignmentStrategy: AssignmentStrategy,
+  maxPerVariation?: number,
+): Promise<ExperimentBatch> {
+  // Generate all parameter combinations
+  const paramCombinations = generateVariationCombinations(baseParameters, variations)
+
+  // Create individual experiments for each variation
+  const experimentIds: string[] = []
+
+  for (let i = 0; i < paramCombinations.length; i++) {
+    const params = paramCombinations[i]
+    const experiment: Experiment = {
+      id: crypto.randomUUID(),
+      templateId,
+      experimenterId,
+      name, // Same name for all - participants see this
+      parameters: params,
+      status: 'active',
+      createdAt: Date.now(),
+      players: [],
+      matches: [],
+      batchId: '', // Will be set after batch is created
+      variationIndex: i,
+    }
+    experimentIds.push(experiment.id)
+    await executeWriteTransaction(STORES.EXPERIMENTS, (store) => store.add(experiment))
+  }
+
+  // Create the batch record
+  const batch: ExperimentBatch = {
+    id: crypto.randomUUID(),
+    name,
+    templateId,
+    experimenterId,
+    baseParameters,
+    variations,
+    assignmentStrategy,
+    maxPerVariation,
+    experimentIds,
+    createdAt: Date.now(),
+    status: 'active',
+  }
+
+  await executeWriteTransaction(STORES.BATCHES, (store) => store.add(batch))
+
+  // Update experiments with the batch ID
+  for (const expId of experimentIds) {
+    const exp = await getExperimentById(expId)
+    if (exp) {
+      exp.batchId = batch.id
+      await updateExperiment(exp)
+    }
+  }
+
+  return batch
+}
+
+/**
+ * Get all batches
+ */
+export async function getBatches(): Promise<ExperimentBatch[]> {
+  return executeReadArrayTransaction<ExperimentBatch>(STORES.BATCHES, (store) => store.getAll())
+}
+
+/**
+ * Get batches by experimenter
+ */
+export async function getBatchesByExperimenter(experimenterId: string): Promise<ExperimentBatch[]> {
+  const allBatches = await getBatches()
+  return allBatches.filter((batch) => batch.experimenterId === experimenterId)
+}
+
+/**
+ * Get a batch by ID
+ */
+export async function getBatchById(id: string): Promise<ExperimentBatch | undefined> {
+  return executeReadTransaction<ExperimentBatch>(STORES.BATCHES, (store) => store.get(id))
+}
+
+/**
+ * Get all experiments belonging to a batch
+ */
+export async function getExperimentsByBatchId(batchId: string): Promise<Experiment[]> {
+  const allExperiments = await getExperiments()
+  return allExperiments.filter((exp) => exp.batchId === batchId).sort((a, b) => (a.variationIndex ?? 0) - (b.variationIndex ?? 0))
+}
+
+/**
+ * Update a batch
+ */
+export async function updateBatch(batch: ExperimentBatch): Promise<void> {
+  await executeWriteTransaction(STORES.BATCHES, (store) => store.put(batch))
+}
+
+/**
+ * Register for a batch experiment - assigns participant to a variation based on strategy
+ */
+export async function registerForBatch(batchId: string, userId: string, playerCount: 1 | 2): Promise<Experiment> {
+  const batch = await getBatchById(batchId)
+  if (!batch) {
+    throw new Error('Batch not found')
+  }
+
+  if (batch.status !== 'active') {
+    throw new Error('Registration is closed for this experiment')
+  }
+
+  // Get all experiments in this batch
+  const experiments = await getExperimentsByBatchId(batchId)
+
+  // Check if user is already registered in any variation
+  for (const exp of experiments) {
+    if (exp.players.some((p) => p.userId === userId)) {
+      throw new Error('Already registered for this experiment')
+    }
+  }
+
+  // Filter to only active experiments that haven't reached capacity
+  const availableExperiments = experiments.filter((exp) => {
+    if (exp.status !== 'active') return false
+    if (batch.maxPerVariation && exp.players.length >= batch.maxPerVariation) return false
+    return true
+  })
+
+  if (availableExperiments.length === 0) {
+    throw new Error('All variations are full or closed')
+  }
+
+  // Select experiment based on assignment strategy
+  let selectedExperiment: Experiment
+
+  if (batch.assignmentStrategy === 'round_robin') {
+    // Pick the experiment with the fewest players
+    selectedExperiment = availableExperiments.reduce((min, exp) => (exp.players.length < min.players.length ? exp : min), availableExperiments[0])
+  } else {
+    // fill_sequential: Pick the first available experiment (by variation index)
+    selectedExperiment = availableExperiments[0]
+  }
+
+  // Register the player in the selected experiment
+  const result = await registerForExperiment(selectedExperiment.id, userId, playerCount)
+
+  // Check if this variation should be auto-closed (for fill_sequential with maxPerVariation)
+  if (batch.assignmentStrategy === 'fill_sequential' && batch.maxPerVariation) {
+    const updatedExp = await getExperimentById(selectedExperiment.id)
+    if (updatedExp && updatedExp.players.length >= batch.maxPerVariation) {
+      await updateExperimentStatus(selectedExperiment.id, 'closed')
+    }
+  }
+
+  return result
+}
 
 export async function createExperiment(
   templateId: string,

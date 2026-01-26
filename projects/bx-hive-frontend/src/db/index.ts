@@ -1,11 +1,12 @@
 // Core database utilities and configuration
 
 const DB_NAME = 'bx_hive'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 export const STORES = {
   USERS: 'users',
   EXPERIMENTS: 'experiments',
+  BATCHES: 'batches',
 } as const
 
 let dbInstance: IDBDatabase | null = null
@@ -69,6 +70,13 @@ export async function initDB(): Promise<IDBDatabase> {
         const experimentsStore = db.createObjectStore(STORES.EXPERIMENTS, { keyPath: 'id' })
         experimentsStore.createIndex('experimenterId', 'experimenterId', { unique: false })
         experimentsStore.createIndex('status', 'status', { unique: false })
+      }
+
+      if (!db.objectStoreNames.contains(STORES.BATCHES)) {
+        console.log('[DB] Creating batches store')
+        const batchesStore = db.createObjectStore(STORES.BATCHES, { keyPath: 'id' })
+        batchesStore.createIndex('experimenterId', 'experimenterId', { unique: false })
+        batchesStore.createIndex('status', 'status', { unique: false })
       }
     }
   })
