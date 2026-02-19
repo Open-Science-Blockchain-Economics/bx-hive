@@ -54,7 +54,7 @@ class SubjectInfo(arc4.Struct, frozen=True):
     assigned: arc4.UInt8
 
 
-class Match(arc4.Struct, frozen=True):
+class Match(arc4.Struct):
     match_id: arc4.UInt32
     investor: arc4.Address
     trustee: arc4.Address
@@ -66,3 +66,12 @@ class Match(arc4.Struct, frozen=True):
     trustee_payout: arc4.UInt64
     completed_at: arc4.UInt64
     paid_out: arc4.UInt8
+
+
+class VariationConfig(arc4.Struct, frozen=True):
+    e1: arc4.UInt64
+    e2: arc4.UInt64
+    multiplier: arc4.UInt64
+    unit: arc4.UInt64
+    asset_id: arc4.UInt64
+    status: arc4.UInt8
