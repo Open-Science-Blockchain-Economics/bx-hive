@@ -1,6 +1,6 @@
 from algopy import Account, ARC4Contract, BoxMap, Global, GlobalState, Txn, UInt64, arc4
 
-from smart_contracts.shared.types import ADMIN_SUPER, ExperimentTemplateInfo, User
+from smart_contracts.shared.types import ExperimentTemplateInfo, User
 
 
 class BxHiveRegistry(ARC4Contract):

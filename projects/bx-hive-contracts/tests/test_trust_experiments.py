@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 
 import pytest
-from algopy import Bytes, arc4
+from algopy import Application, Bytes, arc4
 from algopy_testing import AlgopyTestContext, algopy_testing_context
 
 from smart_contracts.trust_experiments.contract import TrustExperiments
@@ -122,7 +122,7 @@ def test_create_variation_not_owner_fails(context: AlgopyTestContext) -> None:
 
     other = context.any.account()
     app_call = context.any.txn.application_call(
-        sender=other, app_id=__import__("algopy").Application(contract.__app_id__)
+        sender=other, app_id=Application(contract.__app_id__)
     )
     with context.txn.create_group(gtxns=[app_call], active_txn_index=0):
         with pytest.raises(Exception, match="Not experiment owner"):

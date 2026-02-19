@@ -28,7 +28,7 @@ class TrustExperiments(ARC4Contract):
 
     @arc4.abimethod(create="require")
     def create(self, registry_app: arc4.UInt64) -> None:
-        self.registry_app.value = registry_app.native
+        self.registry_app.value = registry_app.as_uint64()
 
     @arc4.abimethod
     def create_experiment(self, name: arc4.String) -> arc4.UInt32:
@@ -60,7 +60,7 @@ class TrustExperiments(ARC4Contract):
         experiment = self.experiments[exp_id].copy()
         assert experiment.owner == arc4.Address(Txn.sender), "Not experiment owner"
 
-        var_id = arc4.UInt32(experiment.variation_count.native)
+        var_id = arc4.UInt32(experiment.variation_count.as_uint64())
 
         # Deploy the TrustVariation contract
         deployed = itxn.ApplicationCall(
@@ -93,7 +93,7 @@ class TrustExperiments(ARC4Contract):
 
         # Packed composite key: high 32 bits = exp_id, low 32 bits = var_id
         variation_key = arc4.UInt64(
-            experiment.exp_id.native * UInt64(4294967296) + var_id.native
+            experiment.exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64()
         )
         self.variations[variation_key] = VariationInfo(
             var_id=var_id,
@@ -108,7 +108,7 @@ class TrustExperiments(ARC4Contract):
             owner=experiment.owner.copy(),
             name=experiment.name,
             created_at=experiment.created_at,
-            variation_count=arc4.UInt64(experiment.variation_count.native + UInt64(1)),
+            variation_count=arc4.UInt64(experiment.variation_count.as_uint64() + UInt64(1)),
         )
 
         return arc4.UInt64(new_app.id)
@@ -120,6 +120,6 @@ class TrustExperiments(ARC4Contract):
 
     @arc4.abimethod(readonly=True)
     def get_variation(self, exp_id: arc4.UInt32, var_id: arc4.UInt32) -> VariationInfo:
-        key = arc4.UInt64(exp_id.native * UInt64(4294967296) + var_id.native)
+        key = arc4.UInt64(exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64())
         assert key in self.variations, "Variation not found"
         return self.variations[key]

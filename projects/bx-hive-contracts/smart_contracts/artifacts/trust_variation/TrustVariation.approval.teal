@@ -154,27 +154,27 @@ create:
     ==
     assert // invalid number of bytes for arc4.uint64
     // smart_contracts/trust_variation/contract.py:64
-    // assert unit.native > UInt64(0), "Unit must be > 0"
+    // assert unit.as_uint64() > UInt64(0), "Unit must be > 0"
     swap
     btoi
     dup
     assert // Unit must be > 0
     // smart_contracts/trust_variation/contract.py:65
-    // self.experiments_app.value = experiments_app.native
+    // self.experiments_app.value = experiments_app.as_uint64()
     uncover 8
     btoi
     bytec 17 // "experiments_app"
     swap
     app_global_put
     // smart_contracts/trust_variation/contract.py:66
-    // self.exp_id.value = exp_id.native
+    // self.exp_id.value = exp_id.as_uint64()
     uncover 7
     btoi
     bytec 18 // "exp_id"
     swap
     app_global_put
     // smart_contracts/trust_variation/contract.py:67
-    // self.var_id.value = var_id.native
+    // self.var_id.value = var_id.as_uint64()
     uncover 6
     btoi
     bytec 19 // "var_id"
@@ -201,33 +201,33 @@ create:
     intc_0 // 0
     app_global_put
     // smart_contracts/trust_variation/contract.py:72
-    // self.e1.value = e1.native
+    // self.e1.value = e1.as_uint64()
     uncover 4
     btoi
     bytec 6 // "e1"
     swap
     app_global_put
     // smart_contracts/trust_variation/contract.py:73
-    // self.e2.value = e2.native
+    // self.e2.value = e2.as_uint64()
     uncover 3
     btoi
     bytec 10 // "e2"
     swap
     app_global_put
     // smart_contracts/trust_variation/contract.py:74
-    // self.multiplier.value = multiplier.native
+    // self.multiplier.value = multiplier.as_uint64()
     uncover 2
     btoi
     bytec 11 // "multiplier"
     swap
     app_global_put
     // smart_contracts/trust_variation/contract.py:75
-    // self.unit.value = unit.native
+    // self.unit.value = unit.as_uint64()
     bytec 7 // "unit"
     swap
     app_global_put
     // smart_contracts/trust_variation/contract.py:76
-    // self.asset_id.value = asset_id.native
+    // self.asset_id.value = asset_id.as_uint64()
     btoi
     bytec 14 // "asset_id"
     swap
@@ -667,7 +667,7 @@ submit_investor_decision:
     b==
     assert // Wrong phase
     // smart_contracts/trust_variation/contract.py:156
-    // inv_amount = investment.native
+    // inv_amount = investment.as_uint64()
     dig 2
     btoi
     // smart_contracts/trust_variation/contract.py:157
@@ -754,7 +754,7 @@ submit_trustee_decision:
     b==
     assert // Wrong phase
     // smart_contracts/trust_variation/contract.py:173
-    // s = match.investment.native
+    // s = match.investment.as_uint64()
     dig 1
     pushint 77 // 77
     extract_uint64
@@ -765,7 +765,7 @@ submit_trustee_decision:
     app_global_get_ex
     assert // check self.multiplier exists
     // smart_contracts/trust_variation/contract.py:175
-    // r = return_amount.native
+    // r = return_amount.as_uint64()
     dig 5
     btoi
     // smart_contracts/trust_variation/contract.py:176

@@ -61,19 +61,19 @@ class TrustVariation(ARC4Contract):
         unit: arc4.UInt64,
         asset_id: arc4.UInt64,
     ) -> None:
-        assert unit.native > UInt64(0), "Unit must be > 0"
-        self.experiments_app.value = experiments_app.native
-        self.exp_id.value = exp_id.native
-        self.var_id.value = var_id.native
+        assert unit.as_uint64() > UInt64(0), "Unit must be > 0"
+        self.experiments_app.value = experiments_app.as_uint64()
+        self.exp_id.value = exp_id.as_uint64()
+        self.var_id.value = var_id.as_uint64()
         self.owner.value = owner
         self.status.value = UInt64(STATUS_ACTIVE)
         self.match_count.value = UInt64(0)
         self.paid_out_count.value = UInt64(0)
-        self.e1.value = e1.native
-        self.e2.value = e2.native
-        self.multiplier.value = multiplier.native
-        self.unit.value = unit.native
-        self.asset_id.value = asset_id.native
+        self.e1.value = e1.as_uint64()
+        self.e2.value = e2.as_uint64()
+        self.multiplier.value = multiplier.as_uint64()
+        self.unit.value = unit.as_uint64()
+        self.asset_id.value = asset_id.as_uint64()
         self.escrow_deposited.value = UInt64(0)
         self.escrow_paid_out.value = UInt64(0)
 
@@ -153,7 +153,7 @@ class TrustVariation(ARC4Contract):
         assert sender_addr == match.investor, "Not the investor"
         assert match.phase == arc4.UInt8(PHASE_INVESTOR_DECISION), "Wrong phase"
 
-        inv_amount = investment.native
+        inv_amount = investment.as_uint64()
         assert inv_amount <= self.e1.value, "Investment exceeds endowment"
         assert inv_amount % self.unit.value == UInt64(0), "Not a multiple of unit"
 
@@ -170,9 +170,9 @@ class TrustVariation(ARC4Contract):
         assert sender_addr == match.trustee, "Not the trustee"
         assert match.phase == arc4.UInt8(PHASE_TRUSTEE_DECISION), "Wrong phase"
 
-        s = match.investment.native
+        s = match.investment.as_uint64()
         m = self.multiplier.value
-        r = return_amount.native
+        r = return_amount.as_uint64()
         max_return = s * m
 
         assert r <= max_return, "Return exceeds maximum"

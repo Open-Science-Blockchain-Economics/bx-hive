@@ -51,7 +51,7 @@ create:
     ==
     assert // invalid number of bytes for arc4.uint64
     // smart_contracts/trust_experiments/contract.py:31
-    // self.registry_app.value = registry_app.native
+    // self.registry_app.value = registry_app.as_uint64()
     btoi
     bytec_1 // "registry_app"
     swap
@@ -263,7 +263,7 @@ create_variation:
     ==
     assert // Not experiment owner
     // smart_contracts/trust_experiments/contract.py:63
-    // var_id = arc4.UInt32(experiment.variation_count.native)
+    // var_id = arc4.UInt32(experiment.variation_count.as_uint64())
     dig 1
     pushint 46 // 46
     intc_1 // 8
@@ -404,7 +404,7 @@ create_variation:
     // ).submit()
     itxn_submit
     // smart_contracts/trust_experiments/contract.py:96
-    // experiment.exp_id.native * UInt64(4294967296) + var_id.native
+    // experiment.exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64()
     dig 5
     intc_0 // 0
     intc_3 // 4
@@ -415,16 +415,16 @@ create_variation:
     *
     uncover 4
     // smart_contracts/trust_experiments/contract.py:63
-    // var_id = arc4.UInt32(experiment.variation_count.native)
+    // var_id = arc4.UInt32(experiment.variation_count.as_uint64())
     intc_3 // 4
     // smart_contracts/trust_experiments/contract.py:96
-    // experiment.exp_id.native * UInt64(4294967296) + var_id.native
+    // experiment.exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64()
     extract_uint32
     +
     // smart_contracts/trust_experiments/contract.py:94-97
     // # Packed composite key: high 32 bits = exp_id, low 32 bits = var_id
     // variation_key = arc4.UInt64(
-    //     experiment.exp_id.native * UInt64(4294967296) + var_id.native
+    //     experiment.exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64()
     // )
     itob
     // smart_contracts/trust_experiments/contract.py:100
@@ -485,7 +485,7 @@ create_variation:
     intc_1 // 8
     box_extract
     // smart_contracts/trust_experiments/contract.py:111
-    // variation_count=arc4.UInt64(experiment.variation_count.native + UInt64(1)),
+    // variation_count=arc4.UInt64(experiment.variation_count.as_uint64() + UInt64(1)),
     uncover 4
     intc_2 // 1
     +
@@ -497,7 +497,7 @@ create_variation:
     //     owner=experiment.owner.copy(),
     //     name=experiment.name,
     //     created_at=experiment.created_at,
-    //     variation_count=arc4.UInt64(experiment.variation_count.native + UInt64(1)),
+    //     variation_count=arc4.UInt64(experiment.variation_count.as_uint64() + UInt64(1)),
     // )
     uncover 4
     uncover 5
@@ -576,7 +576,7 @@ get_variation:
     ==
     assert // invalid number of bytes for arc4.uint32
     // smart_contracts/trust_experiments/contract.py:123
-    // key = arc4.UInt64(exp_id.native * UInt64(4294967296) + var_id.native)
+    // key = arc4.UInt64(exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64())
     swap
     btoi
     intc 4 // 4294967296
