@@ -1,0 +1,376 @@
+#pragma version 11
+#pragma typetrack false
+
+// algopy.arc4.ARC4Contract.approval_program() -> uint64:
+main:
+    intcblock 1 0 32 2
+    bytecblock "user_count" "super_admin" 0x755f 0x151f7c75 0x61646d5f 0x745f
+    txn ApplicationID
+    bnz main_after_if_else@2
+    // smart_contracts/registry/contract.py:9
+    // self.user_count = GlobalState(UInt64(0))
+    bytec_0 // "user_count"
+    intc_1 // 0
+    app_global_put
+
+main_after_if_else@2:
+    // smart_contracts/registry/contract.py:6
+    // class BxHiveRegistry(ARC4Contract):
+    txn OnCompletion
+    !
+    assert // OnCompletion must be NoOp
+    txn ApplicationID
+    bz main_create_NoOp@12
+    pushbytess 0x7eba23e3 0x4828cd2d 0xe811f2a7 0x3da9c682 0x6fad4a65 0x08970342 // method "add_admin(address,uint8)void", method "remove_admin(address)void", method "register_user(uint8,string)uint32", method "register_template(uint8,uint64,string,uint8)void", method "get_user(address)(uint32,uint8,string,uint64)", method "get_template(uint8)(uint64,string,uint8,uint8)"
+    txna ApplicationArgs 0
+    match add_admin remove_admin register_user register_template get_user get_template
+    err
+
+main_create_NoOp@12:
+    // smart_contracts/registry/contract.py:6
+    // class BxHiveRegistry(ARC4Contract):
+    pushbytes 0x4c5c61ba // method "create()void"
+    txna ApplicationArgs 0
+    match create
+    err
+
+
+// smart_contracts.registry.contract.BxHiveRegistry.create[routing]() -> void:
+create:
+    // smart_contracts/registry/contract.py:17
+    // self.super_admin.value = Txn.sender
+    bytec_1 // "super_admin"
+    txn Sender
+    app_global_put
+    // smart_contracts/registry/contract.py:18
+    // self.user_count.value = UInt64(0)
+    bytec_0 // "user_count"
+    intc_1 // 0
+    app_global_put
+    // smart_contracts/registry/contract.py:15
+    // @arc4.abimethod(create="require")
+    intc_0 // 1
+    return
+
+
+// smart_contracts.registry.contract.BxHiveRegistry.add_admin[routing]() -> void:
+add_admin:
+    // smart_contracts/registry/contract.py:20
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    txna ApplicationArgs 2
+    dup
+    len
+    intc_0 // 1
+    ==
+    assert // invalid number of bytes for arc4.uint8
+    // smart_contracts/registry/contract.py:22
+    // assert Txn.sender == self.super_admin.value, "Not super admin"
+    txn Sender
+    intc_1 // 0
+    bytec_1 // "super_admin"
+    app_global_get_ex
+    assert // check self.super_admin exists
+    ==
+    assert // Not super admin
+    // smart_contracts/registry/contract.py:23
+    // self.admins[addr] = role
+    bytec 4 // 0x61646d5f
+    uncover 2
+    concat
+    swap
+    box_put
+    // smart_contracts/registry/contract.py:20
+    // @arc4.abimethod
+    intc_0 // 1
+    return
+
+
+// smart_contracts.registry.contract.BxHiveRegistry.remove_admin[routing]() -> void:
+remove_admin:
+    // smart_contracts/registry/contract.py:25
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    // smart_contracts/registry/contract.py:27
+    // assert Txn.sender == self.super_admin.value, "Not super admin"
+    txn Sender
+    intc_1 // 0
+    bytec_1 // "super_admin"
+    app_global_get_ex
+    assert // check self.super_admin exists
+    ==
+    assert // Not super admin
+    // smart_contracts/registry/contract.py:28
+    // assert addr in self.admins, "Admin not found"
+    bytec 4 // 0x61646d5f
+    swap
+    concat
+    dup
+    box_len
+    bury 1
+    assert // Admin not found
+    // smart_contracts/registry/contract.py:29
+    // del self.admins[addr]
+    box_del
+    pop
+    // smart_contracts/registry/contract.py:25
+    // @arc4.abimethod
+    intc_0 // 1
+    return
+
+
+// smart_contracts.registry.contract.BxHiveRegistry.register_user[routing]() -> void:
+register_user:
+    // smart_contracts/registry/contract.py:31
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_0 // 1
+    ==
+    assert // invalid number of bytes for arc4.uint8
+    txna ApplicationArgs 2
+    dup
+    intc_1 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    // smart_contracts/registry/contract.py:33
+    // assert Txn.sender not in self.users, "Already registered"
+    bytec_2 // 0x755f
+    txn Sender
+    concat
+    box_len
+    bury 1
+    !
+    assert // Already registered
+    // smart_contracts/registry/contract.py:34
+    // user_id = arc4.UInt32(self.user_count.value)
+    intc_1 // 0
+    bytec_0 // "user_count"
+    app_global_get_ex
+    assert // check self.user_count exists
+    dup
+    itob
+    dup
+    bitlen
+    intc_2 // 32
+    <=
+    assert // overflow
+    extract 4 4
+    // smart_contracts/registry/contract.py:35
+    // self.user_count.value += UInt64(1)
+    swap
+    intc_0 // 1
+    +
+    bytec_0 // "user_count"
+    swap
+    app_global_put
+    // smart_contracts/registry/contract.py:40
+    // created_at=arc4.UInt64(Global.latest_timestamp),
+    global LatestTimestamp
+    itob
+    // smart_contracts/registry/contract.py:36-41
+    // user = User(
+    //     user_id=user_id,
+    //     role=role,
+    //     name=name,
+    //     created_at=arc4.UInt64(Global.latest_timestamp),
+    // )
+    dig 1
+    uncover 4
+    concat
+    pushbytes 0x000f
+    concat
+    swap
+    concat
+    uncover 2
+    concat
+    // smart_contracts/registry/contract.py:42
+    // self.users[Txn.sender] = user
+    bytec_2 // 0x755f
+    txn Sender
+    concat
+    dup
+    box_del
+    pop
+    swap
+    box_put
+    // smart_contracts/registry/contract.py:43
+    // self.user_ids[user_id] = arc4.Address(Txn.sender)
+    txn Sender
+    pushbytes 0x75695f
+    dig 2
+    concat
+    swap
+    box_put
+    // smart_contracts/registry/contract.py:31
+    // @arc4.abimethod
+    bytec_3 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+
+// smart_contracts.registry.contract.BxHiveRegistry.register_template[routing]() -> void:
+register_template:
+    // smart_contracts/registry/contract.py:46
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_0 // 1
+    ==
+    assert // invalid number of bytes for arc4.uint8
+    txna ApplicationArgs 2
+    dup
+    len
+    pushint 8 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    txna ApplicationArgs 3
+    dup
+    intc_1 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    txna ApplicationArgs 4
+    dup
+    len
+    intc_0 // 1
+    ==
+    assert // invalid number of bytes for arc4.uint8
+    // smart_contracts/registry/contract.py:54
+    // assert Txn.sender == self.super_admin.value, "Not super admin"
+    txn Sender
+    intc_1 // 0
+    bytec_1 // "super_admin"
+    app_global_get_ex
+    assert // check self.super_admin exists
+    ==
+    assert // Not super admin
+    // smart_contracts/registry/contract.py:55-60
+    // template = ExperimentTemplateInfo(
+    //     app_id=app_id,
+    //     name=name,
+    //     player_count=player_count,
+    //     enabled=arc4.UInt8(1),
+    // )
+    uncover 2
+    pushbytes 0x000c
+    concat
+    swap
+    concat
+    // smart_contracts/registry/contract.py:59
+    // enabled=arc4.UInt8(1),
+    pushbytes 0x01
+    // smart_contracts/registry/contract.py:55-60
+    // template = ExperimentTemplateInfo(
+    //     app_id=app_id,
+    //     name=name,
+    //     player_count=player_count,
+    //     enabled=arc4.UInt8(1),
+    // )
+    concat
+    swap
+    concat
+    // smart_contracts/registry/contract.py:61
+    // self.experiment_templates[template_id] = template
+    bytec 5 // 0x745f
+    uncover 2
+    concat
+    dup
+    box_del
+    pop
+    swap
+    box_put
+    // smart_contracts/registry/contract.py:46
+    // @arc4.abimethod
+    intc_0 // 1
+    return
+
+
+// smart_contracts.registry.contract.BxHiveRegistry.get_user[routing]() -> void:
+get_user:
+    // smart_contracts/registry/contract.py:63
+    // @arc4.abimethod(readonly=True)
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    // smart_contracts/registry/contract.py:65
+    // assert addr in self.users, "User not found"
+    bytec_2 // 0x755f
+    swap
+    concat
+    dup
+    box_len
+    bury 1
+    assert // User not found
+    // smart_contracts/registry/contract.py:66
+    // return self.users[addr]
+    box_get
+    pop
+    // smart_contracts/registry/contract.py:63
+    // @arc4.abimethod(readonly=True)
+    bytec_3 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
+
+
+// smart_contracts.registry.contract.BxHiveRegistry.get_template[routing]() -> void:
+get_template:
+    // smart_contracts/registry/contract.py:68
+    // @arc4.abimethod(readonly=True)
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_0 // 1
+    ==
+    assert // invalid number of bytes for arc4.uint8
+    // smart_contracts/registry/contract.py:70
+    // assert template_id in self.experiment_templates, "Template not found"
+    bytec 5 // 0x745f
+    swap
+    concat
+    dup
+    box_len
+    bury 1
+    assert // Template not found
+    // smart_contracts/registry/contract.py:71
+    // return self.experiment_templates[template_id]
+    box_get
+    pop
+    // smart_contracts/registry/contract.py:68
+    // @arc4.abimethod(readonly=True)
+    bytec_3 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_0 // 1
+    return
