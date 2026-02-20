@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 def deploy() -> None:
     from smart_contracts.artifacts.registry.bx_hive_registry_client import (
         BxHiveRegistryFactory,
+        BxHiveRegistryMethodCallCreateParams,
     )
 
     algorand = algokit_utils.AlgorandClient.from_environment()
@@ -20,6 +21,7 @@ def deploy() -> None:
     app_client, result = factory.deploy(
         on_update=algokit_utils.OnUpdate.AppendApp,
         on_schema_break=algokit_utils.OnSchemaBreak.AppendApp,
+        create_params=BxHiveRegistryMethodCallCreateParams(method="create()void"),
     )
 
     logger.info(
