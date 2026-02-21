@@ -24,6 +24,7 @@ export interface VariationParams {
  */
 export function useTrustExperiments() {
   const { algorand, trustExperimentsClient, activeAddress } = useAlgorand()
+  // algorand is used by createVariation for TEAL compilation
 
   /**
    * Creates a new experiment group on-chain.
@@ -96,29 +97,29 @@ export function useTrustExperiments() {
   )
 
   /**
-   * Lists all experiments by reading experiment_count from global state,
-   * then fetching each ExperimentGroup in parallel.
+   * Lists all experiments using the box state map accessor.
    */
   const listExperiments = useCallback(async (): Promise<ExperimentGroup[]> => {
-    if (!trustExperimentsClient || !algorand) return []
-    const appId = Number(import.meta.env.VITE_TRUST_EXPERIMENTS_APP_ID ?? 0)
-    if (appId === 0) return []
+    if (!trustExperimentsClient) return []
+    const map = await trustExperimentsClient.state.box.experiments.getMap()
+    return Array.from(map.values())
+  }, [trustExperimentsClient])
 
-    const appInfo = await algorand.client.algod.getApplicationByID(appId).do()
-    const globalState = appInfo.params.globalState ?? []
-    const countEntry = globalState.find(
-      (s) => Buffer.from(s.key).toString() === 'experiment_count',
-    )
-    const count = Number(countEntry?.value?.uint ?? 0)
-    if (count === 0) return []
+  /**
+   * Lists all variations for an experiment by iterating var_id 1..count.
+   */
+  const listVariations = useCallback(
+    async (expId: number, count: number): Promise<VariationInfo[]> => {
+      if (!trustExperimentsClient) return []
+      const results = await Promise.allSettled(
+        Array.from({ length: count }, (_, i) => getVariation(expId, i + 1)),
+      )
+      return results
+        .filter((r): r is PromiseFulfilledResult<VariationInfo> => r.status === 'fulfilled')
+        .map((r) => r.value)
+    },
+    [trustExperimentsClient, getVariation],
+  )
 
-    const results = await Promise.allSettled(
-      Array.from({ length: count }, (_, i) => getExperiment(i + 1)),
-    )
-    return results
-      .filter((r): r is PromiseFulfilledResult<ExperimentGroup> => r.status === 'fulfilled')
-      .map((r) => r.value)
-  }, [trustExperimentsClient, algorand, getExperiment])
-
-  return { createExperiment, createVariation, getExperiment, getVariation, listExperiments }
+  return { createExperiment, createVariation, getExperiment, getVariation, listExperiments, listVariations }
 }
