@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createUser, getUsers } from '../db'
+import { useWallet } from '@txnlab/use-wallet-react'
+import { useRegistry } from '../hooks/useRegistry'
+import { useActiveUser } from '../hooks/useActiveUser'
 import type { UserRole } from '../types'
 
 export default function SignUp() {
@@ -9,8 +11,15 @@ export default function SignUp() {
   const [selectedRole, setSelectedRole] = useState<UserRole>('subject')
   const [name, setName] = useState('')
   const navigate = useNavigate()
+  const { activeAddress } = useWallet()
+  const { registerUser } = useRegistry()
+  const { setActiveUser } = useActiveUser()
 
   const handleCreateUser = useCallback(async () => {
+    if (!activeAddress) {
+      setError('Connect a wallet before signing up')
+      return
+    }
     if (!name.trim()) {
       setError('Please enter a name')
       return
@@ -20,28 +29,34 @@ export default function SignUp() {
     setError(null)
 
     try {
-      const user = await createUser(name.trim(), selectedRole)
-      console.log('User created:', user)
-
-      // Store active user in sessionStorage
-      sessionStorage.setItem('activeUserId', user.id)
-
-      // Refresh to show updated user list
+      await registerUser(selectedRole, name.trim())
+      await setActiveUser(activeAddress)
       navigate(0)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to create user:', err)
-      setError(err?.message || 'Failed to create user')
+      setError(err instanceof Error ? err.message : 'Failed to create user')
     } finally {
       setCreating(false)
     }
-  }, [selectedRole, name, navigate])
+  }, [activeAddress, selectedRole, name, navigate, registerUser, setActiveUser])
+
+  if (!activeAddress) {
+    return (
+      <div className="card bg-base-100 shadow-xl border border-base-300">
+        <div className="card-body">
+          <h2 className="card-title">Sign Up</h2>
+          <p className="text-sm text-base-content/70">Connect a wallet to create your account.</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="card bg-base-100 shadow-xl border border-base-300">
       <div className="card-body">
         <h2 className="card-title">Sign Up</h2>
         <p className="text-sm text-base-content/70">
-          Create a new user account.
+          Create a new account on-chain.
         </p>
 
         <div className="form-control w-full mt-4">
@@ -98,7 +113,7 @@ export default function SignUp() {
             className={`btn btn-primary ${creating ? 'btn-disabled' : ''}`}
           >
             {creating && <span className="loading loading-spinner loading-sm"></span>}
-            {creating ? 'Creating...' : 'Create User'}
+            {creating ? 'Creating...' : 'Create Account'}
           </button>
         </div>
 

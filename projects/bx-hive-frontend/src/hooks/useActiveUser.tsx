@@ -1,13 +1,15 @@
+import { useWallet } from '@txnlab/use-wallet-react'
 import { useState, useCallback, createContext, useContext, useEffect, ReactNode } from 'react'
-import { getUserById } from '../db'
-import type { User } from '../types'
+import type { User, UserRole } from '../types'
+import { getAlgorandClient, getRegistryClient } from '../utils/algorand'
 
-const STORAGE_KEY = 'activeUserId'
+const ROLE_REVERSE: Record<number, UserRole> = { 0: 'experimenter', 1: 'subject' }
 
 interface ActiveUserContextType {
   activeUser: User | null
   isLoading: boolean
-  setActiveUser: (userId: string) => Promise<void>
+  /** Re-fetches the user from Registry for the given address. Call after registration. */
+  setActiveUser: (address: string) => Promise<void>
   clearActiveUser: () => void
 }
 
@@ -16,42 +18,62 @@ const ActiveUserContext = createContext<ActiveUserContextType | undefined>(undef
 export function ActiveUserProvider({ children }: { children: ReactNode }) {
   const [activeUser, setActiveUserState] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const { activeAddress, transactionSigner } = useWallet()
 
-  // Load active user from sessionStorage on mount
-  useEffect(() => {
-    async function loadUser() {
-      const userId = sessionStorage.getItem(STORAGE_KEY)
-      if (userId) {
-        const user = await getUserById(userId)
-        setActiveUserState(user || null)
+  const fetchUser = useCallback(
+    async (address: string) => {
+      try {
+        const algorand = getAlgorandClient()
+        algorand.setSigner(address, transactionSigner)
+        const client = getRegistryClient(algorand, address)
+        const result = await client.send.getUser({ args: { addr: address } })
+        const contractUser = result.return
+        if (contractUser) {
+          setActiveUserState({
+            id: address,
+            name: contractUser.name,
+            role: ROLE_REVERSE[contractUser.role] ?? 'subject',
+            createdAt: Number(contractUser.createdAt),
+            userId: contractUser.userId,
+          })
+        } else {
+          setActiveUserState(null)
+        }
+      } catch {
+        // Address not registered in Registry yet
+        setActiveUserState(null)
       }
-      setIsLoading(false)
-    }
-    loadUser()
-  }, [])
+    },
+    [transactionSigner],
+  )
 
-  const setActiveUser = useCallback(async (userId: string) => {
-    const user = await getUserById(userId)
-    if (user) {
-      sessionStorage.setItem(STORAGE_KEY, userId)
-      setActiveUserState(user)
+  // Auto-fetch user whenever the connected wallet address changes
+  useEffect(() => {
+    setIsLoading(true)
+    if (!activeAddress) {
+      setActiveUserState(null)
+      setIsLoading(false)
+      return
     }
-  }, [])
+    fetchUser(activeAddress).finally(() => setIsLoading(false))
+  }, [activeAddress, fetchUser])
+
+  /** Re-fetches and sets the active user from Registry. Call after successful registration. */
+  const setActiveUser = useCallback(
+    async (address: string) => {
+      setIsLoading(true)
+      await fetchUser(address)
+      setIsLoading(false)
+    },
+    [fetchUser],
+  )
 
   const clearActiveUser = useCallback(() => {
-    sessionStorage.removeItem(STORAGE_KEY)
     setActiveUserState(null)
   }, [])
 
   return (
-    <ActiveUserContext.Provider
-      value={{
-        activeUser,
-        isLoading,
-        setActiveUser,
-        clearActiveUser,
-      }}
-    >
+    <ActiveUserContext.Provider value={{ activeUser, isLoading, setActiveUser, clearActiveUser }}>
       {children}
     </ActiveUserContext.Provider>
   )

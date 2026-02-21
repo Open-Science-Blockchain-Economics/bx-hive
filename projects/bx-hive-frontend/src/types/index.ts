@@ -1,10 +1,13 @@
 export type UserRole = 'experimenter' | 'subject'
 
 export interface User {
+  /** Wallet address — the on-chain identity */
   id: string
   name: string
   role: UserRole
   createdAt: number
+  /** On-chain uint32 user_id assigned by BxHiveRegistry */
+  userId?: number
 }
 
 // Experiment Templates
