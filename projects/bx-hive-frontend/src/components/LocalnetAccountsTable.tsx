@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useWallet } from '@txnlab/use-wallet-react'
 import { type LocalnetAccount, type LocalnetAccountRole, useLocalnetAccounts } from '../hooks/useLocalnetAccounts'
 import { truncateAddress } from '../utils/address'
 
@@ -28,13 +29,17 @@ function CopyButton({ text }: { text: string }) {
 function AccountRow({
   account,
   isSelected,
+  activeAddress,
   onSelect,
   onRegister,
+  onConnect,
 }: {
   account: LocalnetAccount
   isSelected: boolean
+  activeAddress: string | null
   onSelect: () => void
   onRegister: (address: string, name: string, role: LocalnetAccountRole) => Promise<void>
+  onConnect: (address: string) => Promise<void>
 }) {
   const [name, setName] = useState(account.name)
   const [role, setRole] = useState<LocalnetAccountRole>('subject')
@@ -84,7 +89,17 @@ function AccountRow({
         </td>
         <td className="text-right">
           {account.registered ? (
-            <span className="text-success text-xs">✓ Registered</span>
+            activeAddress === account.address ? (
+              <span className="text-success text-xs font-medium">● Active</span>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-xs btn-outline btn-success"
+                onClick={(e) => { e.stopPropagation(); void onConnect(account.address) }}
+              >
+                Connect
+              </button>
+            )
           ) : (
             <span className="text-base-content/40 text-xs">
               {isSelected ? '▲ close' : 'click to register'}
@@ -136,7 +151,17 @@ function AccountRow({
 
 export default function LocalnetAccountsTable() {
   const { accounts, loading, seeded, registerAccount, refresh } = useLocalnetAccounts()
+  const { wallets, activeAddress } = useWallet()
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null)
+
+  const handleConnect = async (address: string) => {
+    const kmdWallet = wallets?.find((w) => w.id === 'kmd')
+    if (!kmdWallet) return
+    if (!kmdWallet.isConnected) {
+      await kmdWallet.connect()
+    }
+    kmdWallet.setActiveAccount(address)
+  }
 
   if (import.meta.env.VITE_ENVIRONMENT !== 'local') return null
 
@@ -192,6 +217,7 @@ export default function LocalnetAccountsTable() {
                     key={account.address}
                     account={account}
                     isSelected={selectedAddress === account.address}
+                    activeAddress={activeAddress ?? null}
                     onSelect={() =>
                       setSelectedAddress(
                         selectedAddress === account.address ? null : account.address,
@@ -201,6 +227,7 @@ export default function LocalnetAccountsTable() {
                       await registerAccount(address, name, role)
                       setSelectedAddress(null)
                     }}
+                    onConnect={handleConnect}
                   />
                 ))}
               </tbody>

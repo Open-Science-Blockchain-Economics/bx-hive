@@ -1,5 +1,5 @@
 import { useWallet } from '@txnlab/use-wallet-react'
-import { useState, useCallback, createContext, useContext, useEffect, ReactNode } from 'react'
+import { useState, useCallback, createContext, useContext, useEffect, useRef, ReactNode } from 'react'
 import type { User, UserRole } from '../types'
 import { getAlgorandClient, getRegistryClient } from '../utils/algorand'
 
@@ -20,11 +20,16 @@ export function ActiveUserProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const { activeAddress, transactionSigner } = useWallet()
 
+  const signerRef = useRef(transactionSigner)
+  useEffect(() => {
+    signerRef.current = transactionSigner
+  }, [transactionSigner])
+
   const fetchUser = useCallback(
     async (address: string) => {
       try {
         const algorand = getAlgorandClient()
-        algorand.setSigner(address, transactionSigner)
+        algorand.setSigner(address, signerRef.current)
         const client = getRegistryClient(algorand, address)
         const result = await client.send.getUser({ args: { addr: address } })
         const contractUser = result.return
@@ -44,7 +49,8 @@ export function ActiveUserProvider({ children }: { children: ReactNode }) {
         setActiveUserState(null)
       }
     },
-    [transactionSigner],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
   )
 
   // Auto-fetch user whenever the connected wallet address changes
