@@ -14,6 +14,7 @@
   "devDependencies": {
     "@algorandfoundation/algokit-client-generator": "^5.0.0",
     "@types/node": "^18.17.14",
+    "tsx": "^4.19.0",
     "@types/react": "^18.2.11",
     "@types/react-dom": "^18.2.4",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
@@ -50,7 +51,8 @@
     "build": "vite build",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0 --fix",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "seed:localnet": "tsx --tsconfig tsconfig.scripts.json scripts/seed-localnet.ts"
   },
   "eslintConfig": {
     "extends": [

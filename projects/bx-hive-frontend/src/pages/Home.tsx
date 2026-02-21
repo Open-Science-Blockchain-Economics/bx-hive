@@ -1,12 +1,17 @@
-import SignUp from '../components/SignUp'
 import DataCleaner from '../components/DataCleaner'
 import DatabaseStatus from '../components/DatabaseStatus'
+import LocalnetAccountsTable from '../components/LocalnetAccountsTable'
+import SignUp from '../components/SignUp'
 
 export default function Home() {
   return (
     <main className="py-8">
       <section className="mb-10">
         <h1 className="text-4xl font-bold">Welcome to bx-hive</h1>
+      </section>
+
+      <section className="mb-10">
+        <LocalnetAccountsTable />
       </section>
 
       <section
