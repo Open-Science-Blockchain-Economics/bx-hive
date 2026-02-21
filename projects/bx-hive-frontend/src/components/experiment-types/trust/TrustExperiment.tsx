@@ -1,117 +1,95 @@
-import type { Experiment, Match, TrustExperimentState } from '../../../types'
+import type { Match, VariationConfig } from '../../../hooks/useTrustVariation'
+import { PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '../../../hooks/useTrustVariation'
+import { microAlgoToAlgo } from '../../../utils/amount'
 import InvestorInterface from './InvestorInterface'
 import ResultsDisplay from './ResultsDisplay'
 import TrusteeInterface from './TrusteeInterface'
 
 interface TrustExperimentProps {
-  experiment: Experiment
+  appId: bigint
   match: Match
-  activeUserId: string
-  onExperimentUpdate: () => void
+  config: VariationConfig
+  activeAddress: string
+  onRefresh: () => void
 }
 
-export default function TrustExperiment({ experiment, match, activeUserId, onExperimentUpdate }: TrustExperimentProps) {
-  // Extract Trust Experiment parameters
-  const E1 = experiment.parameters.E1 as number
-  const E2 = experiment.parameters.E2 as number
-  const m = experiment.parameters.m as number
-  const UNIT = experiment.parameters.UNIT as number
+export default function TrustExperiment({ appId, match, config, activeAddress, onRefresh }: TrustExperimentProps) {
+  const E1 = microAlgoToAlgo(config.e1)
+  const E2 = microAlgoToAlgo(config.e2)
+  const m = Number(config.multiplier)
+  const UNIT = microAlgoToAlgo(config.unit)
 
-  // Determine player role
-  const isInvestor = match.player1Id === activeUserId
+  const isInvestor = match.investor === activeAddress
+  const phase = match.phase
 
-  // Check if state is initialized
-  if (!match.state) {
-    return (
-      <div className="text-center py-8 text-base-content/60">
-        <p>Experiment state not initialized</p>
-      </div>
-    )
-  }
-
-  const state = match.state as TrustExperimentState
-  const { phase, investorDecision, trusteeDecision, investorPayout, trusteePayout } = state
-
-  // Completed - show results
-  if (
-    phase === 'completed' &&
-    investorDecision !== undefined &&
-    trusteeDecision !== undefined &&
-    investorPayout !== undefined &&
-    trusteePayout !== undefined
-  ) {
+  if (phase === PHASE_COMPLETED) {
     return (
       <ResultsDisplay
         E1={E1}
         E2={E2}
         m={m}
-        investorDecision={investorDecision}
-        trusteeDecision={trusteeDecision}
-        investorPayout={investorPayout}
-        trusteePayout={trusteePayout}
+        investorDecision={microAlgoToAlgo(match.investment)}
+        trusteeDecision={microAlgoToAlgo(match.returnAmount)}
+        investorPayout={microAlgoToAlgo(match.investorPayout)}
+        trusteePayout={microAlgoToAlgo(match.trusteePayout)}
         isInvestor={isInvestor}
       />
     )
   }
 
-  // Investor decision phase
-  if (phase === 'investor_decision') {
+  if (phase === PHASE_INVESTOR_DECISION) {
     if (isInvestor) {
-      return <InvestorInterface experimentId={experiment.id} matchId={match.id} E1={E1} m={m} UNIT={UNIT} onDecisionMade={onExperimentUpdate} />
-    } else {
-      return (
-        <div className="card bg-base-100 border border-base-300">
-          <div className="card-body text-center">
-            <h2 className="card-title justify-center">Waiting for Investor</h2>
-            <p className="text-base-content/70 mt-2">The Investor is deciding how much to send you.</p>
-            <p className="text-sm text-base-content/50 mt-4">Refresh the page to check for updates.</p>
-            <button className="btn btn-outline mt-4" onClick={onExperimentUpdate}>
-              Refresh
-            </button>
-          </div>
-        </div>
-      )
+      return <InvestorInterface appId={appId} matchId={match.matchId} E1={E1} m={m} UNIT={UNIT} onDecisionMade={onRefresh} />
     }
+    return (
+      <div className="card bg-base-100 border border-base-300">
+        <div className="card-body text-center">
+          <h2 className="card-title justify-center">Waiting for Investor</h2>
+          <p className="text-base-content/70 mt-2">The Investor is deciding how much to send you.</p>
+          <p className="text-sm text-base-content/50 mt-4">Page auto-refreshes every 3 seconds.</p>
+          <button className="btn btn-outline mt-4" onClick={onRefresh}>
+            Refresh Now
+          </button>
+        </div>
+      </div>
+    )
   }
 
-  // Trustee decision phase
-  if (phase === 'trustee_decision' && investorDecision !== undefined) {
+  if (phase === PHASE_TRUSTEE_DECISION) {
     if (!isInvestor) {
       return (
         <TrusteeInterface
-          experimentId={experiment.id}
-          matchId={match.id}
+          appId={appId}
+          matchId={match.matchId}
           E1={E1}
           E2={E2}
           m={m}
           UNIT={UNIT}
-          investorDecision={investorDecision}
-          onDecisionMade={onExperimentUpdate}
+          investorDecision={microAlgoToAlgo(match.investment)}
+          onDecisionMade={onRefresh}
         />
       )
-    } else {
-      return (
-        <div className="card bg-base-100 border border-base-300">
-          <div className="card-body text-center">
-            <h2 className="card-title justify-center">Waiting for Trustee</h2>
-            <p className="text-base-content/70 mt-2">
-              You invested <span className="font-bold">{investorDecision.toLocaleString()}</span>.
-            </p>
-            <p className="text-base-content/70">
-              The Trustee received <span className="font-bold">{(investorDecision * m).toLocaleString()}</span> and is deciding how much to
-              return.
-            </p>
-            <p className="text-sm text-base-content/50 mt-4">Refresh the page to check for updates.</p>
-            <button className="btn btn-outline mt-4" onClick={onExperimentUpdate}>
-              Refresh
-            </button>
-          </div>
-        </div>
-      )
     }
+    return (
+      <div className="card bg-base-100 border border-base-300">
+        <div className="card-body text-center">
+          <h2 className="card-title justify-center">Waiting for Trustee</h2>
+          <p className="text-base-content/70 mt-2">
+            You invested <span className="font-bold">{microAlgoToAlgo(match.investment).toLocaleString()} ALGO</span>.
+          </p>
+          <p className="text-base-content/70">
+            The Trustee received{' '}
+            <span className="font-bold">{(microAlgoToAlgo(match.investment) * m).toLocaleString()} ALGO</span> and is deciding how much to return.
+          </p>
+          <p className="text-sm text-base-content/50 mt-4">Page auto-refreshes every 3 seconds.</p>
+          <button className="btn btn-outline mt-4" onClick={onRefresh}>
+            Refresh Now
+          </button>
+        </div>
+      </div>
+    )
   }
 
-  // Unknown state
   return (
     <div className="text-center py-8 text-base-content/60">
       <p>Unknown experiment state</p>

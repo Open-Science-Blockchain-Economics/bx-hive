@@ -1,17 +1,19 @@
 import { useState } from 'react'
-import { submitInvestorDecision } from '../../../db'
+import { useTrustVariation } from '../../../hooks/useTrustVariation'
 import { calculateInvestorRefund, calculateTrusteeReceived } from '../../../experiment-logic/trustExperiment'
+import { algoToMicroAlgo } from '../../../utils/amount'
 
 interface InvestorInterfaceProps {
-  experimentId: string
-  matchId: string
+  appId: bigint
+  matchId: number
   E1: number
   m: number
   UNIT: number
   onDecisionMade: () => void
 }
 
-export default function InvestorInterface({ experimentId, matchId, E1, m, UNIT, onDecisionMade }: InvestorInterfaceProps) {
+export default function InvestorInterface({ appId, matchId, E1, m, UNIT, onDecisionMade }: InvestorInterfaceProps) {
+  const { submitInvestorDecision } = useTrustVariation()
   const [investment, setInvestment] = useState(0)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -21,10 +23,9 @@ export default function InvestorInterface({ experimentId, matchId, E1, m, UNIT, 
 
   async function handleSubmit() {
     setError(null)
-
     try {
       setSubmitting(true)
-      await submitInvestorDecision(experimentId, matchId, investment)
+      await submitInvestorDecision(appId, matchId, algoToMicroAlgo(investment))
       onDecisionMade()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit decision')
@@ -33,10 +34,10 @@ export default function InvestorInterface({ experimentId, matchId, E1, m, UNIT, 
     }
   }
 
-  // Generate investment options based on UNIT step size
+  // Generate investment options in ALGO using UNIT step size
   const options: number[] = []
   for (let i = 0; i <= E1; i += UNIT) {
-    options.push(i)
+    options.push(Math.round(i * 1000) / 1000)
   }
 
   return (
@@ -63,8 +64,8 @@ export default function InvestorInterface({ experimentId, matchId, E1, m, UNIT, 
           <div className="stats stats-vertical lg:stats-horizontal shadow w-full">
             <div className="stat">
               <div className="stat-title">Your Endowment</div>
-              <div className="stat-value text-primary">{E1.toLocaleString()}</div>
-              <div className="stat-desc">tokens to invest</div>
+              <div className="stat-value text-primary">{E1.toLocaleString()} ALGO</div>
+              <div className="stat-desc">to invest</div>
             </div>
 
             <div className="stat">
@@ -144,7 +145,7 @@ export default function InvestorInterface({ experimentId, matchId, E1, m, UNIT, 
           )}
 
           <div className="card-actions justify-end">
-            <button className="btn btn-primary btn-lg" onClick={handleSubmit} disabled={submitting}>
+            <button className="btn btn-primary btn-lg" onClick={() => void handleSubmit()} disabled={submitting}>
               {submitting ? (
                 <>
                   <span className="loading loading-spinner loading-sm"></span>

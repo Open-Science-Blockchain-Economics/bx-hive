@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { submitTrusteeDecision } from '../../../db'
+import { useTrustVariation } from '../../../hooks/useTrustVariation'
 import { calculateTrusteeReceived } from '../../../experiment-logic/trustExperiment'
+import { algoToMicroAlgo } from '../../../utils/amount'
 
 interface TrusteeInterfaceProps {
-  experimentId: string
-  matchId: string
+  appId: bigint
+  matchId: number
   E1: number
   E2: number
   m: number
@@ -13,7 +14,8 @@ interface TrusteeInterfaceProps {
   onDecisionMade: () => void
 }
 
-export default function TrusteeInterface({ experimentId, matchId, E1, E2, m, UNIT, investorDecision, onDecisionMade }: TrusteeInterfaceProps) {
+export default function TrusteeInterface({ appId, matchId, E1, E2, m, UNIT, investorDecision, onDecisionMade }: TrusteeInterfaceProps) {
+  const { submitTrusteeDecision } = useTrustVariation()
   const received = calculateTrusteeReceived(investorDecision, m)
 
   const [returnAmount, setReturnAmount] = useState(0)
@@ -24,10 +26,9 @@ export default function TrusteeInterface({ experimentId, matchId, E1, E2, m, UNI
 
   async function handleSubmit() {
     setError(null)
-
     try {
       setSubmitting(true)
-      await submitTrusteeDecision(experimentId, matchId, returnAmount)
+      await submitTrusteeDecision(appId, matchId, algoToMicroAlgo(returnAmount))
       onDecisionMade()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit decision')
@@ -36,10 +37,10 @@ export default function TrusteeInterface({ experimentId, matchId, E1, E2, m, UNI
     }
   }
 
-  // Generate return options based on UNIT step size
+  // Generate return options in ALGO using UNIT step size
   const options: number[] = []
   for (let i = 0; i <= received; i += UNIT) {
-    options.push(i)
+    options.push(Math.round(i * 1000) / 1000)
   }
 
   return (
@@ -167,7 +168,7 @@ export default function TrusteeInterface({ experimentId, matchId, E1, E2, m, UNI
           )}
 
           <div className="card-actions justify-end">
-            <button className="btn btn-primary btn-lg" onClick={handleSubmit} disabled={submitting}>
+            <button className="btn btn-primary btn-lg" onClick={() => void handleSubmit()} disabled={submitting}>
               {submitting ? (
                 <>
                   <span className="loading loading-spinner loading-sm"></span>
