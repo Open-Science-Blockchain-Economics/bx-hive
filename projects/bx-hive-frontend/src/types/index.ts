@@ -29,6 +29,7 @@ export interface ExperimentTemplate {
   description: string
   playerCount: 1 | 2
   parameterSchema: ParameterSchema[]
+  disabled?: boolean
 }
 
 // Experiment Instance

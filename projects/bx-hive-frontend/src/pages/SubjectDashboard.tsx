@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import ExperimentCard from '../components/subject/ExperimentCard'
 import { getBatches, getExperiments, getExperimentsByBatchId, registerForBatch, registerForExperiment } from '../db'
 import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
+import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustVariation, PHASE_COMPLETED } from '../hooks/useTrustVariation'
 import type { Match as OnChainMatch } from '../hooks/useTrustVariation'
-import { truncateAddress } from '../utils/address'
+import { pickVariationRoundRobin, type VariationSlot } from '../utils/distributeSubjects'
 import { microAlgoToAlgo } from '../utils/amount'
 import type { Experiment, ExperimentBatch } from '../types'
 
@@ -25,11 +26,18 @@ interface OnChainMatchView {
   match: OnChainMatch
 }
 
+interface OnChainExperimentView {
+  group: ExperimentGroup
+  variations: VariationInfo[]
+  enrolled: boolean // subject is enrolled in at least one variation
+  hasMatch: boolean // subject has an active or completed match
+}
+
 export default function SubjectDashboard() {
   const { activeUser } = useActiveUser()
   const { activeAddress } = useAlgorand()
   const { listExperiments, listVariations } = useTrustExperiments()
-  const { getPlayerMatch } = useTrustVariation()
+  const { getPlayerMatch, selfEnroll, getSubjectCount } = useTrustVariation()
 
   // Local BRET state
   const [experimentViews, setExperimentViews] = useState<SubjectExperimentView[]>([])
@@ -38,34 +46,101 @@ export default function SubjectDashboard() {
 
   // On-chain trust game state
   const [onChainMatches, setOnChainMatches] = useState<OnChainMatchView[]>([])
+  const [onChainExperiments, setOnChainExperiments] = useState<OnChainExperimentView[]>([])
   const [onChainLoading, setOnChainLoading] = useState(true)
+  const [joining, setJoining] = useState<number | null>(null) // exp_id being joined
+  const [joinError, setJoinError] = useState<string | null>(null)
 
-  // Wallet copy feedback
-  const [copied, setCopied] = useState(false)
-
-  useEffect(() => {
-    void loadLocalExperiments()
-    void loadOnChainMatches()
-  }, [activeAddress])
-
-  async function loadOnChainMatches() {
+  const loadOnChainData = useCallback(async () => {
     if (!activeAddress) { setOnChainLoading(false); return }
     try {
       setOnChainLoading(true)
       const groups = await listExperiments()
-      const views: OnChainMatchView[] = []
+      const matchViews: OnChainMatchView[] = []
+      const expViews: OnChainExperimentView[] = []
+
       for (const group of groups) {
         const vars = await listVariations(group.expId, Number(group.variationCount))
+        let enrolled = false
+        let hasMatch = false
+
         for (const v of vars) {
           const match = await getPlayerMatch(v.appId, activeAddress)
-          if (match) views.push({ appId: v.appId, match })
+          if (match) {
+            matchViews.push({ appId: v.appId, match })
+            enrolled = true
+            hasMatch = true
+          }
         }
+
+        // Check enrollment without match (subject enrolled but not yet paired)
+        // We use getSubjectCount as a lightweight check — a precise per-address check
+        // would require box reads. The contract rejects duplicate enrollment anyway.
+        if (!enrolled) {
+          for (const v of vars) {
+            try {
+              const count = await getSubjectCount(v.appId)
+              // If subject_count > 0, experiment is active — but we can't know if *this*
+              // subject is enrolled without a box read. We'll mark as not enrolled and
+              // rely on the "Already enrolled" contract error as a safety net.
+              void count
+            } catch {
+              // ignore
+            }
+          }
+        }
+
+        expViews.push({ group, variations: vars, enrolled, hasMatch })
       }
-      setOnChainMatches(views)
+
+      setOnChainMatches(matchViews)
+      setOnChainExperiments(expViews)
     } catch (err) {
-      console.error('Failed to load on-chain matches:', err)
+      console.error('Failed to load on-chain data:', err)
     } finally {
       setOnChainLoading(false)
+    }
+  }, [activeAddress, listExperiments, listVariations, getPlayerMatch])
+
+  useEffect(() => {
+    void loadLocalExperiments()
+    void loadOnChainData()
+  }, [activeAddress, loadOnChainData])
+
+  async function handleJoinExperiment(expId: number, variations: VariationInfo[]) {
+    if (!activeAddress) return
+    setJoining(expId)
+    setJoinError(null)
+    try {
+      // Query subject counts + max_subjects across all variations
+      const slots: VariationSlot[] = await Promise.all(
+        variations.map(async (v) => {
+          const count = await getSubjectCount(v.appId)
+          // max_subjects is stored in global state; the contract enforces the cap
+          // on-chain regardless, so using 0 (unlimited) here is safe
+          return { appId: v.appId, subjectCount: count, maxSubjects: 0 }
+        }),
+      )
+
+      const chosenAppId = pickVariationRoundRobin(slots)
+      if (!chosenAppId) {
+        setJoinError('All variations are full')
+        return
+      }
+
+      await selfEnroll(chosenAppId)
+      await loadOnChainData()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to join experiment'
+      if (msg.includes('Already enrolled')) {
+        setJoinError('You are already enrolled in this experiment')
+      } else if (msg.includes('User not found')) {
+        setJoinError('Please register your account first (Sign Up page)')
+      } else {
+        setJoinError(msg)
+      }
+    } finally {
+      setJoining(null)
     }
   }
 
@@ -140,16 +215,12 @@ export default function SubjectDashboard() {
     }
   }
 
-  function handleCopyAddress() {
-    if (!activeAddress) return
-    void navigator.clipboard.writeText(activeAddress).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
-  }
-
   const activeOnChain = onChainMatches.filter((v) => v.match.phase !== PHASE_COMPLETED)
   const completedOnChain = onChainMatches.filter((v) => v.match.phase === PHASE_COMPLETED)
+  // Experiments available to join (not enrolled, not matched)
+  const joinableExperiments = onChainExperiments.filter((e) => !e.enrolled && !e.hasMatch)
+  // Experiments enrolled but waiting for match
+  const enrolledWaiting = onChainExperiments.filter((e) => e.enrolled && !e.hasMatch)
   const availableViews = experimentViews.filter((view) => !hasCompletedMatch(view))
   const completedViews = experimentViews.filter((view) => hasCompletedMatch(view))
 
@@ -162,32 +233,75 @@ export default function SubjectDashboard() {
         <p className="text-base-content/70 mt-2">View and participate in experiments</p>
       </div>
 
-      {/* Wallet address card — share with experimenter to be added as subject */}
-      {activeAddress && (
-        <div className="card bg-base-200 border border-base-300 mb-6">
-          <div className="card-body py-4">
-            <div className="flex items-center justify-between gap-4 flex-wrap">
-              <div>
-                <p className="text-sm font-medium">Your Wallet Address</p>
-                <p className="text-xs text-base-content/60 mt-1">Share this with the experimenter to be added to a Trust Game</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <code className="text-xs bg-base-100 px-2 py-1 rounded">{truncateAddress(activeAddress)}</code>
-                <button type="button" className="btn btn-xs btn-outline" onClick={handleCopyAddress}>
-                  {copied ? 'Copied!' : 'Copy'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {isLoading ? (
         <div className="flex justify-center py-12">
           <span className="loading loading-spinner loading-lg"></span>
         </div>
       ) : (
         <div className="space-y-8">
+
+          {/* ── Trust Game: Available to Join ── */}
+          {joinableExperiments.length > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-4">Trust Game — Available</h2>
+              <div className="grid gap-4">
+                {joinableExperiments.map(({ group, variations }) => (
+                  <div key={group.expId} className="card bg-base-100 border border-base-300">
+                    <div className="card-body">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="card-title">{group.name}</h3>
+                          <p className="text-sm text-base-content/70">
+                            Trust Game · {Number(group.variationCount)} variation{Number(group.variationCount) !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <span className="badge badge-info">Open</span>
+                      </div>
+                      {joinError && joining === null && (
+                        <div className="text-error text-sm mt-2">{joinError}</div>
+                      )}
+                      <div className="card-actions justify-end mt-2">
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          disabled={joining !== null}
+                          onClick={() => void handleJoinExperiment(group.expId, variations)}
+                        >
+                          {joining === group.expId ? (
+                            <span className="loading loading-spinner loading-xs"></span>
+                          ) : (
+                            'Join Experiment'
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ── Trust Game: Enrolled, waiting for match ── */}
+          {enrolledWaiting.length > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold mb-4">Trust Game — Enrolled</h2>
+              <div className="grid gap-4">
+                {enrolledWaiting.map(({ group }) => (
+                  <div key={group.expId} className="card bg-base-100 border border-base-300">
+                    <div className="card-body">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="card-title">{group.name}</h3>
+                          <p className="text-sm text-base-content/70">Enrolled — waiting for match assignment</p>
+                        </div>
+                        <span className="badge badge-ghost">Waiting</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* ── Active Trust Game matches ── */}
           {activeOnChain.length > 0 && (
@@ -200,11 +314,8 @@ export default function SubjectDashboard() {
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="card-title">Trust Game</h3>
-                          <p className="text-sm text-base-content/70">Variation #{String(appId)}</p>
                           <p className="text-xs text-base-content/50 mt-1">
                             Role: <span className="font-medium">{match.investor === activeAddress ? 'Investor' : 'Trustee'}</span>
-                            {' · '}
-                            E1: {microAlgoToAlgo(match.investment > 0n ? match.investment : 0n).toLocaleString()} ALGO
                           </p>
                         </div>
                         <span className="badge badge-warning">In Progress</span>
@@ -232,7 +343,6 @@ export default function SubjectDashboard() {
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="card-title">Trust Game</h3>
-                          <p className="text-sm text-base-content/70">Variation #{String(appId)}</p>
                           <p className="text-xs text-base-content/50 mt-1">
                             Payout:{' '}
                             <span className="font-medium text-success">
@@ -254,13 +364,12 @@ export default function SubjectDashboard() {
             </section>
           )}
 
-          {/* No trust matches yet */}
-          {activeOnChain.length === 0 && completedOnChain.length === 0 && (
+          {/* No trust activity at all */}
+          {joinableExperiments.length === 0 && enrolledWaiting.length === 0 && activeOnChain.length === 0 && completedOnChain.length === 0 && (
             <section>
               <h2 className="text-lg font-semibold mb-4">Trust Game</h2>
               <div className="text-center py-8 text-base-content/70 bg-base-200 rounded-lg">
-                <p>No Trust Game matches yet.</p>
-                <p className="text-sm mt-2">Copy your wallet address above and share it with an experimenter to be added.</p>
+                <p>No Trust Game experiments available yet.</p>
               </div>
             </section>
           )}

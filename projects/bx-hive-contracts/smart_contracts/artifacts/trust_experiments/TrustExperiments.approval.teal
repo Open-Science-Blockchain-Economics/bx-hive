@@ -3,18 +3,18 @@
 
 // algopy.arc4.ARC4Contract.approval_program() -> uint64:
 main:
-    intcblock 0 8 1 4 4294967296
-    bytecblock 0x151f7c75 "registry_app" "experiment_count" 0x655f 0x0036 0x765f
+    intcblock 0 8 1 2 4294967296
+    bytecblock "experiment_count" 0x151f7c75 "registry_app" 0x0036 0x655f 0x765f 0x0000000000000000 0xb8db8605 0x0016 0x00000000
     txn ApplicationID
     bnz main_after_if_else@2
     // smart_contracts/trust_experiments/contract.py:22
     // self.registry_app = GlobalState(UInt64(0))
-    bytec_1 // "registry_app"
+    bytec_2 // "registry_app"
     intc_0 // 0
     app_global_put
     // smart_contracts/trust_experiments/contract.py:23
     // self.experiment_count = GlobalState(UInt64(0))
-    bytec_2 // "experiment_count"
+    bytec_0 // "experiment_count"
     intc_0 // 0
     app_global_put
 
@@ -25,13 +25,13 @@ main_after_if_else@2:
     !
     assert // OnCompletion must be NoOp
     txn ApplicationID
-    bz main_create_NoOp@10
-    pushbytess 0x30277cb5 0x0a80775f 0xbe617bca 0x1af376ad // method "create_experiment(string)uint32", method "create_variation(uint32,string,byte[],byte[],uint64,uint64,uint64,uint64,uint64)uint64", method "get_experiment(uint32)(uint32,address,string,uint64,uint64)", method "get_variation(uint32,uint32)(uint32,uint64,string,uint64)"
+    bz main_create_NoOp@11
+    pushbytess 0x30277cb5 0xe5ae81e4 0x71c1307d 0xbe617bca 0x1af376ad // method "create_experiment(string)uint32", method "create_variation(uint32,string,byte[],byte[],uint64,uint64,uint64,uint64,uint64,uint64)uint64", method "create_experiment_with_variation(string,string,byte[],byte[],uint64,uint64,uint64,uint64,uint64,uint64)(uint32,uint64)", method "get_experiment(uint32)(uint32,address,string,uint64,uint64)", method "get_variation(uint32,uint32)(uint32,uint64,string,uint64)"
     txna ApplicationArgs 0
-    match create_experiment create_variation get_experiment get_variation
+    match create_experiment create_variation create_experiment_with_variation get_experiment get_variation
     err
 
-main_create_NoOp@10:
+main_create_NoOp@11:
     // smart_contracts/trust_experiments/contract.py:20
     // class TrustExperiments(ARC4Contract):
     pushbytes 0x240d2f67 // method "create(uint64)void"
@@ -53,7 +53,7 @@ create:
     // smart_contracts/trust_experiments/contract.py:31
     // self.registry_app.value = registry_app.as_uint64()
     btoi
-    bytec_1 // "registry_app"
+    bytec_2 // "registry_app"
     swap
     app_global_put
     // smart_contracts/trust_experiments/contract.py:29
@@ -70,7 +70,7 @@ create_experiment:
     dup
     intc_0 // 0
     extract_uint16 // on error: invalid array length header
-    pushint 2 // 2
+    intc_3 // 2
     +
     dig 1
     len
@@ -79,7 +79,7 @@ create_experiment:
     // smart_contracts/trust_experiments/contract.py:35
     // exp_id = arc4.UInt32(self.experiment_count.value)
     intc_0 // 0
-    bytec_2 // "experiment_count"
+    bytec_0 // "experiment_count"
     app_global_get_ex
     assert // check self.experiment_count exists
     dup
@@ -95,7 +95,7 @@ create_experiment:
     swap
     intc_2 // 1
     +
-    bytec_2 // "experiment_count"
+    bytec_0 // "experiment_count"
     swap
     app_global_put
     // smart_contracts/trust_experiments/contract.py:39
@@ -116,13 +116,13 @@ create_experiment:
     dig 2
     uncover 2
     concat
-    bytec 4 // 0x0036
+    bytec_3 // 0x0036
     concat
     swap
     concat
     // smart_contracts/trust_experiments/contract.py:42
     // variation_count=arc4.UInt64(0),
-    pushbytes 0x0000000000000000
+    bytec 6 // 0x0000000000000000
     // smart_contracts/trust_experiments/contract.py:37-43
     // self.experiments[exp_id] = ExperimentGroup(
     //     exp_id=exp_id,
@@ -136,7 +136,7 @@ create_experiment:
     concat
     // smart_contracts/trust_experiments/contract.py:37
     // self.experiments[exp_id] = ExperimentGroup(
-    bytec_3 // 0x655f
+    bytec 4 // 0x655f
     dig 2
     concat
     // smart_contracts/trust_experiments/contract.py:37-43
@@ -154,7 +154,7 @@ create_experiment:
     box_put
     // smart_contracts/trust_experiments/contract.py:33
     // @arc4.abimethod
-    bytec_0 // 0x151f7c75
+    bytec_1 // 0x151f7c75
     swap
     concat
     log
@@ -169,14 +169,14 @@ create_variation:
     txna ApplicationArgs 1
     dup
     len
-    intc_3 // 4
+    pushint 4 // 4
     ==
     assert // invalid number of bytes for arc4.uint32
     txna ApplicationArgs 2
     dup
     intc_0 // 0
     extract_uint16 // on error: invalid array length header
-    pushint 2 // 2
+    intc_3 // 2
     +
     dig 1
     len
@@ -186,7 +186,7 @@ create_variation:
     dup
     intc_0 // 0
     extract_uint16 // on error: invalid array length header
-    pushint 2 // 2
+    intc_3 // 2
     +
     dig 1
     len
@@ -197,7 +197,7 @@ create_variation:
     dup
     intc_0 // 0
     extract_uint16 // on error: invalid array length header
-    pushint 2 // 2
+    intc_3 // 2
     +
     dig 1
     len
@@ -234,35 +234,40 @@ create_variation:
     intc_1 // 8
     ==
     assert // invalid number of bytes for arc4.uint64
-    // smart_contracts/trust_experiments/contract.py:59
+    txna ApplicationArgs 10
+    dup
+    len
+    intc_1 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    // smart_contracts/trust_experiments/contract.py:60
     // assert exp_id in self.experiments, "Experiment not found"
-    bytec_3 // 0x655f
-    dig 9
+    bytec 4 // 0x655f
+    dig 10
     concat
     dup
     box_len
     bury 1
     assert // Experiment not found
-    // smart_contracts/trust_experiments/contract.py:60
+    // smart_contracts/trust_experiments/contract.py:61
     // experiment = self.experiments[exp_id].copy()
     dup
     box_get
     pop
-    cover 9
-    // smart_contracts/trust_experiments/contract.py:60-61
+    cover 8
+    // smart_contracts/trust_experiments/contract.py:61-62
     // experiment = self.experiments[exp_id].copy()
     // assert experiment.owner == arc4.Address(Txn.sender), "Not experiment owner"
     dup
-    intc_3 // 4
-    pushint 32 // 32
+    pushints 4 32 // 4, 32
     box_extract
-    // smart_contracts/trust_experiments/contract.py:61
+    // smart_contracts/trust_experiments/contract.py:62
     // assert experiment.owner == arc4.Address(Txn.sender), "Not experiment owner"
     dup
     txn Sender
     ==
     assert // Not experiment owner
-    // smart_contracts/trust_experiments/contract.py:63
+    // smart_contracts/trust_experiments/contract.py:64
     // var_id = arc4.UInt32(experiment.variation_count.as_uint64())
     dig 1
     pushint 46 // 46
@@ -278,55 +283,16 @@ create_variation:
     assert // overflow
     dup
     extract 4 4
-    // smart_contracts/trust_experiments/contract.py:65-72
-    // # Deploy the TrustVariation contract
+    // smart_contracts/trust_experiments/contract.py:66-88
+    // # Deploy TrustVariation and call create() in one transaction
+    // # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64,uint64,uint64)void
     // deployed = itxn.ApplicationCall(
     //     approval_program=approval_program,
     //     clear_state_program=clear_program,
     //     global_num_uint=_TRUST_VAR_GLOBAL_UINT,
     //     global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
-    //     fee=0,
-    // ).submit()
-    itxn_begin
-    // smart_contracts/trust_experiments/contract.py:70
-    // global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
-    intc_2 // 1
-    itxn_field GlobalNumByteSlice
-    // smart_contracts/trust_experiments/contract.py:69
-    // global_num_uint=_TRUST_VAR_GLOBAL_UINT,
-    pushint 13 // 13
-    itxn_field GlobalNumUint
-    uncover 10
-    itxn_field ClearStateProgramPages
-    uncover 10
-    itxn_field ApprovalProgramPages
-    // smart_contracts/trust_experiments/contract.py:65-66
-    // # Deploy the TrustVariation contract
-    // deployed = itxn.ApplicationCall(
-    pushint 6 // appl
-    itxn_field TypeEnum
-    // smart_contracts/trust_experiments/contract.py:71
-    // fee=0,
-    intc_0 // 0
-    itxn_field Fee
-    // smart_contracts/trust_experiments/contract.py:65-72
-    // # Deploy the TrustVariation contract
-    // deployed = itxn.ApplicationCall(
-    //     approval_program=approval_program,
-    //     clear_state_program=clear_program,
-    //     global_num_uint=_TRUST_VAR_GLOBAL_UINT,
-    //     global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
-    //     fee=0,
-    // ).submit()
-    itxn_submit
-    itxn CreatedApplicationID
-    // smart_contracts/trust_experiments/contract.py:75-92
-    // # Initialise via TrustVariation.create() ABI call
-    // # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64)void
-    // itxn.ApplicationCall(
-    //     app_id=new_app,
     //     app_args=(
-    //         Bytes(b"\x1b\xfa\x29\x7b"),
+    //         Bytes(b"\xb8\xdb\x86\x05"),
     //         arc4.UInt64(self.registry_app.value).bytes,
     //         exp_id.bytes,
     //         var_id.bytes,
@@ -336,30 +302,34 @@ create_variation:
     //         multiplier.bytes,
     //         unit.bytes,
     //         asset_id.bytes,
+    //         arc4.UInt64(self.registry_app.value).bytes,
+    //         max_subjects.bytes,
     //     ),
     //     fee=0,
     // ).submit()
     itxn_begin
-    // smart_contracts/trust_experiments/contract.py:81
+    // smart_contracts/trust_experiments/contract.py:75
     // arc4.UInt64(self.registry_app.value).bytes,
     intc_0 // 0
-    bytec_1 // "registry_app"
+    bytec_2 // "registry_app"
     app_global_get_ex
     assert // check self.registry_app exists
     itob
-    // smart_contracts/trust_experiments/contract.py:84
+    // smart_contracts/trust_experiments/contract.py:78
     // arc4.Address(Txn.sender).bytes,
     txn Sender
-    // smart_contracts/trust_experiments/contract.py:80
-    // Bytes(b"\x1b\xfa\x29\x7b"),
-    pushbytes 0x1bfa297b
+    // smart_contracts/trust_experiments/contract.py:74
+    // Bytes(b"\xb8\xdb\x86\x05"),
+    bytec 7 // 0xb8db8605
     itxn_field ApplicationArgs
-    swap
+    dig 1
     itxn_field ApplicationArgs
-    uncover 14
+    uncover 17
     itxn_field ApplicationArgs
     dig 2
     itxn_field ApplicationArgs
+    itxn_field ApplicationArgs
+    uncover 11
     itxn_field ApplicationArgs
     uncover 10
     itxn_field ApplicationArgs
@@ -369,27 +339,41 @@ create_variation:
     itxn_field ApplicationArgs
     uncover 7
     itxn_field ApplicationArgs
-    uncover 6
     itxn_field ApplicationArgs
-    dup
-    itxn_field ApplicationID
-    // smart_contracts/trust_experiments/contract.py:75-77
-    // # Initialise via TrustVariation.create() ABI call
-    // # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64)void
-    // itxn.ApplicationCall(
+    uncover 5
+    itxn_field ApplicationArgs
+    // smart_contracts/trust_experiments/contract.py:72
+    // global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
+    intc_2 // 1
+    itxn_field GlobalNumByteSlice
+    // smart_contracts/trust_experiments/contract.py:71
+    // global_num_uint=_TRUST_VAR_GLOBAL_UINT,
+    pushint 16 // 16
+    itxn_field GlobalNumUint
+    uncover 5
+    itxn_field ClearStateProgramPages
+    uncover 6
+    itxn_field ApprovalProgramPages
+    // smart_contracts/trust_experiments/contract.py:66-68
+    // # Deploy TrustVariation and call create() in one transaction
+    // # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64,uint64,uint64)void
+    // deployed = itxn.ApplicationCall(
     pushint 6 // appl
     itxn_field TypeEnum
-    // smart_contracts/trust_experiments/contract.py:91
+    // smart_contracts/trust_experiments/contract.py:87
     // fee=0,
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/trust_experiments/contract.py:75-92
-    // # Initialise via TrustVariation.create() ABI call
-    // # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64)void
-    // itxn.ApplicationCall(
-    //     app_id=new_app,
+    // smart_contracts/trust_experiments/contract.py:66-88
+    // # Deploy TrustVariation and call create() in one transaction
+    // # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64,uint64,uint64)void
+    // deployed = itxn.ApplicationCall(
+    //     approval_program=approval_program,
+    //     clear_state_program=clear_program,
+    //     global_num_uint=_TRUST_VAR_GLOBAL_UINT,
+    //     global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
     //     app_args=(
-    //         Bytes(b"\x1b\xfa\x29\x7b"),
+    //         Bytes(b"\xb8\xdb\x86\x05"),
     //         arc4.UInt64(self.registry_app.value).bytes,
     //         exp_id.bytes,
     //         var_id.bytes,
@@ -399,43 +383,46 @@ create_variation:
     //         multiplier.bytes,
     //         unit.bytes,
     //         asset_id.bytes,
+    //         arc4.UInt64(self.registry_app.value).bytes,
+    //         max_subjects.bytes,
     //     ),
     //     fee=0,
     // ).submit()
     itxn_submit
-    // smart_contracts/trust_experiments/contract.py:96
+    itxn CreatedApplicationID
+    // smart_contracts/trust_experiments/contract.py:93
     // experiment.exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64()
     dig 5
     intc_0 // 0
-    intc_3 // 4
+    pushint 4 // 4
     box_extract
     dup
     btoi
     intc 4 // 4294967296
     *
     uncover 4
-    // smart_contracts/trust_experiments/contract.py:63
+    // smart_contracts/trust_experiments/contract.py:64
     // var_id = arc4.UInt32(experiment.variation_count.as_uint64())
-    intc_3 // 4
-    // smart_contracts/trust_experiments/contract.py:96
+    pushint 4 // 4
+    // smart_contracts/trust_experiments/contract.py:93
     // experiment.exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64()
     extract_uint32
     +
-    // smart_contracts/trust_experiments/contract.py:94-97
+    // smart_contracts/trust_experiments/contract.py:91-94
     // # Packed composite key: high 32 bits = exp_id, low 32 bits = var_id
     // variation_key = arc4.UInt64(
     //     experiment.exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64()
     // )
     itob
-    // smart_contracts/trust_experiments/contract.py:100
+    // smart_contracts/trust_experiments/contract.py:97
     // app_id=arc4.UInt64(new_app.id),
     uncover 2
     itob
-    // smart_contracts/trust_experiments/contract.py:102
+    // smart_contracts/trust_experiments/contract.py:99
     // created_at=arc4.UInt64(Global.latest_timestamp),
     global LatestTimestamp
     itob
-    // smart_contracts/trust_experiments/contract.py:98-103
+    // smart_contracts/trust_experiments/contract.py:95-100
     // self.variations[variation_key] = VariationInfo(
     //     var_id=var_id,
     //     app_id=arc4.UInt64(new_app.id),
@@ -445,18 +432,18 @@ create_variation:
     uncover 4
     dig 2
     concat
-    pushbytes 0x0016
+    bytec 8 // 0x0016
     concat
     swap
     concat
-    uncover 7
+    uncover 8
     concat
-    // smart_contracts/trust_experiments/contract.py:98
+    // smart_contracts/trust_experiments/contract.py:95
     // self.variations[variation_key] = VariationInfo(
     bytec 5 // 0x765f
     uncover 3
     concat
-    // smart_contracts/trust_experiments/contract.py:98-103
+    // smart_contracts/trust_experiments/contract.py:95-100
     // self.variations[variation_key] = VariationInfo(
     //     var_id=var_id,
     //     app_id=arc4.UInt64(new_app.id),
@@ -468,7 +455,7 @@ create_variation:
     pop
     swap
     box_put
-    // smart_contracts/trust_experiments/contract.py:109
+    // smart_contracts/trust_experiments/contract.py:106
     // name=experiment.name,
     dig 5
     pushint 36 // 36
@@ -478,19 +465,19 @@ create_variation:
     uncover 7
     cover 2
     substring3
-    // smart_contracts/trust_experiments/contract.py:110
+    // smart_contracts/trust_experiments/contract.py:107
     // created_at=experiment.created_at,
     dig 5
     pushint 38 // 38
     intc_1 // 8
     box_extract
-    // smart_contracts/trust_experiments/contract.py:111
+    // smart_contracts/trust_experiments/contract.py:108
     // variation_count=arc4.UInt64(experiment.variation_count.as_uint64() + UInt64(1)),
     uncover 4
     intc_2 // 1
     +
     itob
-    // smart_contracts/trust_experiments/contract.py:105-112
+    // smart_contracts/trust_experiments/contract.py:102-109
     // # Increment experiment variation count
     // self.experiments[exp_id] = ExperimentGroup(
     //     exp_id=experiment.exp_id,
@@ -502,7 +489,7 @@ create_variation:
     uncover 4
     uncover 5
     concat
-    bytec 4 // 0x0036
+    bytec_3 // 0x0036
     concat
     uncover 2
     concat
@@ -518,7 +505,397 @@ create_variation:
     box_put
     // smart_contracts/trust_experiments/contract.py:46
     // @arc4.abimethod
-    bytec_0 // 0x151f7c75
+    bytec_1 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_2 // 1
+    return
+
+
+// smart_contracts.trust_experiments.contract.TrustExperiments.create_experiment_with_variation[routing]() -> void:
+create_experiment_with_variation:
+    // smart_contracts/trust_experiments/contract.py:113
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    txna ApplicationArgs 2
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    txna ApplicationArgs 3
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    extract 2 0
+    txna ApplicationArgs 4
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    extract 2 0
+    txna ApplicationArgs 5
+    dup
+    len
+    intc_1 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    txna ApplicationArgs 6
+    dup
+    len
+    intc_1 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    txna ApplicationArgs 7
+    dup
+    len
+    intc_1 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    txna ApplicationArgs 8
+    dup
+    len
+    intc_1 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    txna ApplicationArgs 9
+    dup
+    len
+    intc_1 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    txna ApplicationArgs 10
+    dup
+    len
+    intc_1 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    // smart_contracts/trust_experiments/contract.py:127-128
+    // # Create the experiment group
+    // exp_id = arc4.UInt32(self.experiment_count.value)
+    intc_0 // 0
+    bytec_0 // "experiment_count"
+    app_global_get_ex
+    assert // check self.experiment_count exists
+    dup
+    itob
+    dup
+    bitlen
+    pushint 32 // 32
+    <=
+    assert // overflow
+    dup
+    extract 4 4
+    // smart_contracts/trust_experiments/contract.py:129
+    // self.experiment_count.value += UInt64(1)
+    uncover 2
+    intc_2 // 1
+    +
+    bytec_0 // "experiment_count"
+    swap
+    app_global_put
+    // smart_contracts/trust_experiments/contract.py:132
+    // owner=arc4.Address(Txn.sender),
+    txn Sender
+    // smart_contracts/trust_experiments/contract.py:134
+    // created_at=arc4.UInt64(Global.latest_timestamp),
+    global LatestTimestamp
+    itob
+    // smart_contracts/trust_experiments/contract.py:130-136
+    // self.experiments[exp_id] = ExperimentGroup(
+    //     exp_id=exp_id,
+    //     owner=arc4.Address(Txn.sender),
+    //     name=name,
+    //     created_at=arc4.UInt64(Global.latest_timestamp),
+    //     variation_count=arc4.UInt64(0),
+    // )
+    dig 2
+    uncover 2
+    concat
+    bytec_3 // 0x0036
+    concat
+    swap
+    concat
+    // smart_contracts/trust_experiments/contract.py:135
+    // variation_count=arc4.UInt64(0),
+    bytec 6 // 0x0000000000000000
+    // smart_contracts/trust_experiments/contract.py:130-136
+    // self.experiments[exp_id] = ExperimentGroup(
+    //     exp_id=exp_id,
+    //     owner=arc4.Address(Txn.sender),
+    //     name=name,
+    //     created_at=arc4.UInt64(Global.latest_timestamp),
+    //     variation_count=arc4.UInt64(0),
+    // )
+    concat
+    dig 12
+    concat
+    // smart_contracts/trust_experiments/contract.py:130
+    // self.experiments[exp_id] = ExperimentGroup(
+    bytec 4 // 0x655f
+    dig 2
+    concat
+    // smart_contracts/trust_experiments/contract.py:130-136
+    // self.experiments[exp_id] = ExperimentGroup(
+    //     exp_id=exp_id,
+    //     owner=arc4.Address(Txn.sender),
+    //     name=name,
+    //     created_at=arc4.UInt64(Global.latest_timestamp),
+    //     variation_count=arc4.UInt64(0),
+    // )
+    dup
+    box_del
+    pop
+    dup
+    uncover 2
+    box_put
+    // smart_contracts/trust_experiments/contract.py:141-163
+    // # Deploy TrustVariation and call create() in one transaction
+    // # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64,uint64,uint64)void
+    // deployed = itxn.ApplicationCall(
+    //     approval_program=approval_program,
+    //     clear_state_program=clear_program,
+    //     global_num_uint=_TRUST_VAR_GLOBAL_UINT,
+    //     global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
+    //     app_args=(
+    //         Bytes(b"\xb8\xdb\x86\x05"),
+    //         arc4.UInt64(self.registry_app.value).bytes,
+    //         exp_id.bytes,
+    //         var_id.bytes,
+    //         arc4.Address(Txn.sender).bytes,
+    //         e1.bytes,
+    //         e2.bytes,
+    //         multiplier.bytes,
+    //         unit.bytes,
+    //         asset_id.bytes,
+    //         arc4.UInt64(self.registry_app.value).bytes,
+    //         max_subjects.bytes,
+    //     ),
+    //     fee=0,
+    // ).submit()
+    itxn_begin
+    // smart_contracts/trust_experiments/contract.py:150
+    // arc4.UInt64(self.registry_app.value).bytes,
+    intc_0 // 0
+    bytec_2 // "registry_app"
+    app_global_get_ex
+    assert // check self.registry_app exists
+    itob
+    // smart_contracts/trust_experiments/contract.py:153
+    // arc4.Address(Txn.sender).bytes,
+    txn Sender
+    // smart_contracts/trust_experiments/contract.py:149
+    // Bytes(b"\xb8\xdb\x86\x05"),
+    bytec 7 // 0xb8db8605
+    itxn_field ApplicationArgs
+    dig 1
+    itxn_field ApplicationArgs
+    dig 3
+    itxn_field ApplicationArgs
+    // smart_contracts/trust_experiments/contract.py:138-139
+    // # Create the first variation (var_id = 0)
+    // var_id = arc4.UInt32(0)
+    bytec 9 // 0x00000000
+    itxn_field ApplicationArgs
+    itxn_field ApplicationArgs
+    uncover 9
+    itxn_field ApplicationArgs
+    uncover 8
+    itxn_field ApplicationArgs
+    uncover 7
+    itxn_field ApplicationArgs
+    uncover 6
+    itxn_field ApplicationArgs
+    uncover 5
+    itxn_field ApplicationArgs
+    itxn_field ApplicationArgs
+    uncover 3
+    itxn_field ApplicationArgs
+    // smart_contracts/trust_experiments/contract.py:147
+    // global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
+    intc_2 // 1
+    itxn_field GlobalNumByteSlice
+    // smart_contracts/trust_experiments/contract.py:146
+    // global_num_uint=_TRUST_VAR_GLOBAL_UINT,
+    pushint 16 // 16
+    itxn_field GlobalNumUint
+    uncover 3
+    itxn_field ClearStateProgramPages
+    uncover 3
+    itxn_field ApprovalProgramPages
+    // smart_contracts/trust_experiments/contract.py:141-143
+    // # Deploy TrustVariation and call create() in one transaction
+    // # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64,uint64,uint64)void
+    // deployed = itxn.ApplicationCall(
+    pushint 6 // appl
+    itxn_field TypeEnum
+    // smart_contracts/trust_experiments/contract.py:162
+    // fee=0,
+    intc_0 // 0
+    itxn_field Fee
+    // smart_contracts/trust_experiments/contract.py:141-163
+    // # Deploy TrustVariation and call create() in one transaction
+    // # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64,uint64,uint64)void
+    // deployed = itxn.ApplicationCall(
+    //     approval_program=approval_program,
+    //     clear_state_program=clear_program,
+    //     global_num_uint=_TRUST_VAR_GLOBAL_UINT,
+    //     global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
+    //     app_args=(
+    //         Bytes(b"\xb8\xdb\x86\x05"),
+    //         arc4.UInt64(self.registry_app.value).bytes,
+    //         exp_id.bytes,
+    //         var_id.bytes,
+    //         arc4.Address(Txn.sender).bytes,
+    //         e1.bytes,
+    //         e2.bytes,
+    //         multiplier.bytes,
+    //         unit.bytes,
+    //         asset_id.bytes,
+    //         arc4.UInt64(self.registry_app.value).bytes,
+    //         max_subjects.bytes,
+    //     ),
+    //     fee=0,
+    // ).submit()
+    itxn_submit
+    itxn CreatedApplicationID
+    // smart_contracts/trust_experiments/contract.py:168
+    // exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64()
+    uncover 3
+    // smart_contracts/trust_experiments/contract.py:127-128
+    // # Create the experiment group
+    // exp_id = arc4.UInt32(self.experiment_count.value)
+    pushint 4 // 4
+    // smart_contracts/trust_experiments/contract.py:168
+    // exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64()
+    extract_uint32
+    intc 4 // 4294967296
+    *
+    // smart_contracts/trust_experiments/contract.py:166-169
+    // # Store variation info
+    // variation_key = arc4.UInt64(
+    //     exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64()
+    // )
+    itob
+    // smart_contracts/trust_experiments/contract.py:172
+    // app_id=arc4.UInt64(new_app.id),
+    swap
+    itob
+    // smart_contracts/trust_experiments/contract.py:174
+    // created_at=arc4.UInt64(Global.latest_timestamp),
+    global LatestTimestamp
+    itob
+    // smart_contracts/trust_experiments/contract.py:138-139
+    // # Create the first variation (var_id = 0)
+    // var_id = arc4.UInt32(0)
+    bytec 9 // 0x00000000
+    // smart_contracts/trust_experiments/contract.py:170-175
+    // self.variations[variation_key] = VariationInfo(
+    //     var_id=var_id,
+    //     app_id=arc4.UInt64(new_app.id),
+    //     label=label,
+    //     created_at=arc4.UInt64(Global.latest_timestamp),
+    // )
+    dig 2
+    concat
+    bytec 8 // 0x0016
+    concat
+    swap
+    concat
+    uncover 5
+    concat
+    // smart_contracts/trust_experiments/contract.py:170
+    // self.variations[variation_key] = VariationInfo(
+    bytec 5 // 0x765f
+    uncover 3
+    concat
+    // smart_contracts/trust_experiments/contract.py:170-175
+    // self.variations[variation_key] = VariationInfo(
+    //     var_id=var_id,
+    //     app_id=arc4.UInt64(new_app.id),
+    //     label=label,
+    //     created_at=arc4.UInt64(Global.latest_timestamp),
+    // )
+    dup
+    box_del
+    pop
+    swap
+    box_put
+    // smart_contracts/trust_experiments/contract.py:180
+    // owner=arc4.Address(Txn.sender),
+    txn Sender
+    // smart_contracts/trust_experiments/contract.py:182
+    // created_at=self.experiments[exp_id].created_at,
+    dig 2
+    pushint 38 // 38
+    intc_1 // 8
+    box_extract
+    // smart_contracts/trust_experiments/contract.py:177-184
+    // # Set variation_count to 1
+    // self.experiments[exp_id] = ExperimentGroup(
+    //     exp_id=exp_id,
+    //     owner=arc4.Address(Txn.sender),
+    //     name=name,
+    //     created_at=self.experiments[exp_id].created_at,
+    //     variation_count=arc4.UInt64(1),
+    // )
+    dig 4
+    uncover 2
+    concat
+    bytec_3 // 0x0036
+    concat
+    swap
+    concat
+    // smart_contracts/trust_experiments/contract.py:183
+    // variation_count=arc4.UInt64(1),
+    pushbytes 0x0000000000000001
+    // smart_contracts/trust_experiments/contract.py:177-184
+    // # Set variation_count to 1
+    // self.experiments[exp_id] = ExperimentGroup(
+    //     exp_id=exp_id,
+    //     owner=arc4.Address(Txn.sender),
+    //     name=name,
+    //     created_at=self.experiments[exp_id].created_at,
+    //     variation_count=arc4.UInt64(1),
+    // )
+    concat
+    uncover 4
+    concat
+    dig 2
+    box_del
+    pop
+    uncover 2
+    swap
+    box_put
+    // smart_contracts/trust_experiments/contract.py:113
+    // @arc4.abimethod
+    concat
+    bytec_1 // 0x151f7c75
     swap
     concat
     log
@@ -528,30 +905,30 @@ create_variation:
 
 // smart_contracts.trust_experiments.contract.TrustExperiments.get_experiment[routing]() -> void:
 get_experiment:
-    // smart_contracts/trust_experiments/contract.py:116
+    // smart_contracts/trust_experiments/contract.py:188
     // @arc4.abimethod(readonly=True)
     txna ApplicationArgs 1
     dup
     len
-    intc_3 // 4
+    pushint 4 // 4
     ==
     assert // invalid number of bytes for arc4.uint32
-    // smart_contracts/trust_experiments/contract.py:118
+    // smart_contracts/trust_experiments/contract.py:190
     // assert exp_id in self.experiments, "Experiment not found"
-    bytec_3 // 0x655f
+    bytec 4 // 0x655f
     swap
     concat
     dup
     box_len
     bury 1
     assert // Experiment not found
-    // smart_contracts/trust_experiments/contract.py:119
+    // smart_contracts/trust_experiments/contract.py:191
     // return self.experiments[exp_id]
     box_get
     pop
-    // smart_contracts/trust_experiments/contract.py:116
+    // smart_contracts/trust_experiments/contract.py:188
     // @arc4.abimethod(readonly=True)
-    bytec_0 // 0x151f7c75
+    bytec_1 // 0x151f7c75
     swap
     concat
     log
@@ -561,21 +938,21 @@ get_experiment:
 
 // smart_contracts.trust_experiments.contract.TrustExperiments.get_variation[routing]() -> void:
 get_variation:
-    // smart_contracts/trust_experiments/contract.py:121
+    // smart_contracts/trust_experiments/contract.py:193
     // @arc4.abimethod(readonly=True)
     txna ApplicationArgs 1
     dup
     len
-    intc_3 // 4
+    pushint 4 // 4
     ==
     assert // invalid number of bytes for arc4.uint32
     txna ApplicationArgs 2
     dup
     len
-    intc_3 // 4
+    pushint 4 // 4
     ==
     assert // invalid number of bytes for arc4.uint32
-    // smart_contracts/trust_experiments/contract.py:123
+    // smart_contracts/trust_experiments/contract.py:195
     // key = arc4.UInt64(exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64())
     swap
     btoi
@@ -585,7 +962,7 @@ get_variation:
     btoi
     +
     itob
-    // smart_contracts/trust_experiments/contract.py:124
+    // smart_contracts/trust_experiments/contract.py:196
     // assert key in self.variations, "Variation not found"
     bytec 5 // 0x765f
     swap
@@ -594,13 +971,13 @@ get_variation:
     box_len
     bury 1
     assert // Variation not found
-    // smart_contracts/trust_experiments/contract.py:125
+    // smart_contracts/trust_experiments/contract.py:197
     // return self.variations[key]
     box_get
     pop
-    // smart_contracts/trust_experiments/contract.py:121
+    // smart_contracts/trust_experiments/contract.py:193
     // @arc4.abimethod(readonly=True)
-    bytec_0 // 0x151f7c75
+    bytec_1 // 0x151f7c75
     swap
     concat
     log

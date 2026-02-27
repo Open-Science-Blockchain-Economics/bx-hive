@@ -141,6 +141,45 @@ export function useTrustVariation() {
   )
 
   /**
+   * Self-enroll the connected wallet into a TrustVariation.
+   * Sends a grouped MBR payment + selfEnroll method call.
+   */
+  const selfEnroll = useCallback(
+    async (appId: bigint): Promise<void> => {
+      if (!algorand || !activeAddress) throw new Error('Wallet not connected')
+      const client = getTrustVariationClient(appId)
+      if (!client) throw new Error('Wallet not connected')
+
+      const appAddress = algosdk.getApplicationAddress(appId)
+      const mbrPayment = algorand.createTransaction.payment({
+        sender: activeAddress,
+        receiver: appAddress,
+        amount: AlgoAmount.MicroAlgos(16_900),
+      })
+
+      await client.send.selfEnroll({
+        args: { mbrPayment },
+        coverAppCallInnerTransactionFees: true,
+        maxFee: AlgoAmount.MicroAlgos(3_000),
+      })
+    },
+    [algorand, activeAddress, getTrustVariationClient],
+  )
+
+  /**
+   * Fetches the current subject count for a variation.
+   */
+  const getSubjectCount = useCallback(
+    async (appId: bigint): Promise<number> => {
+      const client = getTrustVariationClient(appId)
+      if (!client) throw new Error('Wallet not connected')
+      const result = await client.send.getSubjectCount({ args: {} })
+      return Number(result.return!)
+    },
+    [getTrustVariationClient],
+  )
+
+  /**
    * Fetches the VariationConfig (e1, e2, multiplier, unit, assetId, status).
    */
   const getConfig = useCallback(
@@ -157,11 +196,13 @@ export function useTrustVariation() {
   return {
     depositEscrow,
     addSubjects,
+    selfEnroll,
     createMatch,
     submitInvestorDecision,
     submitTrusteeDecision,
     getMatch,
     getPlayerMatch,
     getConfig,
+    getSubjectCount,
   }
 }

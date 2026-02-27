@@ -13,7 +13,7 @@ from algopy import (
 from smart_contracts.shared.types import ExperimentGroup, VariationInfo
 
 # TrustVariation GlobalState schema
-_TRUST_VAR_GLOBAL_UINT = 13
+_TRUST_VAR_GLOBAL_UINT = 16
 _TRUST_VAR_GLOBAL_BYTES = 1
 
 
@@ -55,6 +55,7 @@ class TrustExperiments(ARC4Contract):
         multiplier: arc4.UInt64,
         unit: arc4.UInt64,
         asset_id: arc4.UInt64,
+        max_subjects: arc4.UInt64,
     ) -> arc4.UInt64:
         assert exp_id in self.experiments, "Experiment not found"
         experiment = self.experiments[exp_id].copy()
@@ -62,22 +63,15 @@ class TrustExperiments(ARC4Contract):
 
         var_id = arc4.UInt32(experiment.variation_count.as_uint64())
 
-        # Deploy the TrustVariation contract
+        # Deploy TrustVariation and call create() in one transaction
+        # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64,uint64,uint64)void
         deployed = itxn.ApplicationCall(
             approval_program=approval_program,
             clear_state_program=clear_program,
             global_num_uint=_TRUST_VAR_GLOBAL_UINT,
             global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
-            fee=0,
-        ).submit()
-        new_app = deployed.created_app
-
-        # Initialise via TrustVariation.create() ABI call
-        # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64)void
-        itxn.ApplicationCall(
-            app_id=new_app,
             app_args=(
-                Bytes(b"\x1b\xfa\x29\x7b"),
+                Bytes(b"\xb8\xdb\x86\x05"),
                 arc4.UInt64(self.registry_app.value).bytes,
                 exp_id.bytes,
                 var_id.bytes,
@@ -87,9 +81,12 @@ class TrustExperiments(ARC4Contract):
                 multiplier.bytes,
                 unit.bytes,
                 asset_id.bytes,
+                arc4.UInt64(self.registry_app.value).bytes,
+                max_subjects.bytes,
             ),
             fee=0,
         ).submit()
+        new_app = deployed.created_app
 
         # Packed composite key: high 32 bits = exp_id, low 32 bits = var_id
         variation_key = arc4.UInt64(
@@ -112,6 +109,81 @@ class TrustExperiments(ARC4Contract):
         )
 
         return arc4.UInt64(new_app.id)
+
+    @arc4.abimethod
+    def create_experiment_with_variation(
+        self,
+        name: arc4.String,
+        label: arc4.String,
+        approval_program: Bytes,
+        clear_program: Bytes,
+        e1: arc4.UInt64,
+        e2: arc4.UInt64,
+        multiplier: arc4.UInt64,
+        unit: arc4.UInt64,
+        asset_id: arc4.UInt64,
+        max_subjects: arc4.UInt64,
+    ) -> tuple[arc4.UInt32, arc4.UInt64]:
+        # Create the experiment group
+        exp_id = arc4.UInt32(self.experiment_count.value)
+        self.experiment_count.value += UInt64(1)
+        self.experiments[exp_id] = ExperimentGroup(
+            exp_id=exp_id,
+            owner=arc4.Address(Txn.sender),
+            name=name,
+            created_at=arc4.UInt64(Global.latest_timestamp),
+            variation_count=arc4.UInt64(0),
+        )
+
+        # Create the first variation (var_id = 0)
+        var_id = arc4.UInt32(0)
+
+        # Deploy TrustVariation and call create() in one transaction
+        # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64,uint64,uint64)void
+        deployed = itxn.ApplicationCall(
+            approval_program=approval_program,
+            clear_state_program=clear_program,
+            global_num_uint=_TRUST_VAR_GLOBAL_UINT,
+            global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
+            app_args=(
+                Bytes(b"\xb8\xdb\x86\x05"),
+                arc4.UInt64(self.registry_app.value).bytes,
+                exp_id.bytes,
+                var_id.bytes,
+                arc4.Address(Txn.sender).bytes,
+                e1.bytes,
+                e2.bytes,
+                multiplier.bytes,
+                unit.bytes,
+                asset_id.bytes,
+                arc4.UInt64(self.registry_app.value).bytes,
+                max_subjects.bytes,
+            ),
+            fee=0,
+        ).submit()
+        new_app = deployed.created_app
+
+        # Store variation info
+        variation_key = arc4.UInt64(
+            exp_id.as_uint64() * UInt64(4294967296) + var_id.as_uint64()
+        )
+        self.variations[variation_key] = VariationInfo(
+            var_id=var_id,
+            app_id=arc4.UInt64(new_app.id),
+            label=label,
+            created_at=arc4.UInt64(Global.latest_timestamp),
+        )
+
+        # Set variation_count to 1
+        self.experiments[exp_id] = ExperimentGroup(
+            exp_id=exp_id,
+            owner=arc4.Address(Txn.sender),
+            name=name,
+            created_at=self.experiments[exp_id].created_at,
+            variation_count=arc4.UInt64(1),
+        )
+
+        return exp_id, arc4.UInt64(new_app.id)
 
     @arc4.abimethod(readonly=True)
     def get_experiment(self, exp_id: arc4.UInt32) -> ExperimentGroup:

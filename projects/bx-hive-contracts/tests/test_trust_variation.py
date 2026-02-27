@@ -44,6 +44,8 @@ def _make_variation(ctx: AlgopyTestContext, owner: Account | None = None) -> Tru
         arc4.UInt64(MULTIPLIER),
         arc4.UInt64(UNIT),
         arc4.UInt64(ASSET_ID),
+        arc4.UInt64(0),  # registry_app
+        arc4.UInt64(0),  # max_subjects (0 = unlimited)
     )
     return contract
 
@@ -97,6 +99,8 @@ def test_create_zero_unit_fails(context: AlgopyTestContext) -> None:
             arc4.UInt64(MULTIPLIER),
             arc4.UInt64(0),  # zero unit
             arc4.UInt64(ASSET_ID),
+            arc4.UInt64(0),  # registry_app
+            arc4.UInt64(0),  # max_subjects
         )
 
 

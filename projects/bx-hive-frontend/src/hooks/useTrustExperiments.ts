@@ -1,3 +1,4 @@
+import { microAlgo } from '@algorandfoundation/algokit-utils'
 import { useCallback } from 'react'
 import type { ExperimentGroup, VariationInfo } from '../contracts/TrustExperiments'
 import { getTrustVariationPrograms } from '../utils/compilePrograms'
@@ -16,6 +17,8 @@ export interface VariationParams {
   unit: bigint
   /** Asset ID — 0 for ALGO */
   assetId: bigint
+  /** Max subjects per variation — 0 for unlimited */
+  maxSubjects?: bigint
 }
 
 /**
@@ -42,6 +45,36 @@ export function useTrustExperiments() {
   )
 
   /**
+   * Atomically creates a new experiment group and its first variation in one transaction.
+   * Returns { expId, appId }.
+   */
+  const createExperimentWithVariation = useCallback(
+    async (name: string, params: VariationParams): Promise<{ expId: number; appId: bigint }> => {
+      if (!trustExperimentsClient || !algorand || !activeAddress) throw new Error('Wallet not connected')
+      const { approval, clear } = await getTrustVariationPrograms(algorand)
+      const result = await trustExperimentsClient.send.createExperimentWithVariation({
+        args: {
+          name,
+          label: params.label,
+          approvalProgram: approval,
+          clearProgram: clear,
+          e1: params.e1,
+          e2: params.e2,
+          multiplier: params.multiplier,
+          unit: params.unit,
+          assetId: params.assetId,
+          maxSubjects: params.maxSubjects ?? 0n,
+        },
+        coverAppCallInnerTransactionFees: true,
+        maxFee: microAlgo(5_000),
+      })
+      const [expId, appId] = result.return!
+      return { expId: Number(expId), appId: BigInt(appId) }
+    },
+    [trustExperimentsClient, algorand, activeAddress],
+  )
+
+  /**
    * Spawns a new TrustVariation contract for the given experiment.
    * Compiles the TrustVariation TEAL programs and passes them as bytecode.
    * Returns the app_id (bigint) of the newly created TrustVariation contract.
@@ -61,7 +94,10 @@ export function useTrustExperiments() {
           multiplier: params.multiplier,
           unit: params.unit,
           assetId: params.assetId,
+          maxSubjects: params.maxSubjects ?? 0n,
         },
+        coverAppCallInnerTransactionFees: true,
+        maxFee: microAlgo(4_000),
       })
       return result.return!
     },
@@ -112,7 +148,7 @@ export function useTrustExperiments() {
     async (expId: number, count: number): Promise<VariationInfo[]> => {
       if (!trustExperimentsClient) return []
       const results = await Promise.allSettled(
-        Array.from({ length: count }, (_, i) => getVariation(expId, i + 1)),
+        Array.from({ length: count }, (_, i) => getVariation(expId, i)),
       )
       return results
         .filter((r): r is PromiseFulfilledResult<VariationInfo> => r.status === 'fulfilled')
@@ -121,5 +157,5 @@ export function useTrustExperiments() {
     [trustExperimentsClient, getVariation],
   )
 
-  return { createExperiment, createVariation, getExperiment, getVariation, listExperiments, listVariations }
+  return { createExperiment, createExperimentWithVariation, createVariation, getExperiment, getVariation, listExperiments, listVariations }
 }

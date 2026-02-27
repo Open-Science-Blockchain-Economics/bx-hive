@@ -88,7 +88,7 @@ async function main() {
 
   for (const { name, appId } of appIdsToFund) {
     const appAddress = algosdk.getApplicationAddress(appId)
-    await algorand.account.ensureFunded(appAddress, dispenser.addr, algos(1))
+    await algorand.account.ensureFunded(appAddress, dispenser.addr, algos(10))
     console.log(`  ✓ ${name} app account funded: ${appAddress.toString()}`)
   }
   if (appIdsToFund.length > 0) console.log()

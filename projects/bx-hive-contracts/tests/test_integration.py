@@ -123,6 +123,8 @@ def test_full_experiment_flow(context: AlgopyTestContext) -> None:
         arc4.UInt64(MULTIPLIER),
         arc4.UInt64(UNIT),
         arc4.UInt64(ASSET_ID),
+        arc4.UInt64(registry.__app_id__),  # registry_app
+        arc4.UInt64(0),  # max_subjects (0 = unlimited)
     )
     assert variation.status.value == STATUS_ACTIVE
     assert variation.e1.value == E1
@@ -197,6 +199,7 @@ def test_multiple_variations_independent(context: AlgopyTestContext) -> None:
         exp_id, arc4.UInt32(0), alice,
         arc4.UInt64(E1), arc4.UInt64(E2),
         arc4.UInt64(2), arc4.UInt64(UNIT), arc4.UInt64(ASSET_ID),
+        arc4.UInt64(0), arc4.UInt64(0),  # registry_app, max_subjects
     )
 
     # Variation B: multiplier=4
@@ -206,6 +209,7 @@ def test_multiple_variations_independent(context: AlgopyTestContext) -> None:
         exp_id, arc4.UInt32(1), alice,
         arc4.UInt64(E1), arc4.UInt64(E2),
         arc4.UInt64(4), arc4.UInt64(UNIT), arc4.UInt64(ASSET_ID),
+        arc4.UInt64(0), arc4.UInt64(0),  # registry_app, max_subjects
     )
 
     assert var_a.multiplier.value == 2

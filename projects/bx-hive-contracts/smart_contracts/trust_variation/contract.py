@@ -1,7 +1,9 @@
 from algopy import (
     Account,
+    Application,
     ARC4Contract,
     BoxMap,
+    Bytes,
     Global,
     GlobalState,
     Txn,
@@ -40,6 +42,9 @@ class TrustVariation(ARC4Contract):
         self.asset_id = GlobalState(UInt64(0))
         self.escrow_deposited = GlobalState(UInt64(0))
         self.escrow_paid_out = GlobalState(UInt64(0))
+        self.registry_app = GlobalState(UInt64(0))
+        self.subject_count = GlobalState(UInt64(0))
+        self.max_subjects = GlobalState(UInt64(0))
         self.subjects = BoxMap(arc4.Address, SubjectInfo, key_prefix=b"s_")
         self.matches = BoxMap(arc4.UInt32, Match, key_prefix=b"m_")
         self.player_match = BoxMap(arc4.Address, arc4.UInt32, key_prefix=b"pm_")
@@ -60,6 +65,8 @@ class TrustVariation(ARC4Contract):
         multiplier: arc4.UInt64,
         unit: arc4.UInt64,
         asset_id: arc4.UInt64,
+        registry_app: arc4.UInt64,
+        max_subjects: arc4.UInt64,
     ) -> None:
         assert unit.as_uint64() > UInt64(0), "Unit must be > 0"
         self.experiments_app.value = experiments_app.as_uint64()
@@ -76,6 +83,9 @@ class TrustVariation(ARC4Contract):
         self.asset_id.value = asset_id.as_uint64()
         self.escrow_deposited.value = UInt64(0)
         self.escrow_paid_out.value = UInt64(0)
+        self.registry_app.value = registry_app.as_uint64()
+        self.subject_count.value = UInt64(0)
+        self.max_subjects.value = max_subjects.as_uint64()
 
     @arc4.abimethod
     def deposit_escrow(self, payment: gtxn.PaymentTransaction) -> None:
@@ -95,6 +105,31 @@ class TrustVariation(ARC4Contract):
                 enrolled=arc4.UInt8(1),
                 assigned=arc4.UInt8(0),
             )
+            self.subject_count.value += UInt64(1)
+
+    @arc4.abimethod
+    def self_enroll(self, mbr_payment: gtxn.PaymentTransaction) -> None:
+        assert self.status.value == UInt64(STATUS_ACTIVE), "Not active"
+        addr = arc4.Address(Txn.sender)
+        assert addr not in self.subjects, "Already enrolled"
+        if self.max_subjects.value > UInt64(0):
+            assert self.subject_count.value < self.max_subjects.value, "Full"
+        assert mbr_payment.receiver == Global.current_application_address, "Wrong receiver"
+        assert mbr_payment.amount >= UInt64(16_900), "Insufficient MBR"
+        # Verify sender is registered in BxHiveRegistry
+        itxn.ApplicationCall(
+            app_id=Application(self.registry_app.value),
+            app_args=(
+                Bytes(b"\x6f\xad\x4a\x65"),  # get_user(address) selector
+                arc4.Address(Txn.sender).bytes,
+            ),
+            fee=0,
+        ).submit()
+        self.subjects[addr] = SubjectInfo(
+            enrolled=arc4.UInt8(1),
+            assigned=arc4.UInt8(0),
+        )
+        self.subject_count.value += UInt64(1)
 
     @arc4.abimethod
     def create_match(self, investor: arc4.Address, trustee: arc4.Address) -> arc4.UInt32:
@@ -244,6 +279,10 @@ class TrustVariation(ARC4Contract):
     def get_player_match(self, addr: arc4.Address) -> arc4.UInt32:
         assert addr in self.player_match, "No active match"
         return self.player_match[addr]
+
+    @arc4.abimethod(readonly=True)
+    def get_subject_count(self) -> arc4.UInt64:
+        return arc4.UInt64(self.subject_count.value)
 
     @arc4.abimethod(readonly=True)
     def get_escrow_balance(self) -> arc4.UInt64:

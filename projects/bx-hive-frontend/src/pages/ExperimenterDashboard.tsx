@@ -45,7 +45,7 @@ function generateVariationCombinations(
 }
 
 /** Convert trust-game frontend params (ALGO) to contract args (microAlgo) */
-function toVariationParams(params: Record<string, number | string>, label: string) {
+function toVariationParams(params: Record<string, number | string>, label: string, maxSubjects = 0) {
   return {
     label,
     e1: BigInt(Math.round(Number(params.E1) * 1_000_000)),
@@ -53,14 +53,15 @@ function toVariationParams(params: Record<string, number | string>, label: strin
     multiplier: BigInt(Math.round(Number(params.m))),
     unit: BigInt(Math.round(Number(params.UNIT) * 1_000_000)),
     assetId: 0n,
+    maxSubjects: BigInt(maxSubjects),
   }
 }
 
 export default function ExperimenterDashboard() {
   const { activeUser } = useActiveUser()
   const { activeAddress } = useAlgorand()
-  const { createExperiment, createVariation, listExperiments, listVariations } = useTrustExperiments()
-  const { addSubjects, depositEscrow } = useTrustVariation()
+  const { createExperimentWithVariation, createVariation, listExperiments, listVariations } = useTrustExperiments()
+  const { addSubjects, depositEscrow, getSubjectCount } = useTrustVariation()
 
   const [activeTab, setActiveTab] = useState<TabType>('experiments')
 
@@ -95,6 +96,9 @@ export default function ExperimenterDashboard() {
   const [depositAmounts, setDepositAmounts] = useState<Record<string, string>>({})
   const [depositing, setDepositing] = useState<Record<string, boolean>>({})
   const [depositErrors, setDepositErrors] = useState<Record<string, string>>({})
+
+  // Subject counts per variation (appId string → count)
+  const [subjectCounts, setSubjectCounts] = useState<Record<string, number>>({})
 
   // Expanded variation panels
   const [expandedVariations, setExpandedVariations] = useState<Set<string>>(new Set())
@@ -139,7 +143,29 @@ export default function ExperimenterDashboard() {
           variations: await listVariations(group.expId, Number(group.variationCount)),
         })),
       )
-      setOnChainExps(withVariations)
+      const valid = withVariations.filter(({ group }) => {
+        if (Number(group.variationCount) === 0) {
+          console.warn(`[bx-hive] Orphaned experiment exp_id=${group.expId} name="${group.name}" has 0 variations — hiding from UI`)
+          return false
+        }
+        return true
+      })
+      setOnChainExps(valid)
+
+      // Load subject counts for all variations
+      const counts: Record<string, number> = {}
+      await Promise.all(
+        valid.flatMap(({ variations: vars }) =>
+          vars.map(async (v) => {
+            try {
+              counts[String(v.appId)] = await getSubjectCount(v.appId)
+            } catch {
+              counts[String(v.appId)] = 0
+            }
+          }),
+        ),
+      )
+      setSubjectCounts(counts)
     } catch (err) {
       console.error('Failed to load on-chain experiments:', err)
     }
@@ -202,16 +228,23 @@ export default function ExperimenterDashboard() {
   }
 
   async function createTrustGameOnChain() {
-    const expId = await createExperiment(experimentName.trim())
-
+    const maxSub = maxPerVariation ? Number(maxPerVariation) : 0
     if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
       const combos = generateVariationCombinations(parameters, variations)
-      for (let i = 0; i < combos.length; i++) {
-        const label = getVariationLabel(combos[i], variations)
-        await createVariation(expId, toVariationParams(combos[i], label))
+      // First combo: atomic combined call (experiment always has ≥1 variation)
+      const { expId } = await createExperimentWithVariation(
+        experimentName.trim(),
+        toVariationParams(combos[0], getVariationLabel(combos[0], variations), maxSub),
+      )
+      // Remaining combos: add variations to the existing experiment
+      for (let i = 1; i < combos.length; i++) {
+        await createVariation(expId, toVariationParams(combos[i], getVariationLabel(combos[i], variations), maxSub))
       }
     } else {
-      await createVariation(expId, toVariationParams(parameters, 'Default'))
+      await createExperimentWithVariation(
+        experimentName.trim(),
+        toVariationParams(parameters, 'Default', maxSub),
+      )
     }
   }
 
@@ -357,6 +390,7 @@ export default function ExperimenterDashboard() {
                               <div>
                                 <span className="font-medium">V{v.varId}: {v.label}</span>
                                 <span className="text-xs text-base-content/50 ml-2">app #{String(v.appId)}</span>
+                                <span className="badge badge-sm badge-ghost ml-2">{subjectCounts[appIdKey] ?? 0} subjects</span>
                               </div>
                               <span className="text-base-content/50">{isExpanded ? '▲' : '▼'}</span>
                             </button>
@@ -507,21 +541,27 @@ export default function ExperimenterDashboard() {
                   {experimentTemplates.map((template) => (
                     <div
                       key={template.id}
-                      className={`card bg-base-100 border-2 cursor-pointer transition-all ${
-                        selectedTemplateId === template.id ? 'border-primary shadow-lg' : 'border-base-300 hover:border-base-400'
+                      className={`card bg-base-100 border-2 transition-all ${
+                        template.disabled
+                          ? 'opacity-40 cursor-not-allowed border-base-300'
+                          : selectedTemplateId === template.id
+                            ? 'cursor-pointer border-primary shadow-lg'
+                            : 'cursor-pointer border-base-300 hover:border-base-400'
                       }`}
-                      onClick={() => setSelectedTemplateId(template.id)}
+                      onClick={() => !template.disabled && setSelectedTemplateId(template.id)}
                     >
                       <div className="card-body">
                         <div className="flex justify-between items-start">
                           <h4 className="card-title text-lg">{template.name}</h4>
-                          <span className="badge badge-neutral badge-sm">{template.playerCount}-player</span>
+                          <div className="flex gap-1">
+                            {template.disabled && <span className="badge badge-ghost badge-sm">coming soon</span>}
+                            <span className="badge badge-neutral badge-sm">{template.playerCount}-player</span>
+                          </div>
                         </div>
                         <p className="text-sm text-base-content/70">{template.description}</p>
                         {selectedTemplateId === template.id && (
                           <div className="flex gap-2 mt-2">
                             <span className="badge badge-primary">Selected</span>
-                            {template.id === 'trust-game' && <span className="badge badge-secondary badge-sm">on-chain</span>}
                           </div>
                         )}
                       </div>
@@ -616,46 +656,57 @@ export default function ExperimenterDashboard() {
                     )}
                   </div>
 
-                  {/* Step 5: Assignment strategy (BRET batch only) */}
-                  {selectedTemplateId === 'bret' &&
-                    batchModeEnabled &&
+                  {/* Step 5: Assignment strategy + max per variation */}
+                  {batchModeEnabled &&
                     variations.length > 0 &&
                     variations.every((v) => v.values.length > 0) && (
                       <>
                         <div className="divider"></div>
                         <div>
-                          <h3 className="font-semibold text-lg mb-4">5. Participant Assignment Strategy</h3>
-                          <div className="space-y-3">
-                            <label className="flex items-start gap-3 cursor-pointer p-3 border border-base-300 rounded-lg hover:bg-base-200">
-                              <input
-                                type="radio"
-                                name="assignmentStrategy"
-                                className="radio radio-primary mt-1"
-                                checked={assignmentStrategy === 'round_robin'}
-                                onChange={() => setAssignmentStrategy('round_robin')}
-                              />
-                              <div>
-                                <div className="font-medium">Round Robin (Recommended)</div>
-                                <div className="text-sm text-base-content/70">Distribute participants evenly across all variations</div>
-                              </div>
-                            </label>
-                            <label className="flex items-start gap-3 cursor-pointer p-3 border border-base-300 rounded-lg hover:bg-base-200">
-                              <input
-                                type="radio"
-                                name="assignmentStrategy"
-                                className="radio radio-primary mt-1"
-                                checked={assignmentStrategy === 'fill_sequential'}
-                                onChange={() => setAssignmentStrategy('fill_sequential')}
-                              />
-                              <div>
-                                <div className="font-medium">Fill Sequential</div>
-                                <div className="text-sm text-base-content/70">
-                                  Fill each variation to capacity before moving to the next.
+                          <h3 className="font-semibold text-lg mb-4">5. Participant Assignment</h3>
+
+                          {/* Assignment strategy radios — BRET only (trust game uses on-chain round robin) */}
+                          {selectedTemplateId === 'bret' && (
+                            <div className="space-y-3 mb-4">
+                              <label className="flex items-start gap-3 cursor-pointer p-3 border border-base-300 rounded-lg hover:bg-base-200">
+                                <input
+                                  type="radio"
+                                  name="assignmentStrategy"
+                                  className="radio radio-primary mt-1"
+                                  checked={assignmentStrategy === 'round_robin'}
+                                  onChange={() => setAssignmentStrategy('round_robin')}
+                                />
+                                <div>
+                                  <div className="font-medium">Round Robin (Recommended)</div>
+                                  <div className="text-sm text-base-content/70">Distribute participants evenly across all variations</div>
                                 </div>
-                              </div>
-                            </label>
-                          </div>
-                          <div className="form-control mt-4">
+                              </label>
+                              <label className="flex items-start gap-3 cursor-pointer p-3 border border-base-300 rounded-lg hover:bg-base-200">
+                                <input
+                                  type="radio"
+                                  name="assignmentStrategy"
+                                  className="radio radio-primary mt-1"
+                                  checked={assignmentStrategy === 'fill_sequential'}
+                                  onChange={() => setAssignmentStrategy('fill_sequential')}
+                                />
+                                <div>
+                                  <div className="font-medium">Fill Sequential</div>
+                                  <div className="text-sm text-base-content/70">
+                                    Fill each variation to capacity before moving to the next.
+                                  </div>
+                                </div>
+                              </label>
+                            </div>
+                          )}
+
+                          {/* Trust Game info */}
+                          {selectedTemplateId === 'trust-game' && (
+                            <div className="alert alert-info mb-4">
+                              <span>Subjects self-enroll and are automatically distributed across variations using round robin.</span>
+                            </div>
+                          )}
+
+                          <div className="form-control">
                             <label className="label">
                               <span className="label-text font-medium">Max participants per variation (optional)</span>
                             </label>

@@ -46,6 +46,7 @@ export const trustExperimentTemplate: ExperimentTemplate = {
 
 export const bretTemplate: ExperimentTemplate = {
   id: 'bret',
+  disabled: true,
   name: 'BRET',
   label: 'Minesweeper',
   description:
