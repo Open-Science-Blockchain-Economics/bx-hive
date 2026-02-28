@@ -101,6 +101,8 @@ export function useTrustVariation() {
       if (!client) throw new Error('Wallet not connected')
       await client.send.submitTrusteeDecision({
         args: { matchId, returnAmount: returnAmountMicroAlgo },
+        coverAppCallInnerTransactionFees: true,
+        maxFee: AlgoAmount.MicroAlgos(3_000),
       })
     },
     [activeAddress, getTrustVariationClient],
