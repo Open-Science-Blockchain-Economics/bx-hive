@@ -4,6 +4,7 @@ import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiment
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import { PHASE_COMPLETED, STATUS_ACTIVE, STATUS_CLOSED, STATUS_COMPLETED, useTrustVariation } from '../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../hooks/useTrustVariation'
+import { useExperimentManager } from '../hooks/useExperimentManager'
 import { microAlgoToAlgo } from '../utils/amount'
 
 interface SubjectEntry {
@@ -46,6 +47,7 @@ export default function TrustExperimentDetails() {
 
   const { getExperiment, listVariations } = useTrustExperiments()
   const { getEnrolledSubjects, getMatches, getConfig, createMatch } = useTrustVariation()
+  const { getExpConfig, setExpConfig, getVarConfig, setVarConfig } = useExperimentManager()
 
   const [group, setGroup] = useState<ExperimentGroup | null>(null)
   const [variations, setVariations] = useState<VariationInfo[]>([])
@@ -60,8 +62,9 @@ export default function TrustExperimentDetails() {
   const [configs, setConfigs] = useState<Record<string, VariationConfig>>({})
   const [loadingVar, setLoadingVar] = useState<Record<string, boolean>>({})
 
-  // Auto-refresh state
-  const [autoRefresh, setAutoRefresh] = useState(true)
+  // Auto-refresh from experiment manager (persists across navigation)
+  const autoRefresh = getExpConfig(expId).autoRefresh
+  const setAutoRefresh = (val: boolean) => setExpConfig(expId, { autoRefresh: val })
 
   // Match creation state
   const [matchInvestor, setMatchInvestor] = useState<Record<string, string>>({})
@@ -430,7 +433,25 @@ export default function TrustExperimentDetails() {
               {/* Create Match section */}
               {varConfig && varConfig.status === STATUS_ACTIVE && (
                 <div>
-                  <h3 className="font-semibold mb-3">Create Match</h3>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold">Create Match</h3>
+                    <span className="tooltip tooltip-left" data-tip={getVarConfig(selectedVar.appId).autoMatch ? 'Pause auto-matching' : 'Auto-match unassigned subjects (FIFO)'}>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-xs gap-1"
+                        onClick={() => setVarConfig(selectedVar.appId, { autoMatch: !getVarConfig(selectedVar.appId).autoMatch })}
+                      >
+                        {getVarConfig(selectedVar.appId).autoMatch ? (
+                          <>
+                            <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                            ⏸ Auto Match
+                          </>
+                        ) : (
+                          <>▶ Auto Match</>
+                        )}
+                      </button>
+                    </span>
+                  </div>
                   {unassigned.length < 2 ? (
                     <p className="text-sm text-base-content/50">
                       Need at least 2 unassigned subjects to create a match.
