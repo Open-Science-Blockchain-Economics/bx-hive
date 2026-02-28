@@ -1,12 +1,13 @@
 import { useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useWallet } from '@txnlab/use-wallet-react'
+import { useWallet, useNetwork } from '@txnlab/use-wallet-react'
 import { useActiveUser } from '../hooks/useActiveUser'
-import { truncateAddress } from '../utils/address'
+import ConnectedWallet from './ConnectedWallet'
 
 export default function HeaderStatus() {
   const navigate = useNavigate()
   const { activeAddress, wallets } = useWallet()
+  const { activeNetwork } = useNetwork()
   const { activeUser, clearActiveUser } = useActiveUser()
 
   const handleDisconnect = useCallback(async () => {
@@ -42,37 +43,13 @@ export default function HeaderStatus() {
     )
   }
 
-  // Wallet connected but not yet registered in Registry
-  if (!activeUser) {
-    return (
-      <div className="flex items-center gap-2 whitespace-nowrap">
-        <span className="badge badge-warning badge-lg text-xs" title={activeAddress}>
-          {truncateAddress(activeAddress)}
-        </span>
-        <button
-          type="button"
-          onClick={handleDisconnect}
-          className="btn btn-outline btn-sm"
-        >
-          Disconnect
-        </button>
-      </div>
-    )
-  }
-
-  // Wallet connected + registered
+  // Wallet connected — show popover connector
   return (
-    <div className="flex items-center gap-2 whitespace-nowrap">
-      <span className="badge badge-success badge-lg" title={activeAddress}>
-        {activeUser.name}
-      </span>
-      <button
-        type="button"
-        onClick={handleDisconnect}
-        className="btn btn-outline btn-sm"
-      >
-        Disconnect
-      </button>
-    </div>
+    <ConnectedWallet
+      activeAddress={activeAddress}
+      activeNetwork={activeNetwork}
+      activeUser={activeUser}
+      onDisconnect={() => void handleDisconnect()}
+    />
   )
 }
