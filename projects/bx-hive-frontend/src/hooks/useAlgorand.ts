@@ -1,5 +1,5 @@
 import { useWallet } from '@txnlab/use-wallet-react'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { getAlgorandClient, getRegistryClient, getTrustExperimentsClient, getTrustVariationClient } from '../utils/algorand'
 
 /**
@@ -18,14 +18,28 @@ export function useAlgorand() {
     return client
   }, [activeAddress, transactionSigner])
 
+  const registryClient = useMemo(
+    () => (algorand && activeAddress ? getRegistryClient(algorand, activeAddress) : null),
+    [algorand, activeAddress],
+  )
+
+  const trustExperimentsClient = useMemo(
+    () => (algorand && activeAddress ? getTrustExperimentsClient(algorand, activeAddress) : null),
+    [algorand, activeAddress],
+  )
+
+  const getTrustVariationClientFn = useCallback(
+    (appId: bigint) => (algorand && activeAddress ? getTrustVariationClient(algorand, appId, activeAddress) : null),
+    [algorand, activeAddress],
+  )
+
   return {
     algorand,
     activeAddress: activeAddress ?? null,
     isReady,
     isConnected: Boolean(activeAddress),
-    registryClient: algorand && activeAddress ? getRegistryClient(algorand, activeAddress) : null,
-    trustExperimentsClient: algorand && activeAddress ? getTrustExperimentsClient(algorand, activeAddress) : null,
-    getTrustVariationClient: (appId: bigint) =>
-      algorand && activeAddress ? getTrustVariationClient(algorand, appId, activeAddress) : null,
+    registryClient,
+    trustExperimentsClient,
+    getTrustVariationClient: getTrustVariationClientFn,
   }
 }
