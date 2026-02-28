@@ -12,7 +12,7 @@ import { experimentTemplates, getTemplateById } from '../experiment-logic/templa
 import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments, type ExperimentGroup, type VariationInfo } from '../hooks/useTrustExperiments'
-import { useTrustVariation } from '../hooks/useTrustVariation'
+import { useTrustVariation, STATUS_COMPLETED, type VariationConfig } from '../hooks/useTrustVariation'
 import type { AssignmentStrategy, Experiment, ExperimentBatch, ParameterVariation } from '../types'
 
 type TabType = 'experiments' | 'create'
@@ -44,8 +44,17 @@ function generateVariationCombinations(
   return combinations
 }
 
+/** Max escrow in ALGO for one variation given its params and max subjects */
+function computeEscrowAlgo(params: Record<string, number | string>, maxSubjects: number): number {
+  const e1 = Number(params.E1) || 0
+  const m = Number(params.m) || 1
+  const e2 = Number(params.E2) || 0
+  const numPairs = Math.floor(maxSubjects / 2)
+  return (e1 * m + e2) * numPairs
+}
+
 /** Convert trust-game frontend params (ALGO) to contract args (microAlgo) */
-function toVariationParams(params: Record<string, number | string>, label: string, maxSubjects = 0) {
+function toVariationParams(params: Record<string, number | string>, label: string, maxSubjects = 0, escrowAlgo = 0) {
   return {
     label,
     e1: BigInt(Math.round(Number(params.E1) * 1_000_000)),
@@ -54,14 +63,15 @@ function toVariationParams(params: Record<string, number | string>, label: strin
     unit: BigInt(Math.round(Number(params.UNIT) * 1_000_000)),
     assetId: 0n,
     maxSubjects: BigInt(maxSubjects),
+    escrowMicroAlgo: BigInt(Math.round(escrowAlgo * 1_000_000)),
   }
 }
 
 export default function ExperimenterDashboard() {
   const { activeUser } = useActiveUser()
-  const { activeAddress } = useAlgorand()
+  const { algorand, activeAddress } = useAlgorand()
   const { createExperimentWithVariation, createVariation, listExperiments, listVariations } = useTrustExperiments()
-  const { addSubjects, depositEscrow, getSubjectCount } = useTrustVariation()
+  const { addSubjects, getSubjectCount, getConfig, endVariation } = useTrustVariation()
 
   const [activeTab, setActiveTab] = useState<TabType>('experiments')
 
@@ -92,13 +102,18 @@ export default function ExperimenterDashboard() {
   const [addingSubjects, setAddingSubjects] = useState<Record<string, boolean>>({})
   const [subjectErrors, setSubjectErrors] = useState<Record<string, string>>({})
 
-  // Deposit escrow (per variation appId as string)
-  const [depositAmounts, setDepositAmounts] = useState<Record<string, string>>({})
-  const [depositing, setDepositing] = useState<Record<string, boolean>>({})
-  const [depositErrors, setDepositErrors] = useState<Record<string, string>>({})
+  // Variation configs (status, etc) per variation appId as string
+  const [variationConfigs, setVariationConfigs] = useState<Record<string, VariationConfig>>({})
+
+  // End variation (per variation appId as string)
+  const [endingVariation, setEndingVariation] = useState<Record<string, boolean>>({})
+  const [endVariationErrors, setEndVariationErrors] = useState<Record<string, string>>({})
 
   // Subject counts per variation (appId string → count)
   const [subjectCounts, setSubjectCounts] = useState<Record<string, number>>({})
+
+  // Wallet balance in ALGO (null = not yet loaded)
+  const [walletBalanceAlgo, setWalletBalanceAlgo] = useState<number | null>(null)
 
   // Expanded variation panels
   const [expandedVariations, setExpandedVariations] = useState<Set<string>>(new Set())
@@ -110,6 +125,16 @@ export default function ExperimenterDashboard() {
       void loadAll()
     }
   }, [activeUser])
+
+  useEffect(() => {
+    if (!algorand || !activeAddress) {
+      setWalletBalanceAlgo(null)
+      return
+    }
+    void algorand.account.getInformation(activeAddress).then((info) => {
+      setWalletBalanceAlgo(Number(info.balance.microAlgo) / 1_000_000)
+    })
+  }, [algorand, activeAddress])
 
   useEffect(() => {
     if (selectedTemplate) {
@@ -152,20 +177,28 @@ export default function ExperimenterDashboard() {
       })
       setOnChainExps(valid)
 
-      // Load subject counts for all variations
+      // Load subject counts and variation configs for all variations
       const counts: Record<string, number> = {}
+      const configs: Record<string, VariationConfig> = {}
       await Promise.all(
         valid.flatMap(({ variations: vars }) =>
           vars.map(async (v) => {
+            const key = String(v.appId)
             try {
-              counts[String(v.appId)] = await getSubjectCount(v.appId)
+              counts[key] = await getSubjectCount(v.appId)
             } catch {
-              counts[String(v.appId)] = 0
+              counts[key] = 0
+            }
+            try {
+              configs[key] = await getConfig(v.appId)
+            } catch {
+              // config unavailable — leave undefined
             }
           }),
         ),
       )
       setSubjectCounts(counts)
+      setVariationConfigs(configs)
     } catch (err) {
       console.error('Failed to load on-chain experiments:', err)
     }
@@ -204,6 +237,10 @@ export default function ExperimenterDashboard() {
       setError('Experiment name is required')
       return
     }
+    if (selectedTemplateId === 'trust-game' && (!maxPerVariation || Number(maxPerVariation) < 2)) {
+      setError('Max participants per variation must be at least 2 for trust game experiments')
+      return
+    }
     if (!activeUser || !selectedTemplate) return
 
     setCreating(true)
@@ -228,22 +265,22 @@ export default function ExperimenterDashboard() {
   }
 
   async function createTrustGameOnChain() {
-    const maxSub = maxPerVariation ? Number(maxPerVariation) : 0
+    const maxSub = Number(maxPerVariation)
     if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
       const combos = generateVariationCombinations(parameters, variations)
       // First combo: atomic combined call (experiment always has ≥1 variation)
       const { expId } = await createExperimentWithVariation(
         experimentName.trim(),
-        toVariationParams(combos[0], getVariationLabel(combos[0], variations), maxSub),
+        toVariationParams(combos[0], getVariationLabel(combos[0], variations), maxSub, computeEscrowAlgo(combos[0], maxSub)),
       )
       // Remaining combos: add variations to the existing experiment
       for (let i = 1; i < combos.length; i++) {
-        await createVariation(expId, toVariationParams(combos[i], getVariationLabel(combos[i], variations), maxSub))
+        await createVariation(expId, toVariationParams(combos[i], getVariationLabel(combos[i], variations), maxSub, computeEscrowAlgo(combos[i], maxSub)))
       }
     } else {
       await createExperimentWithVariation(
         experimentName.trim(),
-        toVariationParams(parameters, 'Default', maxSub),
+        toVariationParams(parameters, 'Default', maxSub, computeEscrowAlgo(parameters, maxSub)),
       )
     }
   }
@@ -290,23 +327,17 @@ export default function ExperimenterDashboard() {
     }
   }
 
-  async function handleDepositEscrow(appId: bigint) {
+  async function handleEndVariation(appId: bigint) {
     const key = String(appId)
-    const amount = Number(depositAmounts[key] ?? '0')
-    if (!amount || amount <= 0) {
-      setDepositErrors((prev) => ({ ...prev, [key]: 'Enter an amount > 0' }))
-      return
-    }
-
-    setDepositing((prev) => ({ ...prev, [key]: true }))
-    setDepositErrors((prev) => ({ ...prev, [key]: '' }))
+    setEndingVariation((prev) => ({ ...prev, [key]: true }))
+    setEndVariationErrors((prev) => ({ ...prev, [key]: '' }))
     try {
-      await depositEscrow(appId, amount)
-      setDepositAmounts((prev) => ({ ...prev, [key]: '' }))
+      await endVariation(appId)
+      await loadOnChainExperiments()
     } catch (err) {
-      setDepositErrors((prev) => ({ ...prev, [key]: err instanceof Error ? err.message : 'Failed to deposit' }))
+      setEndVariationErrors((prev) => ({ ...prev, [key]: err instanceof Error ? err.message : 'Failed to end variation' }))
     } finally {
-      setDepositing((prev) => ({ ...prev, [key]: false }))
+      setEndingVariation((prev) => ({ ...prev, [key]: false }))
     }
   }
 
@@ -324,6 +355,23 @@ export default function ExperimenterDashboard() {
     selectedTemplateId === 'trust-game'
       ? (Number(parameters.E1) || 0) * (Number(parameters.m) || 1) + (Number(parameters.E2) || 0)
       : null
+
+  // Compute total escrow needed for the create button guard
+  const totalEscrowAlgo = (() => {
+    if (selectedTemplateId !== 'trust-game' || !maxPerVariation || Number(maxPerVariation) < 2) return 0
+    const maxSub = Number(maxPerVariation)
+    const combos =
+      batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
+        ? generateVariationCombinations(parameters, variations)
+        : [parameters]
+    return combos.reduce((sum, combo) => sum + computeEscrowAlgo(combo, maxSub), 0)
+  })()
+
+  const insufficientBalance =
+    selectedTemplateId === 'trust-game' &&
+    walletBalanceAlgo !== null &&
+    totalEscrowAlgo > 0 &&
+    totalEscrowAlgo > walletBalanceAlgo
 
   const hasOnChain = onChainExps.length > 0
   const hasLocal = localExperiments.length > 0 || localBatches.length > 0
@@ -399,36 +447,6 @@ export default function ExperimenterDashboard() {
                             {isExpanded && (
                               <div className="p-3 pt-0 space-y-4 border-t border-base-300">
 
-                                {/* Deposit Escrow */}
-                                <div>
-                                  <h4 className="font-semibold text-sm mb-2">Deposit Escrow</h4>
-                                  <div className="flex gap-2 items-start">
-                                    <div className="flex-1">
-                                      <input
-                                        type="number"
-                                        className="input input-bordered input-sm w-full"
-                                        placeholder="Amount in ALGO"
-                                        min={0}
-                                        step={0.1}
-                                        value={depositAmounts[appIdKey] ?? ''}
-                                        onChange={(e) => setDepositAmounts((prev) => ({ ...prev, [appIdKey]: e.target.value }))}
-                                        disabled={depositing[appIdKey]}
-                                      />
-                                      {depositErrors[appIdKey] && (
-                                        <p className="text-error text-xs mt-1">{depositErrors[appIdKey]}</p>
-                                      )}
-                                    </div>
-                                    <button
-                                      type="button"
-                                      className="btn btn-sm btn-secondary"
-                                      onClick={() => void handleDepositEscrow(v.appId)}
-                                      disabled={depositing[appIdKey]}
-                                    >
-                                      {depositing[appIdKey] ? <span className="loading loading-spinner loading-xs"></span> : 'Deposit'}
-                                    </button>
-                                  </div>
-                                </div>
-
                                 {/* Add Subjects */}
                                 <div>
                                   <h4 className="font-semibold text-sm mb-2">Add Subjects</h4>
@@ -453,6 +471,26 @@ export default function ExperimenterDashboard() {
                                     {addingSubjects[appIdKey] ? <span className="loading loading-spinner loading-xs"></span> : 'Add Subjects'}
                                   </button>
                                 </div>
+
+                                {/* End Variation */}
+                                {variationConfigs[appIdKey]?.status !== STATUS_COMPLETED && (
+                                  <div>
+                                    <button
+                                      type="button"
+                                      className="btn btn-sm btn-warning"
+                                      onClick={() => void handleEndVariation(v.appId)}
+                                      disabled={endingVariation[appIdKey]}
+                                    >
+                                      {endingVariation[appIdKey] ? <span className="loading loading-spinner loading-xs"></span> : 'End Variation & Withdraw Remaining'}
+                                    </button>
+                                    {endVariationErrors[appIdKey] && (
+                                      <p className="text-error text-xs mt-1">{endVariationErrors[appIdKey]}</p>
+                                    )}
+                                  </div>
+                                )}
+                                {variationConfigs[appIdKey]?.status === STATUS_COMPLETED && (
+                                  <div className="badge badge-ghost badge-sm">Variation ended</div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -656,72 +694,132 @@ export default function ExperimenterDashboard() {
                     )}
                   </div>
 
-                  {/* Step 5: Assignment strategy + max per variation */}
-                  {batchModeEnabled &&
-                    variations.length > 0 &&
-                    variations.every((v) => v.values.length > 0) && (
-                      <>
-                        <div className="divider"></div>
-                        <div>
-                          <h3 className="font-semibold text-lg mb-4">5. Participant Assignment</h3>
+                  {/* Step 5: Participants — always shown for trust-game; batch-only for BRET */}
+                  {(selectedTemplateId === 'trust-game' ||
+                    (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0))) && (
+                    <>
+                      <div className="divider"></div>
+                      <div>
+                        <h3 className="font-semibold text-lg mb-4">5. Participants</h3>
 
-                          {/* Assignment strategy radios — BRET only (trust game uses on-chain round robin) */}
-                          {selectedTemplateId === 'bret' && (
-                            <div className="space-y-3 mb-4">
-                              <label className="flex items-start gap-3 cursor-pointer p-3 border border-base-300 rounded-lg hover:bg-base-200">
-                                <input
-                                  type="radio"
-                                  name="assignmentStrategy"
-                                  className="radio radio-primary mt-1"
-                                  checked={assignmentStrategy === 'round_robin'}
-                                  onChange={() => setAssignmentStrategy('round_robin')}
-                                />
-                                <div>
-                                  <div className="font-medium">Round Robin (Recommended)</div>
-                                  <div className="text-sm text-base-content/70">Distribute participants evenly across all variations</div>
-                                </div>
-                              </label>
-                              <label className="flex items-start gap-3 cursor-pointer p-3 border border-base-300 rounded-lg hover:bg-base-200">
-                                <input
-                                  type="radio"
-                                  name="assignmentStrategy"
-                                  className="radio radio-primary mt-1"
-                                  checked={assignmentStrategy === 'fill_sequential'}
-                                  onChange={() => setAssignmentStrategy('fill_sequential')}
-                                />
-                                <div>
-                                  <div className="font-medium">Fill Sequential</div>
-                                  <div className="text-sm text-base-content/70">
-                                    Fill each variation to capacity before moving to the next.
-                                  </div>
-                                </div>
-                              </label>
-                            </div>
-                          )}
-
-                          {/* Trust Game info */}
-                          {selectedTemplateId === 'trust-game' && (
-                            <div className="alert alert-info mb-4">
-                              <span>Subjects self-enroll and are automatically distributed across variations using round robin.</span>
-                            </div>
-                          )}
-
-                          <div className="form-control">
-                            <label className="label">
-                              <span className="label-text font-medium">Max participants per variation (optional)</span>
+                        {/* Assignment strategy radios — BRET only */}
+                        {selectedTemplateId === 'bret' && batchModeEnabled && (
+                          <div className="space-y-3 mb-4">
+                            <label className="flex items-start gap-3 cursor-pointer p-3 border border-base-300 rounded-lg hover:bg-base-200">
+                              <input
+                                type="radio"
+                                name="assignmentStrategy"
+                                className="radio radio-primary mt-1"
+                                checked={assignmentStrategy === 'round_robin'}
+                                onChange={() => setAssignmentStrategy('round_robin')}
+                              />
+                              <div>
+                                <div className="font-medium">Round Robin (Recommended)</div>
+                                <div className="text-sm text-base-content/70">Distribute participants evenly across all variations</div>
+                              </div>
                             </label>
-                            <input
-                              type="number"
-                              className="input input-bordered w-48"
-                              placeholder="No limit"
-                              min={1}
-                              value={maxPerVariation}
-                              onChange={(e) => setMaxPerVariation(e.target.value)}
-                            />
+                            <label className="flex items-start gap-3 cursor-pointer p-3 border border-base-300 rounded-lg hover:bg-base-200">
+                              <input
+                                type="radio"
+                                name="assignmentStrategy"
+                                className="radio radio-primary mt-1"
+                                checked={assignmentStrategy === 'fill_sequential'}
+                                onChange={() => setAssignmentStrategy('fill_sequential')}
+                              />
+                              <div>
+                                <div className="font-medium">Fill Sequential</div>
+                                <div className="text-sm text-base-content/70">Fill each variation to capacity before moving to the next.</div>
+                              </div>
+                            </label>
                           </div>
+                        )}
+
+                        {/* Trust Game info */}
+                        {selectedTemplateId === 'trust-game' && (
+                          <div className="alert alert-info mb-4">
+                            <span>Subjects self-enroll and are automatically distributed across variations using round robin.</span>
+                          </div>
+                        )}
+
+                        <div className="form-control">
+                          <label className="label">
+                            <span className="label-text font-medium">
+                              Max participants per variation{selectedTemplateId === 'trust-game' ? ' (required)' : ' (optional)'}
+                            </span>
+                          </label>
+                          <input
+                            type="number"
+                            className="input input-bordered w-48"
+                            placeholder={selectedTemplateId === 'trust-game' ? 'e.g. 20' : 'No limit'}
+                            min={selectedTemplateId === 'trust-game' ? 2 : 1}
+                            value={maxPerVariation}
+                            onChange={(e) => setMaxPerVariation(e.target.value)}
+                          />
                         </div>
-                      </>
-                    )}
+
+                        {/* Funding Summary — trust-game only */}
+                        {selectedTemplateId === 'trust-game' && maxPerVariation && Number(maxPerVariation) >= 2 && (() => {
+                          const maxSub = Number(maxPerVariation)
+                          const combos = batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
+                            ? generateVariationCombinations(parameters, variations)
+                            : [parameters]
+                          const rows = combos.map((combo, i) => ({
+                            label: batchModeEnabled ? getVariationLabel(combo, variations) : 'Default',
+                            escrow: computeEscrowAlgo(combo, maxSub),
+                            index: i,
+                          }))
+                          const total = rows.reduce((sum, r) => sum + r.escrow, 0)
+                          return (
+                            <>
+                              <div className="divider"></div>
+                              <div>
+                                <h4 className="font-semibold mb-3">Funding Summary</h4>
+                                <div className="overflow-x-auto">
+                                  <table className="table table-sm w-full">
+                                    <thead>
+                                      <tr>
+                                        <th>Variation</th>
+                                        <th className="text-right">Max Escrow (ALGO)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {rows.map((row) => (
+                                        <tr key={row.index}>
+                                          <td>{row.label}</td>
+                                          <td className="text-right">{row.escrow}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                    <tfoot>
+                                      <tr className="font-bold">
+                                        <td>Total Required</td>
+                                        <td className="text-right">{total} ALGO</td>
+                                      </tr>
+                                    </tfoot>
+                                  </table>
+                                </div>
+                                {walletBalanceAlgo !== null && total > walletBalanceAlgo ? (
+                                  <div className="alert alert-error mt-3">
+                                    <span className="text-sm">
+                                      Insufficient balance. You need <strong>{total} ALGO</strong> but your wallet only has{' '}
+                                      <strong>{walletBalanceAlgo.toFixed(2)} ALGO</strong>. Add funds before creating this experiment.
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="alert alert-info mt-3">
+                                    <span className="text-sm">
+                                      Your wallet will be charged <strong>{total} ALGO</strong> at creation to pre-fund all variations.
+                                      Leftover funds are returned automatically when you end each variation.
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          )
+                        })()}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -736,7 +834,7 @@ export default function ExperimenterDashboard() {
               <button
                 className="btn btn-primary"
                 onClick={() => void handleCreateExperiment()}
-                disabled={creating || !experimentName.trim()}
+                disabled={creating || !experimentName.trim() || insufficientBalance}
               >
                 {creating ? (
                   <>

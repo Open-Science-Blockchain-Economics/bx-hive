@@ -20,6 +20,7 @@ from smart_contracts.shared.types import (
     PHASE_TRUSTEE_DECISION,
     STATUS_ACTIVE,
     STATUS_CLOSED,
+    STATUS_COMPLETED,
     Match,
     SubjectInfo,
     VariationConfig,
@@ -93,6 +94,28 @@ class TrustVariation(ARC4Contract):
         assert payment.receiver == Global.current_application_address, "Wrong receiver"
         assert payment.amount > UInt64(0), "Amount must be > 0"
         self.escrow_deposited.value += payment.amount
+
+    @arc4.abimethod
+    def record_escrow(self, amount: arc4.UInt64) -> None:
+        assert Txn.sender == Application(self.experiments_app.value).address, "Not experiments app"
+        assert amount.as_uint64() > UInt64(0), "Amount must be > 0"
+        self.escrow_deposited.value += amount.as_uint64()
+
+    @arc4.abimethod
+    def end_variation(self) -> None:
+        assert Txn.sender == self.owner.value, "Not owner"
+        assert self.status.value != UInt64(STATUS_COMPLETED), "Already ended"
+
+        remaining = self.escrow_deposited.value - self.escrow_paid_out.value
+        if remaining > UInt64(0):
+            itxn.Payment(
+                receiver=self.owner.value,
+                amount=remaining,
+                fee=0,
+            ).submit()
+            self.escrow_deposited.value -= remaining
+
+        self.status.value = UInt64(STATUS_COMPLETED)
 
     @arc4.abimethod
     def add_subjects(self, addresses: arc4.DynamicArray[arc4.Address]) -> None:
@@ -198,6 +221,7 @@ class TrustVariation(ARC4Contract):
 
     @arc4.abimethod
     def submit_trustee_decision(self, match_id: arc4.UInt32, return_amount: arc4.UInt64) -> None:
+        assert self.status.value != UInt64(STATUS_COMPLETED), "Variation ended"
         assert match_id in self.matches, "Match not found"
         match = self.matches[match_id].copy()
 

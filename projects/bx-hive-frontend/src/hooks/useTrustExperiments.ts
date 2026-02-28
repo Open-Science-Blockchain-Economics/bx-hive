@@ -1,4 +1,6 @@
 import { microAlgo } from '@algorandfoundation/algokit-utils'
+import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
+import algosdk from 'algosdk'
 import { useCallback } from 'react'
 import type { ExperimentGroup, VariationInfo } from '../contracts/TrustExperiments'
 import { getTrustVariationPrograms } from '../utils/compilePrograms'
@@ -19,6 +21,8 @@ export interface VariationParams {
   assetId: bigint
   /** Max subjects per variation — 0 for unlimited */
   maxSubjects?: bigint
+  /** Pre-funded escrow in microAlgo to deposit at creation */
+  escrowMicroAlgo: bigint
 }
 
 /**
@@ -52,6 +56,11 @@ export function useTrustExperiments() {
     async (name: string, params: VariationParams): Promise<{ expId: number; appId: bigint }> => {
       if (!trustExperimentsClient || !algorand || !activeAddress) throw new Error('Wallet not connected')
       const { approval, clear } = await getTrustVariationPrograms(algorand)
+      const escrowPayment = await algorand.createTransaction.payment({
+        sender: activeAddress,
+        receiver: algosdk.getApplicationAddress(trustExperimentsClient.appId),
+        amount: AlgoAmount.MicroAlgos(Number(params.escrowMicroAlgo)),
+      })
       const result = await trustExperimentsClient.send.createExperimentWithVariation({
         args: {
           name,
@@ -64,9 +73,10 @@ export function useTrustExperiments() {
           unit: params.unit,
           assetId: params.assetId,
           maxSubjects: params.maxSubjects ?? 0n,
+          escrowPayment,
         },
         coverAppCallInnerTransactionFees: true,
-        maxFee: microAlgo(5_000),
+        maxFee: microAlgo(9_000),
       })
       const [expId, appId] = result.return!
       return { expId: Number(expId), appId: BigInt(appId) }
@@ -83,6 +93,11 @@ export function useTrustExperiments() {
     async (expId: number, params: VariationParams): Promise<bigint> => {
       if (!trustExperimentsClient || !algorand || !activeAddress) throw new Error('Wallet not connected')
       const { approval, clear } = await getTrustVariationPrograms(algorand)
+      const escrowPayment = await algorand.createTransaction.payment({
+        sender: activeAddress,
+        receiver: algosdk.getApplicationAddress(trustExperimentsClient.appId),
+        amount: AlgoAmount.MicroAlgos(Number(params.escrowMicroAlgo)),
+      })
       const result = await trustExperimentsClient.send.createVariation({
         args: {
           expId,
@@ -95,9 +110,10 @@ export function useTrustExperiments() {
           unit: params.unit,
           assetId: params.assetId,
           maxSubjects: params.maxSubjects ?? 0n,
+          escrowPayment,
         },
         coverAppCallInnerTransactionFees: true,
-        maxFee: microAlgo(4_000),
+        maxFee: microAlgo(9_000),
       })
       return result.return!
     },

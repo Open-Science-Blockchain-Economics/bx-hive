@@ -102,6 +102,11 @@ def test_get_experiment_not_found_fails(context: AlgopyTestContext) -> None:
 
 def test_create_variation_experiment_not_found_fails(context: AlgopyTestContext) -> None:
     contract = _make_experiments(context)
+    dummy_payment = context.any.txn.payment(
+        sender=context.default_sender,
+        receiver=context.default_sender,
+        amount=1_000,
+    )
     with pytest.raises(Exception, match="Experiment not found"):
         contract.create_variation(
             arc4.UInt32(99),
@@ -114,6 +119,7 @@ def test_create_variation_experiment_not_found_fails(context: AlgopyTestContext)
             arc4.UInt64(10),
             arc4.UInt64(0),
             arc4.UInt64(0),  # max_subjects
+            dummy_payment,
         )
 
 
@@ -122,6 +128,11 @@ def test_create_variation_not_owner_fails(context: AlgopyTestContext) -> None:
     exp_id = contract.create_experiment(arc4.String("Alpha"))
 
     other = context.any.account()
+    dummy_payment = context.any.txn.payment(
+        sender=other,
+        receiver=context.default_sender,
+        amount=1_000,
+    )
     app_call = context.any.txn.application_call(
         sender=other, app_id=Application(contract.__app_id__)
     )
@@ -138,6 +149,7 @@ def test_create_variation_not_owner_fails(context: AlgopyTestContext) -> None:
                 arc4.UInt64(10),
                 arc4.UInt64(0),
                 arc4.UInt64(0),  # max_subjects
+                dummy_payment,
             )
 
 

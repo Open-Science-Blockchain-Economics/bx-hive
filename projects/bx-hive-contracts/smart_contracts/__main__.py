@@ -1,6 +1,7 @@
 import dataclasses
 import importlib
 import logging
+import shutil
 import subprocess
 import sys
 from collections.abc import Callable
@@ -176,11 +177,19 @@ def main(action: str, contract_name: str | None = None) -> None:
         if contract_name is None or contract.name == contract_name
     ]
 
+    # Destination for TrustVariation TEAL in the frontend
+    frontend_contracts = root_path.parent.parent / "bx-hive-frontend" / "src" / "contracts"
+
     match action:
         case "build":
             for contract in filtered_contracts:
                 logger.info(f"Building app at {contract.path}")
                 build(artifact_path / contract.name, contract.path)
+            # Copy TrustVariation TEAL to the frontend so it stays in sync
+            if frontend_contracts.exists():
+                for teal_file in (artifact_path / "trust_variation").glob("*.teal"):
+                    shutil.copy(teal_file, frontend_contracts / teal_file.name)
+                    logger.info(f"Copied {teal_file.name} → {frontend_contracts}")
         case "deploy":
             for contract in filtered_contracts:
                 output_dir = artifact_path / contract.name

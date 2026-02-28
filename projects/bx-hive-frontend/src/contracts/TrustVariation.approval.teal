@@ -4,105 +4,105 @@
 // algopy.arc4.ARC4Contract.approval_program() -> uint64:
 main:
     intcblock 0 1 8 32
-    bytecblock "subject_count" "status" "escrow_deposited" "escrow_paid_out" "owner" 0x151f7c75 "match_count" "paid_out_count" "e1" "unit" 0x01 "e2" "multiplier" "max_subjects" 0x735f 0x00 0x6d5f "asset_id" "registry_app" 0x706d5f "experiments_app" "exp_id" "var_id" 0x0100 0x0101
+    bytecblock "escrow_deposited" "status" "subject_count" "owner" "escrow_paid_out" 0x151f7c75 "match_count" "paid_out_count" "e1" "unit" 0x01 "e2" "multiplier" "max_subjects" 0x735f 0x00 0x6d5f "experiments_app" "asset_id" "registry_app" 0x706d5f "exp_id" "var_id" 0x0100 0x0101
     txn ApplicationID
     bnz main_after_if_else@2
-    // smart_contracts/trust_variation/contract.py:31
+    // smart_contracts/trust_variation/contract.py:32
     // self.experiments_app = GlobalState(UInt64(0))
-    bytec 20 // "experiments_app"
+    bytec 17 // "experiments_app"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:32
+    // smart_contracts/trust_variation/contract.py:33
     // self.exp_id = GlobalState(UInt64(0))
     bytec 21 // "exp_id"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:33
+    // smart_contracts/trust_variation/contract.py:34
     // self.var_id = GlobalState(UInt64(0))
     bytec 22 // "var_id"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:35
+    // smart_contracts/trust_variation/contract.py:36
     // self.status = GlobalState(UInt64(0))
     bytec_1 // "status"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:36
+    // smart_contracts/trust_variation/contract.py:37
     // self.match_count = GlobalState(UInt64(0))
     bytec 6 // "match_count"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:37
+    // smart_contracts/trust_variation/contract.py:38
     // self.paid_out_count = GlobalState(UInt64(0))
     bytec 7 // "paid_out_count"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:38
+    // smart_contracts/trust_variation/contract.py:39
     // self.e1 = GlobalState(UInt64(0))
     bytec 8 // "e1"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:39
+    // smart_contracts/trust_variation/contract.py:40
     // self.e2 = GlobalState(UInt64(0))
     bytec 11 // "e2"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:40
+    // smart_contracts/trust_variation/contract.py:41
     // self.multiplier = GlobalState(UInt64(0))
     bytec 12 // "multiplier"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:41
+    // smart_contracts/trust_variation/contract.py:42
     // self.unit = GlobalState(UInt64(0))
     bytec 9 // "unit"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:42
-    // self.asset_id = GlobalState(UInt64(0))
-    bytec 17 // "asset_id"
-    intc_0 // 0
-    app_global_put
     // smart_contracts/trust_variation/contract.py:43
-    // self.escrow_deposited = GlobalState(UInt64(0))
-    bytec_2 // "escrow_deposited"
+    // self.asset_id = GlobalState(UInt64(0))
+    bytec 18 // "asset_id"
     intc_0 // 0
     app_global_put
     // smart_contracts/trust_variation/contract.py:44
-    // self.escrow_paid_out = GlobalState(UInt64(0))
-    bytec_3 // "escrow_paid_out"
+    // self.escrow_deposited = GlobalState(UInt64(0))
+    bytec_0 // "escrow_deposited"
     intc_0 // 0
     app_global_put
     // smart_contracts/trust_variation/contract.py:45
-    // self.registry_app = GlobalState(UInt64(0))
-    bytec 18 // "registry_app"
+    // self.escrow_paid_out = GlobalState(UInt64(0))
+    bytec 4 // "escrow_paid_out"
     intc_0 // 0
     app_global_put
     // smart_contracts/trust_variation/contract.py:46
-    // self.subject_count = GlobalState(UInt64(0))
-    bytec_0 // "subject_count"
+    // self.registry_app = GlobalState(UInt64(0))
+    bytec 19 // "registry_app"
     intc_0 // 0
     app_global_put
     // smart_contracts/trust_variation/contract.py:47
+    // self.subject_count = GlobalState(UInt64(0))
+    bytec_2 // "subject_count"
+    intc_0 // 0
+    app_global_put
+    // smart_contracts/trust_variation/contract.py:48
     // self.max_subjects = GlobalState(UInt64(0))
     bytec 13 // "max_subjects"
     intc_0 // 0
     app_global_put
 
 main_after_if_else@2:
-    // smart_contracts/trust_variation/contract.py:29
+    // smart_contracts/trust_variation/contract.py:30
     // class TrustVariation(ARC4Contract):
     txn OnCompletion
     !
     assert // OnCompletion must be NoOp
     txn ApplicationID
-    bz main_create_NoOp@19
-    pushbytess 0x8deb459b 0xd1f38ebe 0x1fd04063 0xe59382a2 0xf10ba6d8 0x1e307790 0x483ab535 0x6b24fd96 0x06f452f3 0x5b9e0558 0xe5ea29a5 0xd791d23e 0x21a1d540 // method "deposit_escrow(pay)void", method "add_subjects(address[])void", method "self_enroll(pay)void", method "create_match(address,address)uint32", method "close_registration()void", method "submit_investor_decision(uint32,uint64)void", method "submit_trustee_decision(uint32,uint64)void", method "withdraw_escrow()void", method "get_config()(uint64,uint64,uint64,uint64,uint64,uint8)", method "get_match(uint32)(uint32,address,address,uint8,uint64,uint64,uint64,uint64,uint64,uint64,uint8)", method "get_player_match(address)uint32", method "get_subject_count()uint64", method "get_escrow_balance()uint64"
+    bz main_create_NoOp@21
+    pushbytess 0x8deb459b 0x5c9a836b 0x38e2e773 0xd1f38ebe 0x1fd04063 0xe59382a2 0xf10ba6d8 0x1e307790 0x483ab535 0x6b24fd96 0x06f452f3 0x5b9e0558 0xe5ea29a5 0xd791d23e 0x21a1d540 // method "deposit_escrow(pay)void", method "record_escrow(uint64)void", method "end_variation()void", method "add_subjects(address[])void", method "self_enroll(pay)void", method "create_match(address,address)uint32", method "close_registration()void", method "submit_investor_decision(uint32,uint64)void", method "submit_trustee_decision(uint32,uint64)void", method "withdraw_escrow()void", method "get_config()(uint64,uint64,uint64,uint64,uint64,uint8)", method "get_match(uint32)(uint32,address,address,uint8,uint64,uint64,uint64,uint64,uint64,uint64,uint8)", method "get_player_match(address)uint32", method "get_subject_count()uint64", method "get_escrow_balance()uint64"
     txna ApplicationArgs 0
-    match deposit_escrow add_subjects self_enroll create_match close_registration submit_investor_decision submit_trustee_decision withdraw_escrow get_config get_match get_player_match get_subject_count get_escrow_balance
+    match deposit_escrow record_escrow end_variation add_subjects self_enroll create_match close_registration submit_investor_decision submit_trustee_decision withdraw_escrow get_config get_match get_player_match get_subject_count get_escrow_balance
     err
 
-main_create_NoOp@19:
-    // smart_contracts/trust_variation/contract.py:29
+main_create_NoOp@21:
+    // smart_contracts/trust_variation/contract.py:30
     // class TrustVariation(ARC4Contract):
     pushbytes 0xb8db8605 // method "create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64,uint64,uint64)void"
     txna ApplicationArgs 0
@@ -112,7 +112,7 @@ main_create_NoOp@19:
 
 // smart_contracts.trust_variation.contract.TrustVariation.create[routing]() -> void:
 create:
-    // smart_contracts/trust_variation/contract.py:56
+    // smart_contracts/trust_variation/contract.py:57
     // @arc4.abimethod(create="require")
     txna ApplicationArgs 1
     dup
@@ -180,115 +180,115 @@ create:
     intc_2 // 8
     ==
     assert // invalid number of bytes for arc4.uint64
-    // smart_contracts/trust_variation/contract.py:71
+    // smart_contracts/trust_variation/contract.py:72
     // assert unit.as_uint64() > UInt64(0), "Unit must be > 0"
     uncover 3
     btoi
     dup
     assert // Unit must be > 0
-    // smart_contracts/trust_variation/contract.py:72
+    // smart_contracts/trust_variation/contract.py:73
     // self.experiments_app.value = experiments_app.as_uint64()
     uncover 10
     btoi
-    bytec 20 // "experiments_app"
+    bytec 17 // "experiments_app"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:73
+    // smart_contracts/trust_variation/contract.py:74
     // self.exp_id.value = exp_id.as_uint64()
     uncover 9
     btoi
     bytec 21 // "exp_id"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:74
+    // smart_contracts/trust_variation/contract.py:75
     // self.var_id.value = var_id.as_uint64()
     uncover 8
     btoi
     bytec 22 // "var_id"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:75
+    // smart_contracts/trust_variation/contract.py:76
     // self.owner.value = owner
-    bytec 4 // "owner"
+    bytec_3 // "owner"
     uncover 8
     app_global_put
-    // smart_contracts/trust_variation/contract.py:76
+    // smart_contracts/trust_variation/contract.py:77
     // self.status.value = UInt64(STATUS_ACTIVE)
     bytec_1 // "status"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:77
+    // smart_contracts/trust_variation/contract.py:78
     // self.match_count.value = UInt64(0)
     bytec 6 // "match_count"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:78
+    // smart_contracts/trust_variation/contract.py:79
     // self.paid_out_count.value = UInt64(0)
     bytec 7 // "paid_out_count"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:79
+    // smart_contracts/trust_variation/contract.py:80
     // self.e1.value = e1.as_uint64()
     uncover 6
     btoi
     bytec 8 // "e1"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:80
+    // smart_contracts/trust_variation/contract.py:81
     // self.e2.value = e2.as_uint64()
     uncover 5
     btoi
     bytec 11 // "e2"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:81
+    // smart_contracts/trust_variation/contract.py:82
     // self.multiplier.value = multiplier.as_uint64()
     uncover 4
     btoi
     bytec 12 // "multiplier"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:82
+    // smart_contracts/trust_variation/contract.py:83
     // self.unit.value = unit.as_uint64()
     bytec 9 // "unit"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:83
+    // smart_contracts/trust_variation/contract.py:84
     // self.asset_id.value = asset_id.as_uint64()
     uncover 2
     btoi
-    bytec 17 // "asset_id"
+    bytec 18 // "asset_id"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:84
-    // self.escrow_deposited.value = UInt64(0)
-    bytec_2 // "escrow_deposited"
-    intc_0 // 0
-    app_global_put
     // smart_contracts/trust_variation/contract.py:85
-    // self.escrow_paid_out.value = UInt64(0)
-    bytec_3 // "escrow_paid_out"
+    // self.escrow_deposited.value = UInt64(0)
+    bytec_0 // "escrow_deposited"
     intc_0 // 0
     app_global_put
     // smart_contracts/trust_variation/contract.py:86
+    // self.escrow_paid_out.value = UInt64(0)
+    bytec 4 // "escrow_paid_out"
+    intc_0 // 0
+    app_global_put
+    // smart_contracts/trust_variation/contract.py:87
     // self.registry_app.value = registry_app.as_uint64()
     swap
     btoi
-    bytec 18 // "registry_app"
+    bytec 19 // "registry_app"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:87
+    // smart_contracts/trust_variation/contract.py:88
     // self.subject_count.value = UInt64(0)
-    bytec_0 // "subject_count"
+    bytec_2 // "subject_count"
     intc_0 // 0
     app_global_put
-    // smart_contracts/trust_variation/contract.py:88
+    // smart_contracts/trust_variation/contract.py:89
     // self.max_subjects.value = max_subjects.as_uint64()
     btoi
     bytec 13 // "max_subjects"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:56
+    // smart_contracts/trust_variation/contract.py:57
     // @arc4.abimethod(create="require")
     intc_1 // 1
     return
@@ -296,7 +296,7 @@ create:
 
 // smart_contracts.trust_variation.contract.TrustVariation.deposit_escrow[routing]() -> void:
 deposit_escrow:
-    // smart_contracts/trust_variation/contract.py:90
+    // smart_contracts/trust_variation/contract.py:91
     // @arc4.abimethod
     txn GroupIndex
     intc_1 // 1
@@ -306,38 +306,172 @@ deposit_escrow:
     intc_1 // pay
     ==
     assert // transaction type is pay
-    // smart_contracts/trust_variation/contract.py:92
+    // smart_contracts/trust_variation/contract.py:93
     // assert Txn.sender == self.owner.value, "Not owner"
     txn Sender
     intc_0 // 0
-    bytec 4 // "owner"
+    bytec_3 // "owner"
     app_global_get_ex
     assert // check self.owner exists
     ==
     assert // Not owner
-    // smart_contracts/trust_variation/contract.py:93
+    // smart_contracts/trust_variation/contract.py:94
     // assert payment.receiver == Global.current_application_address, "Wrong receiver"
     dup
     gtxns Receiver
     global CurrentApplicationAddress
     ==
     assert // Wrong receiver
-    // smart_contracts/trust_variation/contract.py:94
+    // smart_contracts/trust_variation/contract.py:95
     // assert payment.amount > UInt64(0), "Amount must be > 0"
     gtxns Amount
     dup
     assert // Amount must be > 0
-    // smart_contracts/trust_variation/contract.py:95
+    // smart_contracts/trust_variation/contract.py:96
     // self.escrow_deposited.value += payment.amount
     intc_0 // 0
-    bytec_2 // "escrow_deposited"
+    bytec_0 // "escrow_deposited"
     app_global_get_ex
     assert // check self.escrow_deposited exists
     +
-    bytec_2 // "escrow_deposited"
+    bytec_0 // "escrow_deposited"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:90
+    // smart_contracts/trust_variation/contract.py:91
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// smart_contracts.trust_variation.contract.TrustVariation.record_escrow[routing]() -> void:
+record_escrow:
+    // smart_contracts/trust_variation/contract.py:98
+    // @arc4.abimethod
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    // smart_contracts/trust_variation/contract.py:100
+    // assert Txn.sender == Application(self.experiments_app.value).address, "Not experiments app"
+    txn Sender
+    intc_0 // 0
+    bytec 17 // "experiments_app"
+    app_global_get_ex
+    assert // check self.experiments_app exists
+    app_params_get AppAddress
+    assert // application exists
+    ==
+    assert // Not experiments app
+    // smart_contracts/trust_variation/contract.py:101
+    // assert amount.as_uint64() > UInt64(0), "Amount must be > 0"
+    btoi
+    dup
+    assert // Amount must be > 0
+    // smart_contracts/trust_variation/contract.py:102
+    // self.escrow_deposited.value += amount.as_uint64()
+    intc_0 // 0
+    bytec_0 // "escrow_deposited"
+    app_global_get_ex
+    assert // check self.escrow_deposited exists
+    +
+    bytec_0 // "escrow_deposited"
+    swap
+    app_global_put
+    // smart_contracts/trust_variation/contract.py:98
+    // @arc4.abimethod
+    intc_1 // 1
+    return
+
+
+// smart_contracts.trust_variation.contract.TrustVariation.end_variation[routing]() -> void:
+end_variation:
+    // smart_contracts/trust_variation/contract.py:106
+    // assert Txn.sender == self.owner.value, "Not owner"
+    txn Sender
+    intc_0 // 0
+    bytec_3 // "owner"
+    app_global_get_ex
+    assert // check self.owner exists
+    ==
+    assert // Not owner
+    // smart_contracts/trust_variation/contract.py:107
+    // assert self.status.value != UInt64(STATUS_COMPLETED), "Already ended"
+    intc_0 // 0
+    bytec_1 // "status"
+    app_global_get_ex
+    assert // check self.status exists
+    pushint 2 // 2
+    !=
+    assert // Already ended
+    // smart_contracts/trust_variation/contract.py:109
+    // remaining = self.escrow_deposited.value - self.escrow_paid_out.value
+    intc_0 // 0
+    bytec_0 // "escrow_deposited"
+    app_global_get_ex
+    assert // check self.escrow_deposited exists
+    intc_0 // 0
+    bytec 4 // "escrow_paid_out"
+    app_global_get_ex
+    assert // check self.escrow_paid_out exists
+    -
+    dup
+    // smart_contracts/trust_variation/contract.py:110
+    // if remaining > UInt64(0):
+    bz end_variation_after_if_else@4
+    // smart_contracts/trust_variation/contract.py:111-115
+    // itxn.Payment(
+    //     receiver=self.owner.value,
+    //     amount=remaining,
+    //     fee=0,
+    // ).submit()
+    itxn_begin
+    // smart_contracts/trust_variation/contract.py:112
+    // receiver=self.owner.value,
+    intc_0 // 0
+    bytec_3 // "owner"
+    app_global_get_ex
+    assert // check self.owner exists
+    dig 1
+    dup
+    cover 2
+    itxn_field Amount
+    itxn_field Receiver
+    // smart_contracts/trust_variation/contract.py:111
+    // itxn.Payment(
+    intc_1 // pay
+    itxn_field TypeEnum
+    // smart_contracts/trust_variation/contract.py:114
+    // fee=0,
+    intc_0 // 0
+    itxn_field Fee
+    // smart_contracts/trust_variation/contract.py:111-115
+    // itxn.Payment(
+    //     receiver=self.owner.value,
+    //     amount=remaining,
+    //     fee=0,
+    // ).submit()
+    itxn_submit
+    // smart_contracts/trust_variation/contract.py:116
+    // self.escrow_deposited.value -= remaining
+    intc_0 // 0
+    bytec_0 // "escrow_deposited"
+    app_global_get_ex
+    assert // check self.escrow_deposited exists
+    swap
+    -
+    bytec_0 // "escrow_deposited"
+    swap
+    app_global_put
+
+end_variation_after_if_else@4:
+    // smart_contracts/trust_variation/contract.py:118
+    // self.status.value = UInt64(STATUS_COMPLETED)
+    bytec_1 // "status"
+    pushint 2 // 2
+    app_global_put
+    // smart_contracts/trust_variation/contract.py:104
     // @arc4.abimethod
     intc_1 // 1
     return
@@ -345,7 +479,7 @@ deposit_escrow:
 
 // smart_contracts.trust_variation.contract.TrustVariation.add_subjects[routing]() -> void:
 add_subjects:
-    // smart_contracts/trust_variation/contract.py:97
+    // smart_contracts/trust_variation/contract.py:120
     // @arc4.abimethod
     txna ApplicationArgs 1
     dupn 2
@@ -361,16 +495,16 @@ add_subjects:
     len
     ==
     assert // invalid number of bytes for arc4.dynamic_array<arc4.static_array<arc4.uint8, 32>>
-    // smart_contracts/trust_variation/contract.py:99
+    // smart_contracts/trust_variation/contract.py:122
     // assert Txn.sender == self.owner.value, "Not owner"
     txn Sender
     intc_0 // 0
-    bytec 4 // "owner"
+    bytec_3 // "owner"
     app_global_get_ex
     assert // check self.owner exists
     ==
     assert // Not owner
-    // smart_contracts/trust_variation/contract.py:100
+    // smart_contracts/trust_variation/contract.py:123
     // assert self.status.value == UInt64(STATUS_ACTIVE), "Not active"
     intc_0 // 0
     bytec_1 // "status"
@@ -378,18 +512,18 @@ add_subjects:
     assert // check self.status exists
     !
     assert // Not active
-    // smart_contracts/trust_variation/contract.py:101
+    // smart_contracts/trust_variation/contract.py:124
     // for i in urange(addresses.length):
     intc_0 // 0
 
 add_subjects_for_header@2:
-    // smart_contracts/trust_variation/contract.py:101
+    // smart_contracts/trust_variation/contract.py:124
     // for i in urange(addresses.length):
     dup
     dig 2
     <
     bz add_subjects_after_for@5
-    // smart_contracts/trust_variation/contract.py:102
+    // smart_contracts/trust_variation/contract.py:125
     // addr = addresses[i].copy()
     dig 2
     extract 2 0
@@ -400,7 +534,7 @@ add_subjects_for_header@2:
     *
     intc_3 // 32
     extract3 // on error: index access is out of bounds
-    // smart_contracts/trust_variation/contract.py:103
+    // smart_contracts/trust_variation/contract.py:126
     // assert addr not in self.subjects, "Already enrolled"
     bytec 14 // 0x735f
     swap
@@ -410,25 +544,25 @@ add_subjects_for_header@2:
     bury 1
     !
     assert // Already enrolled
-    // smart_contracts/trust_variation/contract.py:104-107
+    // smart_contracts/trust_variation/contract.py:127-130
     // self.subjects[addr] = SubjectInfo(
     //     enrolled=arc4.UInt8(1),
     //     assigned=arc4.UInt8(0),
     // )
     bytec 23 // 0x0100
     box_put
-    // smart_contracts/trust_variation/contract.py:108
+    // smart_contracts/trust_variation/contract.py:131
     // self.subject_count.value += UInt64(1)
     intc_0 // 0
-    bytec_0 // "subject_count"
+    bytec_2 // "subject_count"
     app_global_get_ex
     assert // check self.subject_count exists
     intc_1 // 1
     +
-    bytec_0 // "subject_count"
+    bytec_2 // "subject_count"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:101
+    // smart_contracts/trust_variation/contract.py:124
     // for i in urange(addresses.length):
     intc_1 // 1
     +
@@ -436,7 +570,7 @@ add_subjects_for_header@2:
     b add_subjects_for_header@2
 
 add_subjects_after_for@5:
-    // smart_contracts/trust_variation/contract.py:97
+    // smart_contracts/trust_variation/contract.py:120
     // @arc4.abimethod
     intc_1 // 1
     return
@@ -444,7 +578,7 @@ add_subjects_after_for@5:
 
 // smart_contracts.trust_variation.contract.TrustVariation.self_enroll[routing]() -> void:
 self_enroll:
-    // smart_contracts/trust_variation/contract.py:110
+    // smart_contracts/trust_variation/contract.py:133
     // @arc4.abimethod
     txn GroupIndex
     intc_1 // 1
@@ -454,7 +588,7 @@ self_enroll:
     intc_1 // pay
     ==
     assert // transaction type is pay
-    // smart_contracts/trust_variation/contract.py:112
+    // smart_contracts/trust_variation/contract.py:135
     // assert self.status.value == UInt64(STATUS_ACTIVE), "Not active"
     intc_0 // 0
     bytec_1 // "status"
@@ -462,13 +596,13 @@ self_enroll:
     assert // check self.status exists
     !
     assert // Not active
-    // smart_contracts/trust_variation/contract.py:114
+    // smart_contracts/trust_variation/contract.py:137
     // assert addr not in self.subjects, "Already enrolled"
     bytec 14 // 0x735f
-    // smart_contracts/trust_variation/contract.py:113
+    // smart_contracts/trust_variation/contract.py:136
     // addr = arc4.Address(Txn.sender)
     txn Sender
-    // smart_contracts/trust_variation/contract.py:114
+    // smart_contracts/trust_variation/contract.py:137
     // assert addr not in self.subjects, "Already enrolled"
     concat
     dup
@@ -476,17 +610,17 @@ self_enroll:
     bury 1
     !
     assert // Already enrolled
-    // smart_contracts/trust_variation/contract.py:115
+    // smart_contracts/trust_variation/contract.py:138
     // if self.max_subjects.value > UInt64(0):
     intc_0 // 0
     bytec 13 // "max_subjects"
     app_global_get_ex
     assert // check self.max_subjects exists
     bz self_enroll_after_if_else@3
-    // smart_contracts/trust_variation/contract.py:116
+    // smart_contracts/trust_variation/contract.py:139
     // assert self.subject_count.value < self.max_subjects.value, "Full"
     intc_0 // 0
-    bytec_0 // "subject_count"
+    bytec_2 // "subject_count"
     app_global_get_ex
     assert // check self.subject_count exists
     intc_0 // 0
@@ -497,7 +631,7 @@ self_enroll:
     assert // Full
 
 self_enroll_after_if_else@3:
-    // smart_contracts/trust_variation/contract.py:117
+    // smart_contracts/trust_variation/contract.py:140
     // assert mbr_payment.receiver == Global.current_application_address, "Wrong receiver"
     dig 1
     dup
@@ -505,13 +639,13 @@ self_enroll_after_if_else@3:
     global CurrentApplicationAddress
     ==
     assert // Wrong receiver
-    // smart_contracts/trust_variation/contract.py:118
+    // smart_contracts/trust_variation/contract.py:141
     // assert mbr_payment.amount >= UInt64(16_900), "Insufficient MBR"
     gtxns Amount
     pushint 16900 // 16900
     >=
     assert // Insufficient MBR
-    // smart_contracts/trust_variation/contract.py:119-127
+    // smart_contracts/trust_variation/contract.py:142-150
     // # Verify sender is registered in BxHiveRegistry
     // itxn.ApplicationCall(
     //     app_id=Application(self.registry_app.value),
@@ -522,31 +656,31 @@ self_enroll_after_if_else@3:
     //     fee=0,
     // ).submit()
     itxn_begin
-    // smart_contracts/trust_variation/contract.py:121
+    // smart_contracts/trust_variation/contract.py:144
     // app_id=Application(self.registry_app.value),
     intc_0 // 0
-    bytec 18 // "registry_app"
+    bytec 19 // "registry_app"
     app_global_get_ex
     assert // check self.registry_app exists
-    // smart_contracts/trust_variation/contract.py:124
+    // smart_contracts/trust_variation/contract.py:147
     // arc4.Address(Txn.sender).bytes,
     txn Sender
-    // smart_contracts/trust_variation/contract.py:123
+    // smart_contracts/trust_variation/contract.py:146
     // Bytes(b"\x6f\xad\x4a\x65"),  # get_user(address) selector
     pushbytes 0x6fad4a65
     itxn_field ApplicationArgs
     itxn_field ApplicationArgs
     itxn_field ApplicationID
-    // smart_contracts/trust_variation/contract.py:119-120
+    // smart_contracts/trust_variation/contract.py:142-143
     // # Verify sender is registered in BxHiveRegistry
     // itxn.ApplicationCall(
     pushint 6 // appl
     itxn_field TypeEnum
-    // smart_contracts/trust_variation/contract.py:126
+    // smart_contracts/trust_variation/contract.py:149
     // fee=0,
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/trust_variation/contract.py:119-127
+    // smart_contracts/trust_variation/contract.py:142-150
     // # Verify sender is registered in BxHiveRegistry
     // itxn.ApplicationCall(
     //     app_id=Application(self.registry_app.value),
@@ -557,7 +691,7 @@ self_enroll_after_if_else@3:
     //     fee=0,
     // ).submit()
     itxn_submit
-    // smart_contracts/trust_variation/contract.py:128-131
+    // smart_contracts/trust_variation/contract.py:151-154
     // self.subjects[addr] = SubjectInfo(
     //     enrolled=arc4.UInt8(1),
     //     assigned=arc4.UInt8(0),
@@ -565,18 +699,18 @@ self_enroll_after_if_else@3:
     dup
     bytec 23 // 0x0100
     box_put
-    // smart_contracts/trust_variation/contract.py:132
+    // smart_contracts/trust_variation/contract.py:155
     // self.subject_count.value += UInt64(1)
     intc_0 // 0
-    bytec_0 // "subject_count"
+    bytec_2 // "subject_count"
     app_global_get_ex
     assert // check self.subject_count exists
     intc_1 // 1
     +
-    bytec_0 // "subject_count"
+    bytec_2 // "subject_count"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:110
+    // smart_contracts/trust_variation/contract.py:133
     // @arc4.abimethod
     intc_1 // 1
     return
@@ -584,7 +718,7 @@ self_enroll_after_if_else@3:
 
 // smart_contracts.trust_variation.contract.TrustVariation.create_match[routing]() -> void:
 create_match:
-    // smart_contracts/trust_variation/contract.py:134
+    // smart_contracts/trust_variation/contract.py:157
     // @arc4.abimethod
     txna ApplicationArgs 1
     dup
@@ -598,16 +732,16 @@ create_match:
     intc_3 // 32
     ==
     assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
-    // smart_contracts/trust_variation/contract.py:136
+    // smart_contracts/trust_variation/contract.py:159
     // assert Txn.sender == self.owner.value, "Not owner"
     txn Sender
     intc_0 // 0
-    bytec 4 // "owner"
+    bytec_3 // "owner"
     app_global_get_ex
     assert // check self.owner exists
     ==
     assert // Not owner
-    // smart_contracts/trust_variation/contract.py:137
+    // smart_contracts/trust_variation/contract.py:160
     // assert investor in self.subjects, "Investor not enrolled"
     bytec 14 // 0x735f
     dig 2
@@ -616,7 +750,7 @@ create_match:
     box_len
     bury 1
     assert // Investor not enrolled
-    // smart_contracts/trust_variation/contract.py:138
+    // smart_contracts/trust_variation/contract.py:161
     // assert trustee in self.subjects, "Trustee not enrolled"
     bytec 14 // 0x735f
     dig 2
@@ -625,43 +759,43 @@ create_match:
     box_len
     bury 1
     assert // Trustee not enrolled
-    // smart_contracts/trust_variation/contract.py:140
+    // smart_contracts/trust_variation/contract.py:163
     // investor_info = self.subjects[investor].copy()
     dig 1
     box_get
     pop
-    // smart_contracts/trust_variation/contract.py:141
+    // smart_contracts/trust_variation/contract.py:164
     // assert investor_info.enrolled == arc4.UInt8(1), "Investor not active"
     dup
     extract 0 1
     bytec 10 // 0x01
     b==
     assert // Investor not active
-    // smart_contracts/trust_variation/contract.py:142
+    // smart_contracts/trust_variation/contract.py:165
     // assert investor_info.assigned == arc4.UInt8(0), "Investor already assigned"
     extract 1 1
     bytec 15 // 0x00
     b==
     assert // Investor already assigned
-    // smart_contracts/trust_variation/contract.py:144
+    // smart_contracts/trust_variation/contract.py:167
     // trustee_info = self.subjects[trustee].copy()
     dup
     box_get
     pop
-    // smart_contracts/trust_variation/contract.py:145
+    // smart_contracts/trust_variation/contract.py:168
     // assert trustee_info.enrolled == arc4.UInt8(1), "Trustee not active"
     dup
     extract 0 1
     bytec 10 // 0x01
     b==
     assert // Trustee not active
-    // smart_contracts/trust_variation/contract.py:146
+    // smart_contracts/trust_variation/contract.py:169
     // assert trustee_info.assigned == arc4.UInt8(0), "Trustee already assigned"
     extract 1 1
     bytec 15 // 0x00
     b==
     assert // Trustee already assigned
-    // smart_contracts/trust_variation/contract.py:148
+    // smart_contracts/trust_variation/contract.py:171
     // match_id = arc4.UInt32(self.match_count.value)
     intc_0 // 0
     bytec 6 // "match_count"
@@ -675,7 +809,7 @@ create_match:
     <=
     assert // overflow
     extract 4 4
-    // smart_contracts/trust_variation/contract.py:149
+    // smart_contracts/trust_variation/contract.py:172
     // self.match_count.value += UInt64(1)
     swap
     intc_1 // 1
@@ -683,11 +817,11 @@ create_match:
     bytec 6 // "match_count"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:156
+    // smart_contracts/trust_variation/contract.py:179
     // created_at=arc4.UInt64(Global.latest_timestamp),
     global LatestTimestamp
     itob
-    // smart_contracts/trust_variation/contract.py:151-163
+    // smart_contracts/trust_variation/contract.py:174-186
     // self.matches[match_id] = Match(
     //     match_id=match_id,
     //     investor=investor.copy(),
@@ -706,10 +840,10 @@ create_match:
     concat
     dig 5
     concat
-    // smart_contracts/trust_variation/contract.py:155
+    // smart_contracts/trust_variation/contract.py:178
     // phase=arc4.UInt8(PHASE_INVESTOR_DECISION),
     bytec 15 // 0x00
-    // smart_contracts/trust_variation/contract.py:151-163
+    // smart_contracts/trust_variation/contract.py:174-186
     // self.matches[match_id] = Match(
     //     match_id=match_id,
     //     investor=investor.copy(),
@@ -728,12 +862,12 @@ create_match:
     concat
     pushbytes 0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000
     concat
-    // smart_contracts/trust_variation/contract.py:151
+    // smart_contracts/trust_variation/contract.py:174
     // self.matches[match_id] = Match(
     bytec 16 // 0x6d5f
     dig 2
     concat
-    // smart_contracts/trust_variation/contract.py:151-163
+    // smart_contracts/trust_variation/contract.py:174-186
     // self.matches[match_id] = Match(
     //     match_id=match_id,
     //     investor=investor.copy(),
@@ -749,35 +883,35 @@ create_match:
     // )
     swap
     box_put
-    // smart_contracts/trust_variation/contract.py:164
+    // smart_contracts/trust_variation/contract.py:187
     // self.player_match[investor] = match_id
-    bytec 19 // 0x706d5f
+    bytec 20 // 0x706d5f
     uncover 5
     concat
     dig 1
     box_put
-    // smart_contracts/trust_variation/contract.py:165
+    // smart_contracts/trust_variation/contract.py:188
     // self.player_match[trustee] = match_id
-    bytec 19 // 0x706d5f
+    bytec 20 // 0x706d5f
     uncover 4
     concat
     dig 1
     box_put
-    // smart_contracts/trust_variation/contract.py:167
+    // smart_contracts/trust_variation/contract.py:190
     // self.subjects[investor] = SubjectInfo(enrolled=arc4.UInt8(1), assigned=arc4.UInt8(1))
     uncover 2
     bytec 24 // 0x0101
     box_put
-    // smart_contracts/trust_variation/contract.py:168
+    // smart_contracts/trust_variation/contract.py:191
     // self.subjects[trustee] = SubjectInfo(enrolled=arc4.UInt8(1), assigned=arc4.UInt8(1))
     swap
-    // smart_contracts/trust_variation/contract.py:167
+    // smart_contracts/trust_variation/contract.py:190
     // self.subjects[investor] = SubjectInfo(enrolled=arc4.UInt8(1), assigned=arc4.UInt8(1))
     bytec 24 // 0x0101
-    // smart_contracts/trust_variation/contract.py:168
+    // smart_contracts/trust_variation/contract.py:191
     // self.subjects[trustee] = SubjectInfo(enrolled=arc4.UInt8(1), assigned=arc4.UInt8(1))
     box_put
-    // smart_contracts/trust_variation/contract.py:134
+    // smart_contracts/trust_variation/contract.py:157
     // @arc4.abimethod
     bytec 5 // 0x151f7c75
     swap
@@ -789,16 +923,16 @@ create_match:
 
 // smart_contracts.trust_variation.contract.TrustVariation.close_registration[routing]() -> void:
 close_registration:
-    // smart_contracts/trust_variation/contract.py:174
+    // smart_contracts/trust_variation/contract.py:197
     // assert Txn.sender == self.owner.value, "Not owner"
     txn Sender
     intc_0 // 0
-    bytec 4 // "owner"
+    bytec_3 // "owner"
     app_global_get_ex
     assert // check self.owner exists
     ==
     assert // Not owner
-    // smart_contracts/trust_variation/contract.py:175
+    // smart_contracts/trust_variation/contract.py:198
     // assert self.status.value == UInt64(STATUS_ACTIVE), "Not active"
     intc_0 // 0
     bytec_1 // "status"
@@ -806,12 +940,12 @@ close_registration:
     assert // check self.status exists
     !
     assert // Not active
-    // smart_contracts/trust_variation/contract.py:176
+    // smart_contracts/trust_variation/contract.py:199
     // self.status.value = UInt64(STATUS_CLOSED)
     bytec_1 // "status"
     intc_1 // 1
     app_global_put
-    // smart_contracts/trust_variation/contract.py:172
+    // smart_contracts/trust_variation/contract.py:195
     // @arc4.abimethod
     intc_1 // 1
     return
@@ -819,7 +953,7 @@ close_registration:
 
 // smart_contracts.trust_variation.contract.TrustVariation.submit_investor_decision[routing]() -> void:
 submit_investor_decision:
-    // smart_contracts/trust_variation/contract.py:182
+    // smart_contracts/trust_variation/contract.py:205
     // @arc4.abimethod
     txna ApplicationArgs 1
     dup
@@ -833,7 +967,7 @@ submit_investor_decision:
     intc_2 // 8
     ==
     assert // invalid number of bytes for arc4.uint64
-    // smart_contracts/trust_variation/contract.py:184
+    // smart_contracts/trust_variation/contract.py:207
     // assert match_id in self.matches, "Match not found"
     bytec 16 // 0x6d5f
     uncover 2
@@ -842,32 +976,32 @@ submit_investor_decision:
     box_len
     bury 1
     assert // Match not found
-    // smart_contracts/trust_variation/contract.py:185
+    // smart_contracts/trust_variation/contract.py:208
     // match = self.matches[match_id].copy()
     dup
     box_get
     pop
-    // smart_contracts/trust_variation/contract.py:187
+    // smart_contracts/trust_variation/contract.py:210
     // sender_addr = arc4.Address(Txn.sender)
     txn Sender
-    // smart_contracts/trust_variation/contract.py:188
+    // smart_contracts/trust_variation/contract.py:211
     // assert sender_addr == match.investor, "Not the investor"
     dig 1
     extract 4 32
     ==
     assert // Not the investor
-    // smart_contracts/trust_variation/contract.py:189
+    // smart_contracts/trust_variation/contract.py:212
     // assert match.phase == arc4.UInt8(PHASE_INVESTOR_DECISION), "Wrong phase"
     dup
     extract 68 1
     bytec 15 // 0x00
     b==
     assert // Wrong phase
-    // smart_contracts/trust_variation/contract.py:191
+    // smart_contracts/trust_variation/contract.py:214
     // inv_amount = investment.as_uint64()
     dig 2
     btoi
-    // smart_contracts/trust_variation/contract.py:192
+    // smart_contracts/trust_variation/contract.py:215
     // assert inv_amount <= self.e1.value, "Investment exceeds endowment"
     intc_0 // 0
     bytec 8 // "e1"
@@ -876,7 +1010,7 @@ submit_investor_decision:
     dig 1
     >=
     assert // Investment exceeds endowment
-    // smart_contracts/trust_variation/contract.py:193
+    // smart_contracts/trust_variation/contract.py:216
     // assert inv_amount % self.unit.value == UInt64(0), "Not a multiple of unit"
     intc_0 // 0
     bytec 9 // "unit"
@@ -885,18 +1019,18 @@ submit_investor_decision:
     %
     !
     assert // Not a multiple of unit
-    // smart_contracts/trust_variation/contract.py:195
+    // smart_contracts/trust_variation/contract.py:218
     // match.phase = arc4.UInt8(PHASE_TRUSTEE_DECISION)
     bytec 10 // 0x01
     replace2 68
-    // smart_contracts/trust_variation/contract.py:196
+    // smart_contracts/trust_variation/contract.py:219
     // match.investment = investment
     uncover 2
     replace2 77
-    // smart_contracts/trust_variation/contract.py:197
+    // smart_contracts/trust_variation/contract.py:220
     // self.matches[match_id] = match.copy()
     box_put
-    // smart_contracts/trust_variation/contract.py:182
+    // smart_contracts/trust_variation/contract.py:205
     // @arc4.abimethod
     intc_1 // 1
     return
@@ -904,7 +1038,7 @@ submit_investor_decision:
 
 // smart_contracts.trust_variation.contract.TrustVariation.submit_trustee_decision[routing]() -> void:
 submit_trustee_decision:
-    // smart_contracts/trust_variation/contract.py:199
+    // smart_contracts/trust_variation/contract.py:222
     // @arc4.abimethod
     txna ApplicationArgs 1
     dup
@@ -918,7 +1052,16 @@ submit_trustee_decision:
     intc_2 // 8
     ==
     assert // invalid number of bytes for arc4.uint64
-    // smart_contracts/trust_variation/contract.py:201
+    // smart_contracts/trust_variation/contract.py:224
+    // assert self.status.value != UInt64(STATUS_COMPLETED), "Variation ended"
+    intc_0 // 0
+    bytec_1 // "status"
+    app_global_get_ex
+    assert // check self.status exists
+    pushint 2 // 2
+    !=
+    assert // Variation ended
+    // smart_contracts/trust_variation/contract.py:225
     // assert match_id in self.matches, "Match not found"
     bytec 16 // 0x6d5f
     uncover 2
@@ -927,15 +1070,15 @@ submit_trustee_decision:
     box_len
     bury 1
     assert // Match not found
-    // smart_contracts/trust_variation/contract.py:202
+    // smart_contracts/trust_variation/contract.py:226
     // match = self.matches[match_id].copy()
     dup
     box_get
     pop
-    // smart_contracts/trust_variation/contract.py:204
+    // smart_contracts/trust_variation/contract.py:228
     // sender_addr = arc4.Address(Txn.sender)
     txn Sender
-    // smart_contracts/trust_variation/contract.py:205
+    // smart_contracts/trust_variation/contract.py:229
     // assert sender_addr == match.trustee, "Not the trustee"
     dig 1
     extract 36 32
@@ -943,39 +1086,39 @@ submit_trustee_decision:
     dig 1
     ==
     assert // Not the trustee
-    // smart_contracts/trust_variation/contract.py:206
+    // smart_contracts/trust_variation/contract.py:230
     // assert match.phase == arc4.UInt8(PHASE_TRUSTEE_DECISION), "Wrong phase"
     dig 1
     extract 68 1
     bytec 10 // 0x01
     b==
     assert // Wrong phase
-    // smart_contracts/trust_variation/contract.py:208
+    // smart_contracts/trust_variation/contract.py:232
     // s = match.investment.as_uint64()
     dig 1
     pushint 77 // 77
     extract_uint64
-    // smart_contracts/trust_variation/contract.py:209
+    // smart_contracts/trust_variation/contract.py:233
     // m = self.multiplier.value
     intc_0 // 0
     bytec 12 // "multiplier"
     app_global_get_ex
     assert // check self.multiplier exists
-    // smart_contracts/trust_variation/contract.py:210
+    // smart_contracts/trust_variation/contract.py:234
     // r = return_amount.as_uint64()
     dig 5
     btoi
-    // smart_contracts/trust_variation/contract.py:211
+    // smart_contracts/trust_variation/contract.py:235
     // max_return = s * m
     dig 2
     uncover 2
     *
-    // smart_contracts/trust_variation/contract.py:213
+    // smart_contracts/trust_variation/contract.py:237
     // assert r <= max_return, "Return exceeds maximum"
     dup2
     <=
     assert // Return exceeds maximum
-    // smart_contracts/trust_variation/contract.py:214
+    // smart_contracts/trust_variation/contract.py:238
     // assert r % self.unit.value == UInt64(0), "Not a multiple of unit"
     intc_0 // 0
     bytec 9 // "unit"
@@ -986,7 +1129,7 @@ submit_trustee_decision:
     %
     !
     assert // Not a multiple of unit
-    // smart_contracts/trust_variation/contract.py:216
+    // smart_contracts/trust_variation/contract.py:240
     // investor_payout = self.e1.value - s + r
     intc_0 // 0
     bytec 8 // "e1"
@@ -996,7 +1139,7 @@ submit_trustee_decision:
     -
     dig 2
     +
-    // smart_contracts/trust_variation/contract.py:217
+    // smart_contracts/trust_variation/contract.py:241
     // trustee_payout = self.e2.value + max_return - r
     intc_0 // 0
     bytec 11 // "e2"
@@ -1006,14 +1149,14 @@ submit_trustee_decision:
     +
     uncover 2
     -
-    // smart_contracts/trust_variation/contract.py:219-223
+    // smart_contracts/trust_variation/contract.py:243-247
     // itxn.Payment(
     //     receiver=Account(match.investor.bytes),
     //     amount=investor_payout,
     //     fee=0,
     // ).submit()
     itxn_begin
-    // smart_contracts/trust_variation/contract.py:220
+    // smart_contracts/trust_variation/contract.py:244
     // receiver=Account(match.investor.bytes),
     dig 3
     extract 4 32
@@ -1025,29 +1168,29 @@ submit_trustee_decision:
     dig 2
     itxn_field Amount
     itxn_field Receiver
-    // smart_contracts/trust_variation/contract.py:219
+    // smart_contracts/trust_variation/contract.py:243
     // itxn.Payment(
     intc_1 // pay
     itxn_field TypeEnum
-    // smart_contracts/trust_variation/contract.py:222
+    // smart_contracts/trust_variation/contract.py:246
     // fee=0,
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/trust_variation/contract.py:219-223
+    // smart_contracts/trust_variation/contract.py:243-247
     // itxn.Payment(
     //     receiver=Account(match.investor.bytes),
     //     amount=investor_payout,
     //     fee=0,
     // ).submit()
     itxn_submit
-    // smart_contracts/trust_variation/contract.py:225-229
+    // smart_contracts/trust_variation/contract.py:249-253
     // itxn.Payment(
     //     receiver=Account(match.trustee.bytes),
     //     amount=trustee_payout,
     //     fee=0,
     // ).submit()
     itxn_begin
-    // smart_contracts/trust_variation/contract.py:226
+    // smart_contracts/trust_variation/contract.py:250
     // receiver=Account(match.trustee.bytes),
     dig 2
     len
@@ -1058,35 +1201,35 @@ submit_trustee_decision:
     itxn_field Amount
     uncover 2
     itxn_field Receiver
-    // smart_contracts/trust_variation/contract.py:225
+    // smart_contracts/trust_variation/contract.py:249
     // itxn.Payment(
     intc_1 // pay
     itxn_field TypeEnum
-    // smart_contracts/trust_variation/contract.py:228
+    // smart_contracts/trust_variation/contract.py:252
     // fee=0,
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/trust_variation/contract.py:225-229
+    // smart_contracts/trust_variation/contract.py:249-253
     // itxn.Payment(
     //     receiver=Account(match.trustee.bytes),
     //     amount=trustee_payout,
     //     fee=0,
     // ).submit()
     itxn_submit
-    // smart_contracts/trust_variation/contract.py:231
+    // smart_contracts/trust_variation/contract.py:255
     // self.escrow_paid_out.value += investor_payout + trustee_payout
     intc_0 // 0
-    bytec_3 // "escrow_paid_out"
+    bytec 4 // "escrow_paid_out"
     app_global_get_ex
     assert // check self.escrow_paid_out exists
     dig 2
     dig 2
     +
     +
-    bytec_3 // "escrow_paid_out"
+    bytec 4 // "escrow_paid_out"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:232
+    // smart_contracts/trust_variation/contract.py:256
     // self.paid_out_count.value += UInt64(1)
     intc_0 // 0
     bytec 7 // "paid_out_count"
@@ -1097,38 +1240,38 @@ submit_trustee_decision:
     bytec 7 // "paid_out_count"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:234
+    // smart_contracts/trust_variation/contract.py:258
     // match.phase = arc4.UInt8(PHASE_COMPLETED)
     uncover 2
     pushbytes 0x02
     replace2 68
-    // smart_contracts/trust_variation/contract.py:235
+    // smart_contracts/trust_variation/contract.py:259
     // match.return_amount = return_amount
     uncover 4
     replace2 85
-    // smart_contracts/trust_variation/contract.py:236
+    // smart_contracts/trust_variation/contract.py:260
     // match.investor_payout = arc4.UInt64(investor_payout)
     uncover 2
     itob
     replace2 93
-    // smart_contracts/trust_variation/contract.py:237
+    // smart_contracts/trust_variation/contract.py:261
     // match.trustee_payout = arc4.UInt64(trustee_payout)
     swap
     itob
     replace2 101
-    // smart_contracts/trust_variation/contract.py:238
+    // smart_contracts/trust_variation/contract.py:262
     // match.completed_at = arc4.UInt64(Global.latest_timestamp)
     global LatestTimestamp
     itob
     replace2 109
-    // smart_contracts/trust_variation/contract.py:239
+    // smart_contracts/trust_variation/contract.py:263
     // match.paid_out = arc4.UInt8(1)
     bytec 10 // 0x01
     replace2 117
-    // smart_contracts/trust_variation/contract.py:240
+    // smart_contracts/trust_variation/contract.py:264
     // self.matches[match_id] = match.copy()
     box_put
-    // smart_contracts/trust_variation/contract.py:199
+    // smart_contracts/trust_variation/contract.py:222
     // @arc4.abimethod
     intc_1 // 1
     return
@@ -1136,18 +1279,18 @@ submit_trustee_decision:
 
 // smart_contracts.trust_variation.contract.TrustVariation.withdraw_escrow[routing]() -> void:
 withdraw_escrow:
-    // smart_contracts/trust_variation/contract.py:244
+    // smart_contracts/trust_variation/contract.py:268
     // assert Txn.sender == self.owner.value, "Not owner"
     txn Sender
     intc_0 // 0
-    bytec 4 // "owner"
+    bytec_3 // "owner"
     app_global_get_ex
     assert // check self.owner exists
     swap
     dig 1
     ==
     assert // Not owner
-    // smart_contracts/trust_variation/contract.py:245
+    // smart_contracts/trust_variation/contract.py:269
     // assert self.paid_out_count.value == self.match_count.value, "Matches not all paid out"
     intc_0 // 0
     bytec 7 // "paid_out_count"
@@ -1159,24 +1302,24 @@ withdraw_escrow:
     assert // check self.match_count exists
     ==
     assert // Matches not all paid out
-    // smart_contracts/trust_variation/contract.py:247
+    // smart_contracts/trust_variation/contract.py:271
     // remaining = self.escrow_deposited.value - self.escrow_paid_out.value
     intc_0 // 0
-    bytec_2 // "escrow_deposited"
+    bytec_0 // "escrow_deposited"
     app_global_get_ex
     assert // check self.escrow_deposited exists
     intc_0 // 0
-    bytec_3 // "escrow_paid_out"
+    bytec 4 // "escrow_paid_out"
     app_global_get_ex
     assert // check self.escrow_paid_out exists
     dig 1
     swap
     -
-    // smart_contracts/trust_variation/contract.py:248
+    // smart_contracts/trust_variation/contract.py:272
     // assert remaining > UInt64(0), "No remaining escrow"
     dup
     assert // No remaining escrow
-    // smart_contracts/trust_variation/contract.py:250-254
+    // smart_contracts/trust_variation/contract.py:274-278
     // itxn.Payment(
     //     receiver=self.owner.value,
     //     amount=remaining,
@@ -1187,28 +1330,28 @@ withdraw_escrow:
     itxn_field Amount
     uncover 2
     itxn_field Receiver
-    // smart_contracts/trust_variation/contract.py:250
+    // smart_contracts/trust_variation/contract.py:274
     // itxn.Payment(
     intc_1 // pay
     itxn_field TypeEnum
-    // smart_contracts/trust_variation/contract.py:253
+    // smart_contracts/trust_variation/contract.py:277
     // fee=0,
     intc_0 // 0
     itxn_field Fee
-    // smart_contracts/trust_variation/contract.py:250-254
+    // smart_contracts/trust_variation/contract.py:274-278
     // itxn.Payment(
     //     receiver=self.owner.value,
     //     amount=remaining,
     //     fee=0,
     // ).submit()
     itxn_submit
-    // smart_contracts/trust_variation/contract.py:256
+    // smart_contracts/trust_variation/contract.py:280
     // self.escrow_deposited.value -= remaining
     -
-    bytec_2 // "escrow_deposited"
+    bytec_0 // "escrow_deposited"
     swap
     app_global_put
-    // smart_contracts/trust_variation/contract.py:242
+    // smart_contracts/trust_variation/contract.py:266
     // @arc4.abimethod
     intc_1 // 1
     return
@@ -1216,42 +1359,42 @@ withdraw_escrow:
 
 // smart_contracts.trust_variation.contract.TrustVariation.get_config[routing]() -> void:
 get_config:
-    // smart_contracts/trust_variation/contract.py:265
+    // smart_contracts/trust_variation/contract.py:289
     // e1=arc4.UInt64(self.e1.value),
     intc_0 // 0
     bytec 8 // "e1"
     app_global_get_ex
     assert // check self.e1 exists
     itob
-    // smart_contracts/trust_variation/contract.py:266
+    // smart_contracts/trust_variation/contract.py:290
     // e2=arc4.UInt64(self.e2.value),
     intc_0 // 0
     bytec 11 // "e2"
     app_global_get_ex
     assert // check self.e2 exists
     itob
-    // smart_contracts/trust_variation/contract.py:267
+    // smart_contracts/trust_variation/contract.py:291
     // multiplier=arc4.UInt64(self.multiplier.value),
     intc_0 // 0
     bytec 12 // "multiplier"
     app_global_get_ex
     assert // check self.multiplier exists
     itob
-    // smart_contracts/trust_variation/contract.py:268
+    // smart_contracts/trust_variation/contract.py:292
     // unit=arc4.UInt64(self.unit.value),
     intc_0 // 0
     bytec 9 // "unit"
     app_global_get_ex
     assert // check self.unit exists
     itob
-    // smart_contracts/trust_variation/contract.py:269
+    // smart_contracts/trust_variation/contract.py:293
     // asset_id=arc4.UInt64(self.asset_id.value),
     intc_0 // 0
-    bytec 17 // "asset_id"
+    bytec 18 // "asset_id"
     app_global_get_ex
     assert // check self.asset_id exists
     itob
-    // smart_contracts/trust_variation/contract.py:270
+    // smart_contracts/trust_variation/contract.py:294
     // status=arc4.UInt8(self.status.value),
     intc_0 // 0
     bytec_1 // "status"
@@ -1264,7 +1407,7 @@ get_config:
     <=
     assert // overflow
     extract 7 1
-    // smart_contracts/trust_variation/contract.py:264-271
+    // smart_contracts/trust_variation/contract.py:288-295
     // return VariationConfig(
     //     e1=arc4.UInt64(self.e1.value),
     //     e2=arc4.UInt64(self.e2.value),
@@ -1284,7 +1427,7 @@ get_config:
     concat
     swap
     concat
-    // smart_contracts/trust_variation/contract.py:262
+    // smart_contracts/trust_variation/contract.py:286
     // @arc4.abimethod(readonly=True)
     bytec 5 // 0x151f7c75
     swap
@@ -1296,7 +1439,7 @@ get_config:
 
 // smart_contracts.trust_variation.contract.TrustVariation.get_match[routing]() -> void:
 get_match:
-    // smart_contracts/trust_variation/contract.py:273
+    // smart_contracts/trust_variation/contract.py:297
     // @arc4.abimethod(readonly=True)
     txna ApplicationArgs 1
     dup
@@ -1304,7 +1447,7 @@ get_match:
     pushint 4 // 4
     ==
     assert // invalid number of bytes for arc4.uint32
-    // smart_contracts/trust_variation/contract.py:275
+    // smart_contracts/trust_variation/contract.py:299
     // assert match_id in self.matches, "Match not found"
     bytec 16 // 0x6d5f
     swap
@@ -1313,11 +1456,11 @@ get_match:
     box_len
     bury 1
     assert // Match not found
-    // smart_contracts/trust_variation/contract.py:276
+    // smart_contracts/trust_variation/contract.py:300
     // return self.matches[match_id].copy()
     box_get
     pop
-    // smart_contracts/trust_variation/contract.py:273
+    // smart_contracts/trust_variation/contract.py:297
     // @arc4.abimethod(readonly=True)
     bytec 5 // 0x151f7c75
     swap
@@ -1329,7 +1472,7 @@ get_match:
 
 // smart_contracts.trust_variation.contract.TrustVariation.get_player_match[routing]() -> void:
 get_player_match:
-    // smart_contracts/trust_variation/contract.py:278
+    // smart_contracts/trust_variation/contract.py:302
     // @arc4.abimethod(readonly=True)
     txna ApplicationArgs 1
     dup
@@ -1337,20 +1480,20 @@ get_player_match:
     intc_3 // 32
     ==
     assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
-    // smart_contracts/trust_variation/contract.py:280
+    // smart_contracts/trust_variation/contract.py:304
     // assert addr in self.player_match, "No active match"
-    bytec 19 // 0x706d5f
+    bytec 20 // 0x706d5f
     swap
     concat
     dup
     box_len
     bury 1
     assert // No active match
-    // smart_contracts/trust_variation/contract.py:281
+    // smart_contracts/trust_variation/contract.py:305
     // return self.player_match[addr]
     box_get
     pop
-    // smart_contracts/trust_variation/contract.py:278
+    // smart_contracts/trust_variation/contract.py:302
     // @arc4.abimethod(readonly=True)
     bytec 5 // 0x151f7c75
     swap
@@ -1362,14 +1505,14 @@ get_player_match:
 
 // smart_contracts.trust_variation.contract.TrustVariation.get_subject_count[routing]() -> void:
 get_subject_count:
-    // smart_contracts/trust_variation/contract.py:285
+    // smart_contracts/trust_variation/contract.py:309
     // return arc4.UInt64(self.subject_count.value)
     intc_0 // 0
-    bytec_0 // "subject_count"
+    bytec_2 // "subject_count"
     app_global_get_ex
     assert // check self.subject_count exists
     itob
-    // smart_contracts/trust_variation/contract.py:283
+    // smart_contracts/trust_variation/contract.py:307
     // @arc4.abimethod(readonly=True)
     bytec 5 // 0x151f7c75
     swap
@@ -1381,19 +1524,19 @@ get_subject_count:
 
 // smart_contracts.trust_variation.contract.TrustVariation.get_escrow_balance[routing]() -> void:
 get_escrow_balance:
-    // smart_contracts/trust_variation/contract.py:289
+    // smart_contracts/trust_variation/contract.py:313
     // return arc4.UInt64(self.escrow_deposited.value - self.escrow_paid_out.value)
     intc_0 // 0
-    bytec_2 // "escrow_deposited"
+    bytec_0 // "escrow_deposited"
     app_global_get_ex
     assert // check self.escrow_deposited exists
     intc_0 // 0
-    bytec_3 // "escrow_paid_out"
+    bytec 4 // "escrow_paid_out"
     app_global_get_ex
     assert // check self.escrow_paid_out exists
     -
     itob
-    // smart_contracts/trust_variation/contract.py:287
+    // smart_contracts/trust_variation/contract.py:311
     // @arc4.abimethod(readonly=True)
     bytec 5 // 0x151f7c75
     swap

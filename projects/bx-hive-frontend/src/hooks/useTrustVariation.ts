@@ -14,6 +14,7 @@ export const PHASE_COMPLETED = 2
 // Status constants matching contract values
 export const STATUS_ACTIVE = 0
 export const STATUS_CLOSED = 1
+export const STATUS_COMPLETED = 2
 
 /**
  * Hook for interacting with TrustVariation contracts (Layer 3).
@@ -193,6 +194,24 @@ export function useTrustVariation() {
     [activeAddress, getTrustVariationClient],
   )
 
+  /**
+   * Ends a variation, returning any remaining escrow to the owner.
+   * Can be called after all matches complete or to force-end early.
+   */
+  const endVariation = useCallback(
+    async (appId: bigint): Promise<void> => {
+      if (!activeAddress) throw new Error('Wallet not connected')
+      const client = getTrustVariationClient(appId)
+      if (!client) throw new Error('Wallet not connected')
+      await client.send.endVariation({
+        args: {},
+        coverAppCallInnerTransactionFees: true,
+        maxFee: AlgoAmount.MicroAlgos(3_000),
+      })
+    },
+    [activeAddress, getTrustVariationClient],
+  )
+
   return {
     depositEscrow,
     addSubjects,
@@ -204,5 +223,6 @@ export function useTrustVariation() {
     getPlayerMatch,
     getConfig,
     getSubjectCount,
+    endVariation,
   }
 }

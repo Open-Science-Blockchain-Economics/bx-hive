@@ -1,45 +1,134 @@
 # bx-hive
 
-This starter full stack project has been generated using AlgoKit. See below for default getting started instructions.
+Research platform for running Algorand-based trust game experiments.
 
-## Setup
+## Architecture
 
-### Initial setup
-1. Clone this repository to your local machine.
-2. Ensure [Docker](https://www.docker.com/) is installed and operational. Then, install `AlgoKit` following this [guide](https://github.com/algorandfoundation/algokit-cli#install).
-3. Run `algokit project bootstrap all` in the project directory. This command sets up your environment by installing necessary dependencies, setting up a Python virtual environment, and preparing your `.env` file.
-4. In the case of a smart contract project, execute `algokit generate env-file -a target_network localnet` from the `bx-hive-contracts` directory to create a `.env.localnet` file with default configuration for `localnet`.
-5. To build your project, execute `algokit project run build`. This compiles your project and prepares it for running.
-6. For project-specific instructions, refer to the READMEs of the child projects:
-   - Smart Contracts: [bx-hive-contracts](projects/bx-hive-contracts/README.md)
-   - Frontend Application: [bx-hive-frontend](projects/bx-hive-frontend/README.md)
+Three-layer smart contract system:
 
-> This project is structured as a monorepo, refer to the [documentation](https://github.com/algorandfoundation/algokit-cli/blob/main/docs/features/project/run.md) to learn more about custom command orchestration via `algokit project run`.
+- **Layer 1 — BxHiveRegistry** (`registry/`): participant identity and registration
+- **Layer 2 — TrustExperiments** (`trust_experiments/`): experiment groups and variation management; spawns Layer 3 via inner transactions
+- **Layer 3 — TrustVariation** (`trust_variation/`): per-experiment escrow, matching, and payouts
 
-### Subsequently
+The frontend communicates with Layer 1 and Layer 2 directly. Layer 3 contracts are deployed on-chain by Layer 2 and addressed by their app ID.
 
-1. If you update to the latest source code and there are new dependencies, you will need to run `algokit project bootstrap all` again.
-2. Follow step 3 above.
+---
+
+## LocalNet Quickstart
+
+Follow these steps every time you reset LocalNet or deploy updated contracts.
+
+### Prerequisites
+
+- [Docker](https://www.docker.com/) running
+- [AlgoKit CLI](https://github.com/algorandfoundation/algokit-cli#install) installed (`algokit --version` ≥ 2.0.0)
+- Python 3.12 virtual environment bootstrapped (`algokit project bootstrap all` from repo root)
+
+---
+
+### Step 1 — Reset LocalNet
+
+```bash
+algokit localnet reset
+```
+
+This wipes all chain state and starts fresh. Any previously deployed contracts are gone.
+
+---
+
+### Step 2 — Deploy contracts
+
+```bash
+cd projects/bx-hive-contracts
+algokit project deploy localnet
+```
+
+The output will print the app IDs for both contracts, e.g.:
+
+```
+Deployed BxHiveRegistry ... app_id=1002
+TrustExperiments deployed: app_id=1003, address=ABCDEF...
+```
+
+Note both IDs — you'll need them in step 3.
+
+> If `.env.localnet` doesn't exist yet, run this first:
+> ```bash
+> algokit generate env-file -a target_network localnet
+> ```
+
+---
+
+### Step 3 — Update the frontend `.env`
+
+Edit `projects/bx-hive-frontend/.env` and update the app IDs from step 2:
+
+```bash
+VITE_REGISTRY_APP_ID=<registry app id>
+VITE_TRUST_EXPERIMENTS_APP_ID=<trust experiments app id>
+```
+
+---
+
+### Step 4 — Seed test accounts
+
+```bash
+cd projects/bx-hive-frontend
+pnpm seed:localnet
+```
+
+This creates test experimenter and subject accounts on LocalNet with funded wallets, so you can log in and run experiments without setting up accounts manually.
+
+---
+
+### Step 5 — Start the frontend
+
+```bash
+cd projects/bx-hive-frontend
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173).
+
+---
+
+## Development Workflow
+
+### Build & test contracts
+
+```bash
+cd projects/bx-hive-contracts
+source .venv/bin/activate
+
+# Build TEAL + regenerate artifacts
+python -m smart_contracts build
+
+# Regenerate TypeScript clients and copy TEAL to frontend
+cd ..
+npm run generate:app-clients   # run from bx-hive-frontend or workspace root
+
+# Run unit tests
+cd bx-hive-contracts
+python -m pytest tests/
+```
+
+> After any contract change, rebuild, regenerate clients, redeploy (step 2 above), and restart the frontend dev server.
+
+### Frontend
+
+```bash
+cd projects/bx-hive-frontend
+npm install
+npm run dev
+```
+
+---
 
 ## Tools
 
-This project makes use of Python and React to build Algorand smart contracts and to provide a base project configuration to develop frontends for your Algorand dApps and interactions with smart contracts. The following tools are in use:
-
-- Algorand, AlgoKit, and AlgoKit Utils
-- Python dependencies including Poetry, Black, Ruff or Flake8, mypy, pytest, and pip-audit
-- React and related dependencies including AlgoKit Utils, Tailwind CSS, daisyUI, use-wallet, npm, jest, playwright, Prettier, ESLint, and Github Actions workflows for build validation
-
-### VS Code
-
-It has also been configured to have a productive dev experience out of the box in [VS Code](https://code.visualstudio.com/), see the [backend .vscode](./backend/.vscode) and [frontend .vscode](./frontend/.vscode) folders for more details.
-
-## Integrating with smart contracts and application clients
-
-Refer to the [bx-hive-contracts](projects/bx-hive-contracts/README.md) folder for overview of working with smart contracts, [projects/bx-hive-frontend](projects/bx-hive-frontend/README.md) for overview of the React project and the [projects/bx-hive-frontend/contracts](projects/bx-hive-frontend/src/contracts/README.md) folder for README on adding new smart contracts from backend as application clients on your frontend. The templates provided in these folders will help you get started.
-When you compile and generate smart contract artifacts, your frontend component will automatically generate typescript application clients from smart contract artifacts and move them to `frontend/src/contracts` folder, see [`generate:app-clients` in package.json](projects/bx-hive-frontend/package.json). Afterwards, you are free to import and use them in your frontend application.
-
-The frontend starter also provides an example of interactions with your TrustGameClient in [`AppCalls.tsx`](projects/bx-hive-frontend/src/components/AppCalls.tsx) component by default.
-
-## Next Steps
-
-You can take this project and customize it to build your own decentralized applications on Algorand. Make sure to understand how to use AlgoKit and how to write smart contracts for Algorand before you start.
+- [Algorand Python (Puya)](https://github.com/algorandfoundation/puya) — smart contracts
+- [AlgoKit Utils](https://github.com/algorandfoundation/algokit-utils-py) — Python deployment helpers
+- [AlgoKit Utils TS](https://github.com/algorandfoundation/algokit-utils-ts) — frontend blockchain client
+- [React](https://react.dev/) + [Vite](https://vitejs.dev/) + [Tailwind CSS](https://tailwindcss.com/) + [daisyUI](https://daisyui.com/)
+- [use-wallet](https://github.com/TxnLab/use-wallet) — wallet connection
+- [pytest](https://docs.pytest.org/) — contract unit tests

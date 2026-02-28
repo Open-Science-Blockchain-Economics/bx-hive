@@ -10,6 +10,7 @@ from smart_contracts.shared.types import (
     PHASE_TRUSTEE_DECISION,
     STATUS_ACTIVE,
     STATUS_CLOSED,
+    STATUS_COMPLETED,
 )
 from smart_contracts.trust_variation.contract import TrustVariation
 
@@ -390,3 +391,145 @@ def test_close_registration(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
     contract.close_registration()
     assert contract.status.value == STATUS_CLOSED
+
+
+# -------------------------------------------------------------------------
+# record_escrow
+# -------------------------------------------------------------------------
+
+
+def _make_variation_with_experiments_app(
+    ctx: AlgopyTestContext,
+) -> tuple[TrustVariation, "Application"]:
+    """Create a variation whose experiments_app is a real mock application."""
+    experiments_app = ctx.any.application()
+    contract = TrustVariation()
+    contract.create(
+        arc4.UInt64(experiments_app.id),
+        arc4.UInt32(1),
+        arc4.UInt32(1),
+        ctx.default_sender,
+        arc4.UInt64(E1),
+        arc4.UInt64(E2),
+        arc4.UInt64(MULTIPLIER),
+        arc4.UInt64(UNIT),
+        arc4.UInt64(ASSET_ID),
+        arc4.UInt64(0),  # registry_app
+        arc4.UInt64(0),  # max_subjects
+    )
+    return contract, experiments_app
+
+
+def test_record_escrow_from_experiments_app(context: AlgopyTestContext) -> None:
+    """record_escrow increments escrow_deposited when called by experiments_app."""
+    contract, experiments_app = _make_variation_with_experiments_app(context)
+    exp_addr = context.ledger.get_app(experiments_app.id).address
+    app_call = context.any.txn.application_call(
+        sender=exp_addr, app_id=Application(contract.__app_id__)
+    )
+    with context.txn.create_group(gtxns=[app_call], active_txn_index=0):
+        contract.record_escrow(arc4.UInt64(500))
+
+    assert contract.escrow_deposited.value == 500
+
+
+def test_record_escrow_accumulates(context: AlgopyTestContext) -> None:
+    contract, experiments_app = _make_variation_with_experiments_app(context)
+    exp_addr = context.ledger.get_app(experiments_app.id).address
+
+    app_call1 = context.any.txn.application_call(
+        sender=exp_addr, app_id=Application(contract.__app_id__)
+    )
+    with context.txn.create_group(gtxns=[app_call1], active_txn_index=0):
+        contract.record_escrow(arc4.UInt64(300))
+
+    app_call2 = context.any.txn.application_call(
+        sender=exp_addr, app_id=Application(contract.__app_id__)
+    )
+    with context.txn.create_group(gtxns=[app_call2], active_txn_index=0):
+        contract.record_escrow(arc4.UInt64(200))
+
+    assert contract.escrow_deposited.value == 500
+
+
+def test_record_escrow_wrong_caller_fails(context: AlgopyTestContext) -> None:
+    """Only the experiments_app address may call record_escrow."""
+    contract, _ = _make_variation_with_experiments_app(context)
+    # default_sender is NOT the experiments_app address
+    with pytest.raises(Exception, match="Not experiments app"):
+        contract.record_escrow(arc4.UInt64(500))
+
+
+def test_record_escrow_zero_amount_fails(context: AlgopyTestContext) -> None:
+    contract, experiments_app = _make_variation_with_experiments_app(context)
+    exp_addr = context.ledger.get_app(experiments_app.id).address
+    app_call = context.any.txn.application_call(
+        sender=exp_addr, app_id=Application(contract.__app_id__)
+    )
+    with context.txn.create_group(gtxns=[app_call], active_txn_index=0):
+        with pytest.raises(Exception, match="Amount must be > 0"):
+            contract.record_escrow(arc4.UInt64(0))
+
+
+# -------------------------------------------------------------------------
+# end_variation
+# -------------------------------------------------------------------------
+
+
+def test_end_variation_sets_completed(context: AlgopyTestContext) -> None:
+    contract = _make_variation(context)
+    contract.end_variation()
+    assert contract.status.value == STATUS_COMPLETED
+
+
+def test_end_variation_returns_remaining_escrow(context: AlgopyTestContext) -> None:
+    contract = _make_variation(context)
+    contract.escrow_deposited.value = UInt64(1000)
+    contract.escrow_paid_out.value = UInt64(300)
+    contract.end_variation()
+    # Remaining 700 returned; deposited decremented
+    assert contract.escrow_deposited.value == 300
+    assert contract.status.value == STATUS_COMPLETED
+
+
+def test_end_variation_no_remaining_escrow(context: AlgopyTestContext) -> None:
+    """end_variation with zero remaining still sets status to COMPLETED."""
+    contract = _make_variation(context)
+    contract.escrow_deposited.value = UInt64(500)
+    contract.escrow_paid_out.value = UInt64(500)
+    contract.end_variation()
+    assert contract.status.value == STATUS_COMPLETED
+
+
+def test_end_variation_wrong_caller_fails(context: AlgopyTestContext) -> None:
+    other = context.any.account()
+    contract = _make_variation(context, owner=other)
+    with pytest.raises(Exception, match="Not owner"):
+        contract.end_variation()
+
+
+def test_end_variation_already_ended_fails(context: AlgopyTestContext) -> None:
+    contract = _make_variation(context)
+    contract.end_variation()
+    with pytest.raises(Exception, match="Already ended"):
+        contract.end_variation()
+
+
+def test_submit_trustee_decision_after_end_variation_fails(context: AlgopyTestContext) -> None:
+    """submit_trustee_decision must be rejected after variation is ended."""
+    contract = _make_variation(context)
+    investor, trustee, trustee_acct = _add_subjects(context, contract)
+    contract.escrow_deposited.value = UInt64(10_000)
+    match_id = contract.create_match(investor.copy(), trustee.copy())
+    contract.submit_investor_decision(match_id, arc4.UInt64(40))
+
+    # End the variation
+    contract.end_variation()
+
+    # Trustee tries to submit — should fail
+    app_call = context.any.txn.application_call(
+        sender=trustee_acct, app_id=Application(contract.__app_id__)
+    )
+    with context.txn.create_group(gtxns=[app_call], active_txn_index=0):
+        with pytest.raises(Exception, match="Variation ended"):
+            contract.submit_trustee_decision(match_id, arc4.UInt64(60))

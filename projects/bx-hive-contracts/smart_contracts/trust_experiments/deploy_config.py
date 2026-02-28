@@ -34,7 +34,7 @@ def deploy() -> None:
         default_sender=deployer.address,
         default_signer=deployer.signer,
     )
-    app_client, _ = factory.deploy(
+    app_client, deploy_result = factory.deploy(
         on_update=algokit_utils.OnUpdate.AppendApp,
         on_schema_break=algokit_utils.OnSchemaBreak.AppendApp,
         create_params=TrustExperimentsMethodCallCreateParams(
@@ -43,3 +43,14 @@ def deploy() -> None:
         ),
     )
     logger.info(f"TrustExperiments deployed: app_id={app_client.app_id}, address={app_client.app_address}")
+
+    # Seed the app account on fresh deploys so it can pay box MBR for experiments/variations
+    if deploy_result.operation_performed == algokit_utils.OperationPerformed.Create:
+        algorand.send.payment(
+            algokit_utils.PaymentParams(
+                sender=deployer.address,
+                receiver=app_client.app_address,
+                amount=algokit_utils.AlgoAmount(algo=10),
+            )
+        )
+        logger.info(f"Seeded TrustExperiments app account with 10 ALGO")

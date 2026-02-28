@@ -7,6 +7,7 @@ from algopy import (
     Txn,
     UInt64,
     arc4,
+    gtxn,
     itxn,
 )
 
@@ -56,10 +57,13 @@ class TrustExperiments(ARC4Contract):
         unit: arc4.UInt64,
         asset_id: arc4.UInt64,
         max_subjects: arc4.UInt64,
+        escrow_payment: gtxn.PaymentTransaction,
     ) -> arc4.UInt64:
         assert exp_id in self.experiments, "Experiment not found"
         experiment = self.experiments[exp_id].copy()
         assert experiment.owner == arc4.Address(Txn.sender), "Not experiment owner"
+        assert escrow_payment.receiver == Global.current_application_address, "Wrong escrow receiver"
+        assert escrow_payment.amount > UInt64(0), "Escrow must be > 0"
 
         var_id = arc4.UInt32(experiment.variation_count.as_uint64())
 
@@ -72,7 +76,7 @@ class TrustExperiments(ARC4Contract):
             global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
             app_args=(
                 Bytes(b"\xb8\xdb\x86\x05"),
-                arc4.UInt64(self.registry_app.value).bytes,
+                arc4.UInt64(Global.current_application_id.id).bytes,
                 exp_id.bytes,
                 var_id.bytes,
                 arc4.Address(Txn.sender).bytes,
@@ -87,6 +91,24 @@ class TrustExperiments(ARC4Contract):
             fee=0,
         ).submit()
         new_app = deployed.created_app
+
+        # Forward escrow to the new TrustVariation app account
+        itxn.Payment(
+            receiver=new_app.address,
+            amount=escrow_payment.amount,
+            fee=0,
+        ).submit()
+
+        # Record the deposit in TrustVariation
+        # Selector: record_escrow(uint64)void
+        itxn.ApplicationCall(
+            app_id=new_app,
+            app_args=(
+                Bytes(b"\x5c\x9a\x83\x6b"),
+                arc4.UInt64(escrow_payment.amount).bytes,
+            ),
+            fee=0,
+        ).submit()
 
         # Packed composite key: high 32 bits = exp_id, low 32 bits = var_id
         variation_key = arc4.UInt64(
@@ -123,7 +145,11 @@ class TrustExperiments(ARC4Contract):
         unit: arc4.UInt64,
         asset_id: arc4.UInt64,
         max_subjects: arc4.UInt64,
+        escrow_payment: gtxn.PaymentTransaction,
     ) -> tuple[arc4.UInt32, arc4.UInt64]:
+        assert escrow_payment.receiver == Global.current_application_address, "Wrong escrow receiver"
+        assert escrow_payment.amount > UInt64(0), "Escrow must be > 0"
+
         # Create the experiment group
         exp_id = arc4.UInt32(self.experiment_count.value)
         self.experiment_count.value += UInt64(1)
@@ -147,7 +173,7 @@ class TrustExperiments(ARC4Contract):
             global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
             app_args=(
                 Bytes(b"\xb8\xdb\x86\x05"),
-                arc4.UInt64(self.registry_app.value).bytes,
+                arc4.UInt64(Global.current_application_id.id).bytes,
                 exp_id.bytes,
                 var_id.bytes,
                 arc4.Address(Txn.sender).bytes,
@@ -162,6 +188,24 @@ class TrustExperiments(ARC4Contract):
             fee=0,
         ).submit()
         new_app = deployed.created_app
+
+        # Forward escrow to the new TrustVariation app account
+        itxn.Payment(
+            receiver=new_app.address,
+            amount=escrow_payment.amount,
+            fee=0,
+        ).submit()
+
+        # Record the deposit in TrustVariation
+        # Selector: record_escrow(uint64)void
+        itxn.ApplicationCall(
+            app_id=new_app,
+            app_args=(
+                Bytes(b"\x5c\x9a\x83\x6b"),
+                arc4.UInt64(escrow_payment.amount).bytes,
+            ),
+            fee=0,
+        ).submit()
 
         # Store variation info
         variation_key = arc4.UInt64(
