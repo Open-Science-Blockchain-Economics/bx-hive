@@ -37,7 +37,7 @@ export default function SubjectDashboard() {
   const { activeUser } = useActiveUser()
   const { activeAddress } = useAlgorand()
   const { listExperiments, listVariations } = useTrustExperiments()
-  const { getPlayerMatch, selfEnroll, getSubjectCount } = useTrustVariation()
+  const { getPlayerMatch, selfEnroll, getSubjectCount, isSubjectEnrolled } = useTrustVariation()
 
   // Local BRET state
   const [experimentViews, setExperimentViews] = useState<SubjectExperimentView[]>([])
@@ -74,16 +74,13 @@ export default function SubjectDashboard() {
         }
 
         // Check enrollment without match (subject enrolled but not yet paired)
-        // We use getSubjectCount as a lightweight check — a precise per-address check
-        // would require box reads. The contract rejects duplicate enrollment anyway.
         if (!enrolled) {
           for (const v of vars) {
             try {
-              const count = await getSubjectCount(v.appId)
-              // If subject_count > 0, experiment is active — but we can't know if *this*
-              // subject is enrolled without a box read. We'll mark as not enrolled and
-              // rely on the "Already enrolled" contract error as a safety net.
-              void count
+              if (await isSubjectEnrolled(v.appId, activeAddress)) {
+                enrolled = true
+                break
+              }
             } catch {
               // ignore
             }
@@ -100,7 +97,7 @@ export default function SubjectDashboard() {
     } finally {
       setOnChainLoading(false)
     }
-  }, [activeAddress, listExperiments, listVariations, getPlayerMatch])
+  }, [activeAddress, listExperiments, listVariations, getPlayerMatch, isSubjectEnrolled])
 
   useEffect(() => {
     void loadLocalExperiments()

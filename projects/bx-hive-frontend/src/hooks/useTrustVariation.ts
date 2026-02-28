@@ -168,6 +168,19 @@ export function useTrustVariation() {
   )
 
   /**
+   * Checks if an address is enrolled as a subject in a variation (subjects box read).
+   */
+  const isSubjectEnrolled = useCallback(
+    async (appId: bigint, address: string): Promise<boolean> => {
+      const client = getTrustVariationClient(appId)
+      if (!client) return false
+      const info = await client.state.box.subjects.value(address)
+      return info !== undefined && info.enrolled === 1
+    },
+    [getTrustVariationClient],
+  )
+
+  /**
    * Fetches the current subject count for a variation.
    */
   const getSubjectCount = useCallback(
@@ -223,6 +236,7 @@ export function useTrustVariation() {
     getPlayerMatch,
     getConfig,
     getSubjectCount,
+    isSubjectEnrolled,
     endVariation,
   }
 }
