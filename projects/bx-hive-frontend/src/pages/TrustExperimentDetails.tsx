@@ -23,11 +23,12 @@ function statusLabel(config: VariationConfig | undefined): string {
   return 'Active'
 }
 
-function statusDotColor(config: VariationConfig | undefined): string {
+function statusDotColor(config: VariationConfig | undefined, hasWaiting = false): string {
   if (!config) return 'bg-base-300'
   if (config.status === STATUS_COMPLETED) return 'bg-error'
   if (config.status === STATUS_CLOSED) return 'bg-warning'
-  return 'bg-success'
+  if (hasWaiting) return 'bg-warning'
+  return 'bg-info'
 }
 
 function variationTooltip(v: VariationInfo, config: VariationConfig | undefined): string {
@@ -59,6 +60,9 @@ export default function TrustExperimentDetails() {
   const [configs, setConfigs] = useState<Record<string, VariationConfig>>({})
   const [loadingVar, setLoadingVar] = useState<Record<string, boolean>>({})
 
+  // Auto-refresh state
+  const [autoRefresh, setAutoRefresh] = useState(true)
+
   // Match creation state
   const [matchInvestor, setMatchInvestor] = useState<Record<string, string>>({})
   const [matchTrustee, setMatchTrustee] = useState<Record<string, string>>({})
@@ -76,7 +80,7 @@ export default function TrustExperimentDetails() {
         setVariations(vars)
         // Pre-load ALL variations so aggregate stats are correct immediately
         if (vars.length > 0) {
-          void Promise.all(vars.map((v) => loadVariationData(v.appId)))
+          await Promise.all(vars.map((v) => loadVariationData(v.appId)))
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load experiment')
@@ -109,6 +113,18 @@ export default function TrustExperimentDetails() {
     },
     [getEnrolledSubjects, getMatches, getConfig],
   )
+
+  const refreshAll = useCallback(async () => {
+    if (variations.length === 0) return
+    await Promise.all(variations.map((v) => loadVariationData(v.appId)))
+  }, [variations, loadVariationData])
+
+  // Auto-refresh interval
+  useEffect(() => {
+    if (!autoRefresh || variations.length === 0) return
+    const id = setInterval(() => void refreshAll(), 5000)
+    return () => clearInterval(id)
+  }, [autoRefresh, variations, refreshAll])
 
   function selectTab(idx: number, appId: bigint) {
     setSelectedVarIdx(idx)
@@ -188,8 +204,38 @@ export default function TrustExperimentDetails() {
       {/* Overview section */}
       <div className="bg-base-200 rounded-box p-4 mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-base-content/40">{group.name} Overview</h2>
-          <span className="text-xs uppercase tracking-wide text-base-content/50">Trust Experiment</span>
+          <div className="flex items-center gap-1 text-xs">
+            <h2 className="text-sm font-semibold text-base-content/60">{group.name} Overview</h2>
+            {autoRefresh ? (
+              <>
+                <span className="tooltip tooltip-bottom" data-tip="Pause auto-refresh">
+                  <button type="button" className="btn btn-ghost btn-xs btn-square" onClick={() => setAutoRefresh(false)}>
+                    ⏸
+                  </button>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                  <span className="text-success font-medium">Live</span>
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="tooltip tooltip-bottom" data-tip="Start auto-refresh">
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-xs btn-square"
+                    onClick={() => { setAutoRefresh(true); void refreshAll() }}
+                  >
+                    ▶
+                  </button>
+                </span>
+                <button type="button" className="btn btn-ghost btn-xs" onClick={() => void refreshAll()}>
+                  ↻ Refresh
+                </button>
+              </>
+            )}
+          </div>
+          <span className="text-xs uppercase tracking-wide text-base-content/30">Trust Experiment</span>
         </div>
         <div className="grid grid-cols-3 gap-3">
           {/* Variations */}
@@ -218,7 +264,7 @@ export default function TrustExperimentDetails() {
           <div className="stat bg-base-200 rounded-box py-3">
             <div className="stat-figure">
               <div
-                className="radial-progress text-primary text-xs"
+                className={`radial-progress text-xs ${progressPct === 100 ? 'text-primary' : 'text-base-content'}`}
                 style={{ '--value': progressPct, '--size': '3rem', '--thickness': '4px' } as React.CSSProperties}
                 role="progressbar"
               >
@@ -247,6 +293,7 @@ export default function TrustExperimentDetails() {
             {variations.map((v, idx) => {
               const k = String(v.appId)
               const cfg = configs[k]
+              const hasWaiting = (subjects[k] ?? []).some((s) => s.assigned === 0)
               return (
                 <button
                   key={v.varId}
@@ -261,7 +308,7 @@ export default function TrustExperimentDetails() {
                   >
                     Var {v.varId + 1}
                     <span
-                      className={`inline-block w-2 h-2 rounded-full ml-2 ${statusDotColor(cfg)}`}
+                      className={`inline-block w-2 h-2 rounded-full ml-2 ${statusDotColor(cfg, hasWaiting)}`}
                       aria-label={statusLabel(cfg)}
                     />
                   </span>
@@ -276,8 +323,26 @@ export default function TrustExperimentDetails() {
               {/* Variation config card */}
               {varConfig ? (
                 <div className="bg-base-200 rounded-box p-3">
-                  <div className="mb-2">
-                    <span className="font-mono text-xs text-base-content/50">app #{String(selectedVar.appId)}</span>
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-xs font-semibold text-base-content/50">Parameters</h3>
+                    <a
+                      href={`https://lora.algokit.io/localnet/application/${String(selectedVar.appId)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="tooltip tooltip-right"
+                      data-tip={`View app #${String(selectedVar.appId)} on Lora`}
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-4 h-4 text-base-content/50 hover:text-primary transition-colors"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
                   </div>
                   <div className="overflow-x-auto">
                     <div className="stats stats-horizontal shadow-none bg-transparent text-sm w-full">
@@ -305,22 +370,32 @@ export default function TrustExperimentDetails() {
                   </div>
                 </div>
               ) : (
-                <div className="text-xs text-base-content/50 font-mono">app #{String(selectedVar.appId)}</div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-semibold text-base-content/50">Parameters</h3>
+                  <a
+                    href={`https://lora.algokit.io/localnet/application/${String(selectedVar.appId)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="tooltip tooltip-right"
+                    data-tip={`View app #${String(selectedVar.appId)} on Lora`}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-3.5 h-3.5 text-base-content/40 hover:text-primary transition-colors"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </a>
+                </div>
               )}
 
               {/* Subjects section */}
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold">Subjects ({varSubjects.length})</h3>
-                  <button
-                    type="button"
-                    className="btn btn-xs btn-ghost"
-                    onClick={() => void loadVariationData(selectedVar.appId)}
-                    disabled={isLoadingVar}
-                  >
-                    {isLoadingVar ? <span className="loading loading-spinner loading-xs" /> : '↻ Refresh'}
-                  </button>
-                </div>
+                <h3 className="font-semibold mb-3">Subjects ({varSubjects.length})</h3>
 
                 {isLoadingVar && varSubjects.length === 0 ? (
                   <div className="flex justify-center py-4">
@@ -341,7 +416,7 @@ export default function TrustExperimentDetails() {
                         <tr key={s.address}>
                           <td className="font-mono text-xs">{truncAddr(s.address)}</td>
                           <td>
-                            <span className={`badge badge-sm ${s.assigned ? 'badge-success' : 'badge-ghost'}`}>
+                            <span className={`badge badge-sm ${s.assigned ? 'badge-ghost' : 'badge-warning'}`}>
                               {s.assigned ? 'Assigned' : 'Waiting'}
                             </span>
                           </td>
@@ -443,7 +518,7 @@ export default function TrustExperimentDetails() {
                             {m.phase === PHASE_COMPLETED ? (
                               <span className="badge badge-sm badge-success">Completed</span>
                             ) : m.phase === 1 ? (
-                              <span className="badge badge-sm badge-warning">Trustee deciding</span>
+                              <span className="badge badge-sm badge-info">Trustee deciding</span>
                             ) : (
                               <span className="badge badge-sm badge-info">Investor deciding</span>
                             )}

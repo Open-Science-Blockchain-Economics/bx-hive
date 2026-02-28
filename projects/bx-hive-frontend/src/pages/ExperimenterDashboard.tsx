@@ -375,7 +375,7 @@ export default function ExperimenterDashboard() {
                           const dotColor = !cfg ? 'bg-base-300'
                             : cfg.status === STATUS_COMPLETED ? 'bg-error'
                             : cfg.status === STATUS_CLOSED ? 'bg-warning'
-                            : 'bg-success'
+                            : 'bg-info'
                           const label = !cfg ? 'loading'
                             : cfg.status === STATUS_ACTIVE ? 'active'
                             : cfg.status === STATUS_CLOSED ? 'closed'
