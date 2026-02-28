@@ -13,7 +13,7 @@ import { experimentTemplates, getTemplateById } from '../experiment-logic/templa
 import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments, type ExperimentGroup, type VariationInfo } from '../hooks/useTrustExperiments'
-import { useTrustVariation, STATUS_COMPLETED, type VariationConfig } from '../hooks/useTrustVariation'
+import { useTrustVariation, STATUS_ACTIVE, STATUS_CLOSED, STATUS_COMPLETED, type VariationConfig } from '../hooks/useTrustVariation'
 import type { AssignmentStrategy, Experiment, ExperimentBatch, ParameterVariation } from '../types'
 
 type TabType = 'experiments' | 'create'
@@ -72,7 +72,7 @@ export default function ExperimenterDashboard() {
   const { activeUser } = useActiveUser()
   const { algorand, activeAddress } = useAlgorand()
   const { createExperimentWithVariation, createVariation, listExperiments, listVariations } = useTrustExperiments()
-  const { addSubjects, getSubjectCount, getConfig, endVariation } = useTrustVariation()
+  const { getSubjectCount, getConfig } = useTrustVariation()
 
   const [activeTab, setActiveTab] = useState<TabType>('experiments')
 
@@ -98,26 +98,14 @@ export default function ExperimenterDashboard() {
   const [assignmentStrategy, setAssignmentStrategy] = useState<AssignmentStrategy>('round_robin')
   const [maxPerVariation, setMaxPerVariation] = useState<string>('')
 
-  // Subjects management (per variation appId as string)
-  const [subjectInputs, setSubjectInputs] = useState<Record<string, string>>({})
-  const [addingSubjects, setAddingSubjects] = useState<Record<string, boolean>>({})
-  const [subjectErrors, setSubjectErrors] = useState<Record<string, string>>({})
-
   // Variation configs (status, etc) per variation appId as string
   const [variationConfigs, setVariationConfigs] = useState<Record<string, VariationConfig>>({})
-
-  // End variation (per variation appId as string)
-  const [endingVariation, setEndingVariation] = useState<Record<string, boolean>>({})
-  const [endVariationErrors, setEndVariationErrors] = useState<Record<string, string>>({})
 
   // Subject counts per variation (appId string → count)
   const [subjectCounts, setSubjectCounts] = useState<Record<string, number>>({})
 
   // Wallet balance in ALGO (null = not yet loaded)
   const [walletBalanceAlgo, setWalletBalanceAlgo] = useState<number | null>(null)
-
-  // Expanded variation panels
-  const [expandedVariations, setExpandedVariations] = useState<Set<string>>(new Set())
 
   const selectedTemplate = getTemplateById(selectedTemplateId)
 
@@ -303,55 +291,6 @@ export default function ExperimenterDashboard() {
     }
   }
 
-  async function handleAddSubjects(appId: bigint) {
-    const key = String(appId)
-    const raw = subjectInputs[key] ?? ''
-    const addresses = raw
-      .split('\n')
-      .map((a) => a.trim())
-      .filter((a) => a.length > 0)
-
-    if (addresses.length === 0) {
-      setSubjectErrors((prev) => ({ ...prev, [key]: 'Enter at least one address' }))
-      return
-    }
-
-    setAddingSubjects((prev) => ({ ...prev, [key]: true }))
-    setSubjectErrors((prev) => ({ ...prev, [key]: '' }))
-    try {
-      await addSubjects(appId, addresses)
-      setSubjectInputs((prev) => ({ ...prev, [key]: '' }))
-    } catch (err) {
-      setSubjectErrors((prev) => ({ ...prev, [key]: err instanceof Error ? err.message : 'Failed to add subjects' }))
-    } finally {
-      setAddingSubjects((prev) => ({ ...prev, [key]: false }))
-    }
-  }
-
-  async function handleEndVariation(appId: bigint) {
-    const key = String(appId)
-    setEndingVariation((prev) => ({ ...prev, [key]: true }))
-    setEndVariationErrors((prev) => ({ ...prev, [key]: '' }))
-    try {
-      await endVariation(appId)
-      await loadOnChainExperiments()
-    } catch (err) {
-      setEndVariationErrors((prev) => ({ ...prev, [key]: err instanceof Error ? err.message : 'Failed to end variation' }))
-    } finally {
-      setEndingVariation((prev) => ({ ...prev, [key]: false }))
-    }
-  }
-
-  function toggleVariation(appId: bigint) {
-    const key = String(appId)
-    setExpandedVariations((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
-
   const maxPayout =
     selectedTemplateId === 'trust-game'
       ? (Number(parameters.E1) || 0) * (Number(parameters.m) || 1) + (Number(parameters.E2) || 0)
@@ -410,105 +349,50 @@ export default function ExperimenterDashboard() {
           ) : (
             <div className="grid gap-6">
               {/* ── On-chain Trust Game Experiments ── */}
-              {onChainExps.map(({ group, variations: vars }) => (
-                <div key={group.expId} className="card bg-base-100 border border-base-300">
-                  <div className="card-body">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="card-title">{group.name}</h3>
-                        <p className="text-sm text-base-content/70">
-                          Trust Game • {Number(group.variationCount)} variation{Number(group.variationCount) !== 1 ? 's' : ''} • on-chain
-                        </p>
+              {onChainExps.map(({ group, variations: vars }) => {
+                const totalSubjects = vars.reduce((sum, v) => sum + (subjectCounts[String(v.appId)] ?? 0), 0)
+                return (
+                  <Link
+                    key={group.expId}
+                    to={`/experimenter/trust/${group.expId}`}
+                    className="card bg-base-100 border border-base-300 hover:bg-base-200 cursor-pointer transition-colors"
+                  >
+                    <div className="card-body">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="card-title">{group.name}</h3>
+                          <p className="text-sm text-base-content/70">
+                            {Number(group.variationCount)} variation{Number(group.variationCount) !== 1 ? 's' : ''} · {totalSubjects} subject{totalSubjects !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <span className="badge badge-primary badge-sm">TRUST</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Link
-                          to={`/experimenter/trust/${group.expId}`}
-                          className="btn btn-sm btn-ghost"
-                        >
-                          View Details
-                        </Link>
-                        <span className="badge badge-primary">TRUST</span>
+
+                      {/* Variation status row */}
+                      <div className="flex flex-wrap gap-3 mt-2">
+                        {vars.map((v) => {
+                          const cfg = variationConfigs[String(v.appId)]
+                          const dotColor = !cfg ? 'bg-base-300'
+                            : cfg.status === STATUS_COMPLETED ? 'bg-error'
+                            : cfg.status === STATUS_CLOSED ? 'bg-warning'
+                            : 'bg-success'
+                          const label = !cfg ? 'loading'
+                            : cfg.status === STATUS_ACTIVE ? 'active'
+                            : cfg.status === STATUS_CLOSED ? 'closed'
+                            : 'ended'
+                          return (
+                            <span key={v.varId} className="text-xs text-base-content/70 flex items-center gap-1">
+                              Var {v.varId + 1}
+                              <span className={`inline-block w-2 h-2 rounded-full ${dotColor}`} aria-label={label} />
+                              {label}
+                            </span>
+                          )
+                        })}
                       </div>
                     </div>
-
-                    {/* Variation cards */}
-                    <div className="mt-3 space-y-3">
-                      {vars.map((v) => {
-                        const appIdKey = String(v.appId)
-                        const isExpanded = expandedVariations.has(appIdKey)
-                        return (
-                          <div key={v.varId} className="border border-base-300 rounded-lg">
-                            {/* Variation header */}
-                            <button
-                              type="button"
-                              className="w-full flex justify-between items-center p-3 text-left hover:bg-base-200 rounded-lg"
-                              onClick={() => toggleVariation(v.appId)}
-                            >
-                              <div>
-                                <span className="font-medium">V{v.varId}: {v.label}</span>
-                                <span className="text-xs text-base-content/50 ml-2">app #{String(v.appId)}</span>
-                                <span className="badge badge-sm badge-ghost ml-2">{subjectCounts[appIdKey] ?? 0} subjects</span>
-                              </div>
-                              <span className="text-base-content/50">{isExpanded ? '▲' : '▼'}</span>
-                            </button>
-
-                            {/* Management panel */}
-                            {isExpanded && (
-                              <div className="p-3 pt-0 space-y-4 border-t border-base-300">
-
-                                {/* Add Subjects */}
-                                <div>
-                                  <h4 className="font-semibold text-sm mb-2">Add Subjects</h4>
-                                  <p className="text-xs text-base-content/60 mb-2">One wallet address per line</p>
-                                  <textarea
-                                    className="textarea textarea-bordered w-full text-xs font-mono"
-                                    rows={3}
-                                    placeholder={"ABCDEF...\nGHIJKL..."}
-                                    value={subjectInputs[appIdKey] ?? ''}
-                                    onChange={(e) => setSubjectInputs((prev) => ({ ...prev, [appIdKey]: e.target.value }))}
-                                    disabled={addingSubjects[appIdKey]}
-                                  />
-                                  {subjectErrors[appIdKey] && (
-                                    <p className="text-error text-xs mt-1">{subjectErrors[appIdKey]}</p>
-                                  )}
-                                  <button
-                                    type="button"
-                                    className="btn btn-sm btn-primary mt-2"
-                                    onClick={() => void handleAddSubjects(v.appId)}
-                                    disabled={addingSubjects[appIdKey]}
-                                  >
-                                    {addingSubjects[appIdKey] ? <span className="loading loading-spinner loading-xs"></span> : 'Add Subjects'}
-                                  </button>
-                                </div>
-
-                                {/* End Variation */}
-                                {variationConfigs[appIdKey]?.status !== STATUS_COMPLETED && (
-                                  <div>
-                                    <button
-                                      type="button"
-                                      className="btn btn-sm btn-warning"
-                                      onClick={() => void handleEndVariation(v.appId)}
-                                      disabled={endingVariation[appIdKey]}
-                                    >
-                                      {endingVariation[appIdKey] ? <span className="loading loading-spinner loading-xs"></span> : 'End Variation & Withdraw Remaining'}
-                                    </button>
-                                    {endVariationErrors[appIdKey] && (
-                                      <p className="text-error text-xs mt-1">{endVariationErrors[appIdKey]}</p>
-                                    )}
-                                  </div>
-                                )}
-                                {variationConfigs[appIdKey]?.status === STATUS_COMPLETED && (
-                                  <div className="badge badge-ghost badge-sm">Variation ended</div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  </Link>
+                )
+              })}
 
               {/* ── Local BRET Batches ── */}
               {localBatches.map((batch) => {
