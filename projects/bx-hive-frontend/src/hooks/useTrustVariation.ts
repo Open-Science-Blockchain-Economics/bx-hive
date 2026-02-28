@@ -132,7 +132,6 @@ export function useTrustVariation() {
       try {
         const matchIdResult = await client.send.getPlayerMatch({ args: { addr: address } })
         const matchId = matchIdResult.return!
-        if (matchId === 0) return null
         return getMatch(appId, matchId)
       } catch {
         return null
@@ -165,6 +164,32 @@ export function useTrustVariation() {
       })
     },
     [algorand, activeAddress, getTrustVariationClient],
+  )
+
+  /**
+   * Returns all enrolled subjects for a variation (subjects BoxMap read).
+   */
+  const getEnrolledSubjects = useCallback(
+    async (appId: bigint): Promise<Array<{ address: string; enrolled: number; assigned: number }>> => {
+      const client = getTrustVariationClient(appId)
+      if (!client) return []
+      const map = await client.state.box.subjects.getMap()
+      return Array.from(map.entries()).map(([address, info]) => ({ address, ...info }))
+    },
+    [getTrustVariationClient],
+  )
+
+  /**
+   * Returns all matches for a variation (matches BoxMap read).
+   */
+  const getMatches = useCallback(
+    async (appId: bigint): Promise<Match[]> => {
+      const client = getTrustVariationClient(appId)
+      if (!client) return []
+      const map = await client.state.box.matches.getMap()
+      return Array.from(map.values())
+    },
+    [getTrustVariationClient],
   )
 
   /**
@@ -236,6 +261,8 @@ export function useTrustVariation() {
     getPlayerMatch,
     getConfig,
     getSubjectCount,
+    getEnrolledSubjects,
+    getMatches,
     isSubjectEnrolled,
     endVariation,
   }

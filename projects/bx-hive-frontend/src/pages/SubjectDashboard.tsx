@@ -6,7 +6,7 @@ import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
-import { useTrustVariation, PHASE_COMPLETED } from '../hooks/useTrustVariation'
+import { useTrustVariation, PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '../hooks/useTrustVariation'
 import type { Match as OnChainMatch } from '../hooks/useTrustVariation'
 import { pickVariationRoundRobin, type VariationSlot } from '../utils/distributeSubjects'
 import { microAlgoToAlgo } from '../utils/amount'
@@ -305,26 +305,41 @@ export default function SubjectDashboard() {
             <section>
               <h2 className="text-lg font-semibold mb-4">Trust Game — Active</h2>
               <div className="grid gap-4">
-                {activeOnChain.map(({ appId, match }) => (
-                  <div key={String(appId)} className="card bg-base-100 border border-base-300">
-                    <div className="card-body">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="card-title">Trust Game</h3>
-                          <p className="text-xs text-base-content/50 mt-1">
-                            Role: <span className="font-medium">{match.investor === activeAddress ? 'Investor' : 'Trustee'}</span>
-                          </p>
+                {activeOnChain.map(({ appId, match }) => {
+                  const isInvestor = match.investor === activeAddress
+                  const isMyTurn =
+                    (isInvestor && match.phase === PHASE_INVESTOR_DECISION) ||
+                    (!isInvestor && match.phase === PHASE_TRUSTEE_DECISION)
+
+                  return (
+                    <div key={String(appId)} className="card bg-base-100 border border-base-300">
+                      <div className="card-body">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="card-title">Trust Game</h3>
+                            <p className="text-xs text-base-content/50 mt-1">
+                              Role: <span className="font-medium">{isInvestor ? 'Investor' : 'Trustee'}</span>
+                            </p>
+                          </div>
+                          <span className={`badge ${isMyTurn ? 'badge-warning' : 'badge-ghost'}`}>
+                            {isMyTurn ? 'Your Turn' : 'Waiting'}
+                          </span>
                         </div>
-                        <span className="badge badge-warning">In Progress</span>
-                      </div>
-                      <div className="card-actions justify-end mt-2">
-                        <Link to={`/play/${String(appId)}`} className="btn btn-success btn-sm">
-                          Play
-                        </Link>
+                        <div className="card-actions justify-end mt-2">
+                          {isMyTurn ? (
+                            <Link to={`/play/${String(appId)}`} className="btn btn-success btn-sm">
+                              Play
+                            </Link>
+                          ) : (
+                            <Link to={`/play/${String(appId)}`} className="btn btn-ghost btn-sm">
+                              View Status
+                            </Link>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </section>
           )}

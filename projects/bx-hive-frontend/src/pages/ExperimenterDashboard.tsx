@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { VariationBuilder } from '../components/experimenter/VariationBuilder'
 import {
   createExperiment as dbCreateExperiment,
@@ -419,7 +420,15 @@ export default function ExperimenterDashboard() {
                           Trust Game • {Number(group.variationCount)} variation{Number(group.variationCount) !== 1 ? 's' : ''} • on-chain
                         </p>
                       </div>
-                      <span className="badge badge-primary">TRUST</span>
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/experimenter/trust/${group.expId}`}
+                          className="btn btn-sm btn-ghost"
+                        >
+                          View Details
+                        </Link>
+                        <span className="badge badge-primary">TRUST</span>
+                      </div>
                     </div>
 
                     {/* Variation cards */}

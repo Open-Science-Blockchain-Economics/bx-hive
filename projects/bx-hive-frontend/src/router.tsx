@@ -7,6 +7,7 @@ import ExperimenterDashboard from './pages/ExperimenterDashboard'
 import Home from './pages/Home'
 import PlayExperiment from './pages/PlayExperiment'
 import SubjectDashboard from './pages/SubjectDashboard'
+import TrustExperimentDetails from './pages/TrustExperimentDetails'
 
 export const router = createBrowserRouter([
   {
@@ -17,7 +18,7 @@ export const router = createBrowserRouter([
       {
         path: 'dashboard/experimenter',
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="experimenter">
             <ExperimenterDashboard />
           </ProtectedRoute>
         ),
@@ -25,7 +26,7 @@ export const router = createBrowserRouter([
       {
         path: 'experimenter/experiment/:experimentId',
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="experimenter">
             <ExperimentDetails />
           </ProtectedRoute>
         ),
@@ -33,7 +34,7 @@ export const router = createBrowserRouter([
       {
         path: 'experimenter/batch/:batchId',
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="experimenter">
             <BatchDetails />
           </ProtectedRoute>
         ),
@@ -41,15 +42,23 @@ export const router = createBrowserRouter([
       {
         path: 'dashboard/subject',
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="subject">
             <SubjectDashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'experimenter/trust/:expId',
+        element: (
+          <ProtectedRoute requiredRole="experimenter">
+            <TrustExperimentDetails />
           </ProtectedRoute>
         ),
       },
       {
         path: 'play/:experimentId',
         element: (
-          <ProtectedRoute>
+          <ProtectedRoute requiredRole="subject">
             <PlayExperiment />
           </ProtectedRoute>
         ),
