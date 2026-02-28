@@ -23,11 +23,20 @@ function statusLabel(config: VariationConfig | undefined): string {
   return 'Active'
 }
 
-function statusBadge(config: VariationConfig | undefined): string {
-  if (!config) return 'badge-ghost'
-  if (config.status === STATUS_COMPLETED) return 'badge-error'
-  if (config.status === STATUS_CLOSED) return 'badge-warning'
-  return 'badge-success'
+function statusDotColor(config: VariationConfig | undefined): string {
+  if (!config) return 'bg-base-300'
+  if (config.status === STATUS_COMPLETED) return 'bg-error'
+  if (config.status === STATUS_CLOSED) return 'bg-warning'
+  return 'bg-success'
+}
+
+function variationTooltip(v: VariationInfo, config: VariationConfig | undefined): string {
+  const status = config ? statusLabel(config) : 'Loading…'
+  if (!config) return `${v.label} · ${status}`
+  const e1 = microAlgoToAlgo(config.e1).toFixed(3)
+  const e2 = microAlgoToAlgo(config.e2).toFixed(3)
+  const unit = microAlgoToAlgo(config.unit).toFixed(3)
+  return `${status} · E1: ${e1} · E2: ${e2} · ×${config.multiplier} · unit: ${unit}`
 }
 
 export default function TrustExperimentDetails() {
@@ -65,9 +74,9 @@ export default function TrustExperimentDetails() {
         setGroup(g)
         const vars = await listVariations(expId, Number(g.variationCount))
         setVariations(vars)
-        // Auto-load first variation
+        // Pre-load ALL variations so aggregate stats are correct immediately
         if (vars.length > 0) {
-          void loadVariationData(vars[0].appId)
+          void Promise.all(vars.map((v) => loadVariationData(v.appId)))
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load experiment')
@@ -134,7 +143,15 @@ export default function TrustExperimentDetails() {
   const totalEnrolled = allSubjects.length
   const totalWaiting = allSubjects.filter((s) => s.assigned === 0).length
   const totalAssigned = allSubjects.filter((s) => s.assigned === 1).length
+  const totalMatches = allMatches.length
+  const matchesInvestorPhase = allMatches.filter((m) => m.phase === 0).length
+  const matchesTrusteePhase = allMatches.filter((m) => m.phase === 1).length
   const totalCompleted = allMatches.filter((m) => m.phase === PHASE_COMPLETED).length
+  const allConfigs = Object.values(configs)
+  const variationsActive = allConfigs.filter((c) => c.status === STATUS_ACTIVE).length
+  const variationsClosed = allConfigs.filter((c) => c.status === STATUS_CLOSED).length
+  const variationsEnded = allConfigs.filter((c) => c.status === STATUS_COMPLETED).length
+  const progressPct = totalMatches > 0 ? Math.round((totalCompleted / totalMatches) * 100) : 0
 
   if (loading) {
     return (
@@ -168,41 +185,68 @@ export default function TrustExperimentDetails() {
         ← Experimenter Dashboard
       </Link>
 
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">{group.name}</h1>
-          <p className="text-base-content/70 mt-1">
-            Trust Game · {Number(group.variationCount)} variation{Number(group.variationCount) !== 1 ? 's' : ''}
-          </p>
+      {/* Overview section */}
+      <div className="bg-base-200 rounded-box p-4 mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-base-content/40">{group.name} Overview</h2>
+          <span className="text-xs uppercase tracking-wide text-base-content/50">Trust Experiment</span>
         </div>
-        <span className="badge badge-primary badge-lg">TRUST</span>
-      </div>
-
-      {/* Summary strip */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
-        {[
-          { label: 'Enrolled', value: totalEnrolled },
-          { label: 'Waiting', value: totalWaiting },
-          { label: 'Assigned', value: totalAssigned },
-          { label: 'Completed', value: totalCompleted },
-        ].map(({ label, value }) => (
-          <div key={label} className="stat bg-base-200 rounded-box py-3">
-            <div className="stat-value text-2xl">{value}</div>
-            <div className="stat-desc">{label}</div>
+        <div className="grid grid-cols-3 gap-3">
+          {/* Variations */}
+          <div className="stat bg-base-200 rounded-box py-3">
+            <div className="stat-title">Variations</div>
+            <div className="stat-value text-2xl">{variations.length}</div>
+            <div className="stat-desc">
+              {variationsActive > 0 && <span className="text-primary">{variationsActive} active </span>}
+              {variationsClosed > 0 && <span className="text-warning">{variationsClosed} closed </span>}
+              {variationsEnded > 0 && <span className="text-error">{variationsEnded} ended</span>}
+            </div>
           </div>
-        ))}
+
+          {/* Subjects */}
+          <div className="stat bg-base-200 rounded-box py-3">
+            <div className="stat-title">Subjects</div>
+            <div className="stat-value text-2xl">{totalEnrolled}</div>
+            <div className="stat-desc">
+              <span className="text-primary">{totalAssigned} playing</span>
+              {' · '}
+              <span>{totalWaiting} waiting</span>
+            </div>
+          </div>
+
+          {/* Matches */}
+          <div className="stat bg-base-200 rounded-box py-3">
+            <div className="stat-figure">
+              <div
+                className="radial-progress text-primary text-xs"
+                style={{ '--value': progressPct, '--size': '3rem', '--thickness': '4px' } as React.CSSProperties}
+                role="progressbar"
+              >
+                {progressPct}%
+              </div>
+            </div>
+            <div className="stat-title">Total Matches</div>
+            <div className="stat-value text-2xl">{totalMatches}</div>
+            <div className="stat-desc">
+              <span className="text-primary">{totalCompleted} completed</span>
+              {' · '}
+              <span>{matchesInvestorPhase + matchesTrusteePhase} in play</span>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Variation Details section */}
+      <h2 className="text-xs uppercase tracking-wide text-base-content/50 mb-3">Variation Details</h2>
       {variations.length === 0 ? (
         <div className="text-center py-12 text-base-content/50">No variations found.</div>
       ) : (
         <>
           {/* Tabs */}
-          <div role="tablist" className="tabs tabs-bordered mb-0">
+          <div role="tablist" className="tabs tabs-border mb-0">
             {variations.map((v, idx) => {
               const k = String(v.appId)
-              const subCount = subjects[k]?.length ?? null
+              const cfg = configs[k]
               return (
                 <button
                   key={v.varId}
@@ -211,10 +255,16 @@ export default function TrustExperimentDetails() {
                   className={`tab${selectedVarIdx === idx ? ' tab-active' : ''}`}
                   onClick={() => selectTab(idx, v.appId)}
                 >
-                  V{v.varId}: {v.label}
-                  {subCount !== null && (
-                    <span className="badge badge-sm badge-ghost ml-2">{subCount}</span>
-                  )}
+                  <span
+                    className="tooltip tooltip-bottom"
+                    data-tip={variationTooltip(v, cfg)}
+                  >
+                    Var {v.varId + 1}
+                    <span
+                      className={`inline-block w-2 h-2 rounded-full ml-2 ${statusDotColor(cfg)}`}
+                      aria-label={statusLabel(cfg)}
+                    />
+                  </span>
                 </button>
               )
             })}
@@ -222,20 +272,41 @@ export default function TrustExperimentDetails() {
 
           {/* Tab panel */}
           {selectedVar && (
-            <div className="border border-base-300 rounded-b-box rounded-tr-box p-5 space-y-6">
-              {/* Variation config bar */}
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-base-content/70 items-center">
-                <span className="font-mono text-xs text-base-content/50">app #{String(selectedVar.appId)}</span>
-                {varConfig && (
-                  <>
-                    <span>E1: <span className="text-base-content font-medium">{microAlgoToAlgo(varConfig.e1).toFixed(3)} ALGO</span></span>
-                    <span>E2: <span className="text-base-content font-medium">{microAlgoToAlgo(varConfig.e2).toFixed(3)} ALGO</span></span>
-                    <span>×<span className="text-base-content font-medium">{String(varConfig.multiplier)}</span></span>
-                    <span>unit: <span className="text-base-content font-medium">{microAlgoToAlgo(varConfig.unit).toFixed(3)} ALGO</span></span>
-                    <span className={`badge badge-sm ${statusBadge(varConfig)}`}>{statusLabel(varConfig)}</span>
-                  </>
-                )}
-              </div>
+            <div className="rounded-b-box rounded-tr-box p-5 space-y-6">
+              {/* Variation config card */}
+              {varConfig ? (
+                <div className="bg-base-200 rounded-box p-3">
+                  <div className="mb-2">
+                    <span className="font-mono text-xs text-base-content/50">app #{String(selectedVar.appId)}</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <div className="stats stats-horizontal shadow-none bg-transparent text-sm w-full">
+                      <div className="stat py-1 px-3">
+                        <div className="stat-title text-xs">E1 Endowment</div>
+                        <div className="stat-value text-base font-semibold">{microAlgoToAlgo(varConfig.e1).toFixed(3)}</div>
+                        <div className="stat-desc">ALGO</div>
+                      </div>
+                      <div className="stat py-1 px-3">
+                        <div className="stat-title text-xs">E2 Endowment</div>
+                        <div className="stat-value text-base font-semibold">{microAlgoToAlgo(varConfig.e2).toFixed(3)}</div>
+                        <div className="stat-desc">ALGO</div>
+                      </div>
+                      <div className="stat py-1 px-3">
+                        <div className="stat-title text-xs">Multiplier</div>
+                        <div className="stat-value text-base font-semibold">×{String(varConfig.multiplier)}</div>
+                        <div className="stat-desc">trust factor</div>
+                      </div>
+                      <div className="stat py-1 px-3">
+                        <div className="stat-title text-xs">Unit Size</div>
+                        <div className="stat-value text-base font-semibold">{microAlgoToAlgo(varConfig.unit).toFixed(3)}</div>
+                        <div className="stat-desc">ALGO</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-base-content/50 font-mono">app #{String(selectedVar.appId)}</div>
+              )}
 
               {/* Subjects section */}
               <div>
