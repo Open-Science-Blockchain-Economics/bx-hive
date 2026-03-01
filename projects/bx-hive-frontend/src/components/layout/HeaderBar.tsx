@@ -35,6 +35,17 @@ export default function HeaderBar() {
                 </NavLink>
               </li>
             )}
+            {activeUser && (
+              <li>
+                <a
+                  href="https://open-science-blockchain-economics.github.io/bx-hive/getting-started/overview/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Docs
+                </a>
+              </li>
+            )}
           </ul>
         </nav>
       </div>
