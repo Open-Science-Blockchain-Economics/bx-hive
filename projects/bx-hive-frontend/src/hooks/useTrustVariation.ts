@@ -49,30 +49,48 @@ export function useTrustVariation() {
 
   /**
    * Adds subject wallet addresses to a variation (owner-only).
+   * Sends a grouped MBR payment (16,900 microAlgo per subject) for subject boxes.
    */
   const addSubjects = useCallback(
     async (appId: bigint, addresses: string[]): Promise<void> => {
-      if (!activeAddress) throw new Error('Wallet not connected')
+      if (!algorand || !activeAddress) throw new Error('Wallet not connected')
       const client = getTrustVariationClient(appId)
       if (!client) throw new Error('Wallet not connected')
-      await client.send.addSubjects({ args: { addresses } })
+
+      const appAddress = algosdk.getApplicationAddress(appId)
+      const mbrPayment = algorand.createTransaction.payment({
+        sender: activeAddress,
+        receiver: appAddress,
+        amount: AlgoAmount.MicroAlgos(16_900 * addresses.length),
+      })
+
+      await client.send.addSubjects({ args: { addresses, mbrPayment } })
     },
-    [activeAddress, getTrustVariationClient],
+    [algorand, activeAddress, getTrustVariationClient],
   )
 
   /**
    * Creates a match pairing an investor and trustee (owner-only).
+   * Sends a grouped MBR payment (88,300 microAlgo) for match + player_match boxes.
    * Returns the match_id (uint32).
    */
   const createMatch = useCallback(
     async (appId: bigint, investor: string, trustee: string): Promise<number> => {
-      if (!activeAddress) throw new Error('Wallet not connected')
+      if (!algorand || !activeAddress) throw new Error('Wallet not connected')
       const client = getTrustVariationClient(appId)
       if (!client) throw new Error('Wallet not connected')
-      const result = await client.send.createMatch({ args: { investor, trustee } })
+
+      const appAddress = algosdk.getApplicationAddress(appId)
+      const mbrPayment = algorand.createTransaction.payment({
+        sender: activeAddress,
+        receiver: appAddress,
+        amount: AlgoAmount.MicroAlgos(88_300),
+      })
+
+      const result = await client.send.createMatch({ args: { investor, trustee, mbrPayment } })
       return result.return!
     },
-    [activeAddress, getTrustVariationClient],
+    [algorand, activeAddress, getTrustVariationClient],
   )
 
   /**

@@ -24,7 +24,7 @@ from smart_contracts.shared.types import (
     STATUS_ACTIVE,
 )
 from smart_contracts.trust_experiments.contract import TrustExperiments
-from smart_contracts.trust_variation.contract import TrustVariation
+from smart_contracts.trust_variation.contract import MATCH_MBR, SUBJECT_MBR, TrustVariation
 
 # Game parameters
 E1 = 100       # investor endowment
@@ -142,12 +142,14 @@ def test_full_experiment_flow(context: AlgopyTestContext) -> None:
     subjects: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(
         arc4.Address(bob), arc4.Address(dan)
     )
-    variation.add_subjects(subjects)
+    subj_mbr = context.any.txn.payment(sender=alice, receiver=app_addr, amount=SUBJECT_MBR * 2)
+    variation.add_subjects(subjects, subj_mbr)
     assert arc4.Address(bob) in variation.subjects
     assert arc4.Address(dan) in variation.subjects
 
     # Create the match
-    match_id = variation.create_match(arc4.Address(bob), arc4.Address(dan))
+    match_mbr = context.any.txn.payment(sender=alice, receiver=app_addr, amount=MATCH_MBR)
+    match_id = variation.create_match(arc4.Address(bob), arc4.Address(dan), match_mbr)
     assert match_id == arc4.UInt32(0)
     assert variation.match_count.value == 1
 
@@ -222,8 +224,10 @@ def test_multiple_variations_independent(context: AlgopyTestContext) -> None:
     subjects_a: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(
         arc4.Address(bob), arc4.Address(dan)
     )
-    var_a.add_subjects(subjects_a)
-    mid_a = var_a.create_match(arc4.Address(bob), arc4.Address(dan))
+    subj_mbr_a = context.any.txn.payment(receiver=addr_a, amount=SUBJECT_MBR * 2)
+    var_a.add_subjects(subjects_a, subj_mbr_a)
+    match_mbr_a = context.any.txn.payment(receiver=addr_a, amount=MATCH_MBR)
+    mid_a = var_a.create_match(arc4.Address(bob), arc4.Address(dan), match_mbr_a)
 
     # Bob invests 40 in variation A (default_sender = alice = owner, not investor here)
     bob_call_a = context.any.txn.application_call(

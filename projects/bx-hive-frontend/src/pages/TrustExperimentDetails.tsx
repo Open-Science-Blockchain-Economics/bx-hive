@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { FaPause, FaPlay } from 'react-icons/fa'
 import { Link, useParams } from 'react-router-dom'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
@@ -213,7 +214,7 @@ export default function TrustExperimentDetails() {
               <>
                 <span className="tooltip tooltip-bottom" data-tip="Pause auto-refresh">
                   <button type="button" className="btn btn-ghost btn-xs btn-square" onClick={() => setAutoRefresh(false)}>
-                    ⏸
+                    <FaPause className="w-3 h-3" />
                   </button>
                 </span>
                 <span className="flex items-center gap-1.5">
@@ -229,7 +230,7 @@ export default function TrustExperimentDetails() {
                     className="btn btn-ghost btn-xs btn-square"
                     onClick={() => { setAutoRefresh(true); void refreshAll() }}
                   >
-                    ▶
+                    <FaPlay className="w-3 h-3" />
                   </button>
                 </span>
                 <button type="button" className="btn btn-ghost btn-xs" onClick={() => void refreshAll()}>
@@ -444,10 +445,10 @@ export default function TrustExperimentDetails() {
                         {getVarConfig(selectedVar.appId).autoMatch ? (
                           <>
                             <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                            ⏸ Auto Match
+                            <FaPause className="w-3 h-3" /> Auto Match
                           </>
                         ) : (
-                          <>▶ Auto Match</>
+                          <><FaPlay className="w-3 h-3" /> Auto Match</>
                         )}
                       </button>
                     </span>

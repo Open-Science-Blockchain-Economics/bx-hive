@@ -54,6 +54,12 @@ function computeEscrowAlgo(params: Record<string, number | string>, maxSubjects:
   return (e1 * m + e2) * numPairs
 }
 
+/** Match MBR in ALGO for one variation (88,300 microAlgo per match = per pair) */
+function computeMatchMbrAlgo(maxSubjects: number): number {
+  const numPairs = Math.floor(maxSubjects / 2)
+  return (88_300 * numPairs) / 1_000_000
+}
+
 /** Convert trust-game frontend params (ALGO) to contract args (microAlgo) */
 function toVariationParams(params: Record<string, number | string>, label: string, maxSubjects = 0, escrowAlgo = 0) {
   return {
@@ -656,12 +662,16 @@ export default function ExperimenterDashboard() {
                           const combos = batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
                             ? generateVariationCombinations(parameters, variations)
                             : [parameters]
+                          const matchMbrPerVar = computeMatchMbrAlgo(maxSub)
                           const rows = combos.map((combo, i) => ({
                             label: batchModeEnabled ? getVariationLabel(combo, variations) : 'Default',
                             escrow: computeEscrowAlgo(combo, maxSub),
+                            matchMbr: matchMbrPerVar,
                             index: i,
                           }))
-                          const total = rows.reduce((sum, r) => sum + r.escrow, 0)
+                          const totalEscrow = rows.reduce((sum, r) => sum + r.escrow, 0)
+                          const totalMatchMbr = rows.reduce((sum, r) => sum + r.matchMbr, 0)
+                          const total = totalEscrow + totalMatchMbr
                           return (
                             <>
                               <div className="divider"></div>
@@ -672,7 +682,8 @@ export default function ExperimenterDashboard() {
                                     <thead>
                                       <tr>
                                         <th>Variation</th>
-                                        <th className="text-right">Max Escrow (ALGO)</th>
+                                        <th className="text-right">Escrow (ALGO)</th>
+                                        <th className="text-right">Match MBR (ALGO)</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -680,29 +691,35 @@ export default function ExperimenterDashboard() {
                                         <tr key={row.index}>
                                           <td>{row.label}</td>
                                           <td className="text-right">{row.escrow}</td>
+                                          <td className="text-right">{row.matchMbr.toFixed(4)}</td>
                                         </tr>
                                       ))}
                                     </tbody>
                                     <tfoot>
                                       <tr className="font-bold">
-                                        <td>Total Required</td>
-                                        <td className="text-right">{total} ALGO</td>
+                                        <td>Total</td>
+                                        <td className="text-right">{totalEscrow} ALGO</td>
+                                        <td className="text-right">{totalMatchMbr.toFixed(4)} ALGO</td>
                                       </tr>
                                     </tfoot>
                                   </table>
                                 </div>
+                                <div className="text-xs text-base-content/60 mt-2">
+                                  Escrow funds payouts to players. Match MBR (0.0883 ALGO/match) covers on-chain storage and is paid when matches are created.
+                                  Subjects pay 0.0169 ALGO each on self-enrollment.
+                                </div>
                                 {walletBalanceAlgo !== null && total > walletBalanceAlgo ? (
                                   <div className="alert alert-error mt-3">
                                     <span className="text-sm">
-                                      Insufficient balance. You need <strong>{total} ALGO</strong> but your wallet only has{' '}
+                                      Insufficient balance. You need <strong>{total.toFixed(4)} ALGO</strong> total but your wallet only has{' '}
                                       <strong>{walletBalanceAlgo.toFixed(2)} ALGO</strong>. Add funds before creating this experiment.
                                     </span>
                                   </div>
                                 ) : (
                                   <div className="alert alert-info mt-3">
                                     <span className="text-sm">
-                                      Your wallet will be charged <strong>{total} ALGO</strong> at creation to pre-fund all variations.
-                                      Leftover funds are returned automatically when you end each variation.
+                                      Your wallet will be charged <strong>{totalEscrow} ALGO</strong> escrow at creation.
+                                      Match MBR (<strong>{totalMatchMbr.toFixed(4)} ALGO</strong>) is charged per match when matches are created.
                                     </span>
                                   </div>
                                 )}

@@ -1,3 +1,5 @@
+import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
+import algosdk from 'algosdk'
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useAlgorand } from './useAlgorand'
 
@@ -28,7 +30,7 @@ const ExperimentManagerContext = createContext<ExperimentManagerContextType | un
 // --- Provider ---
 
 export function ExperimentManagerProvider({ children }: { children: ReactNode }) {
-  const { activeAddress, getTrustVariationClient } = useAlgorand()
+  const { algorand, activeAddress, getTrustVariationClient } = useAlgorand()
 
   const [expConfigs, setExpConfigs] = useState<Record<number, ExperimentConfig>>({})
   const [varConfigs, setVarConfigs] = useState<Record<string, VariationConfig>>({})
@@ -76,6 +78,11 @@ export function ExperimentManagerProvider({ children }: { children: ReactNode })
     getClientRef.current = getTrustVariationClient
   }, [getTrustVariationClient])
 
+  const algorandRef = useRef(algorand)
+  useEffect(() => {
+    algorandRef.current = algorand
+  }, [algorand])
+
   // --- Auto-match polling ---
   useEffect(() => {
     const id = setInterval(() => {
@@ -92,7 +99,9 @@ export function ExperimentManagerProvider({ children }: { children: ReactNode })
         void (async () => {
           try {
             const client = getClientRef.current(appId)
-            if (!client) return
+            const algo = algorandRef.current
+            const sender = activeAddressRef.current
+            if (!client || !algo || !sender) return
 
             // Fetch unassigned subjects
             const map = await client.state.box.subjects.getMap()
@@ -100,11 +109,18 @@ export function ExperimentManagerProvider({ children }: { children: ReactNode })
               .filter(([, info]) => info.assigned === 0)
               .map(([address]) => address)
 
+            const appAddress = algosdk.getApplicationAddress(appId)
+
             // FIFO: pair first two, then next two, etc.
             while (unassigned.length >= 2) {
               const investor = unassigned.shift()!
               const trustee = unassigned.shift()!
-              await client.send.createMatch({ args: { investor, trustee } })
+              const mbrPayment = algo.createTransaction.payment({
+                sender,
+                receiver: appAddress,
+                amount: AlgoAmount.MicroAlgos(88_300),
+              })
+              await client.send.createMatch({ args: { investor, trustee, mbrPayment } })
             }
           } catch (err) {
             console.warn(`[AutoMatch] Error processing variation ${key}:`, err)

@@ -26,6 +26,13 @@ from smart_contracts.shared.types import (
     VariationConfig,
 )
 
+# Box MBR constants (2,500 + 400 * (key_len + value_len))
+# Subject box: prefix "s_"(2) + Address(32) + SubjectInfo(2) = 16,900
+SUBJECT_MBR = 16_900
+# Match box: prefix "m_"(2) + UInt32(4) + Match(118) = 52,100
+# Player match box x2: prefix "pm_"(3) + Address(32) + UInt32(4) = 18,100 each
+MATCH_MBR = 88_300  # 52,100 + 2 * 18,100
+
 
 class TrustVariation(ARC4Contract):
     def __init__(self) -> None:
@@ -118,9 +125,11 @@ class TrustVariation(ARC4Contract):
         self.status.value = UInt64(STATUS_COMPLETED)
 
     @arc4.abimethod
-    def add_subjects(self, addresses: arc4.DynamicArray[arc4.Address]) -> None:
+    def add_subjects(self, addresses: arc4.DynamicArray[arc4.Address], mbr_payment: gtxn.PaymentTransaction) -> None:
         assert Txn.sender == self.owner.value, "Not owner"
         assert self.status.value == UInt64(STATUS_ACTIVE), "Not active"
+        assert mbr_payment.receiver == Global.current_application_address, "Wrong MBR receiver"
+        assert mbr_payment.amount >= UInt64(SUBJECT_MBR) * addresses.length, "Insufficient MBR"
         for i in urange(addresses.length):
             addr = addresses[i].copy()
             assert addr not in self.subjects, "Already enrolled"
@@ -155,8 +164,10 @@ class TrustVariation(ARC4Contract):
         self.subject_count.value += UInt64(1)
 
     @arc4.abimethod
-    def create_match(self, investor: arc4.Address, trustee: arc4.Address) -> arc4.UInt32:
+    def create_match(self, investor: arc4.Address, trustee: arc4.Address, mbr_payment: gtxn.PaymentTransaction) -> arc4.UInt32:
         assert Txn.sender == self.owner.value, "Not owner"
+        assert mbr_payment.receiver == Global.current_application_address, "Wrong MBR receiver"
+        assert mbr_payment.amount >= UInt64(MATCH_MBR), "Insufficient MBR"
         assert investor in self.subjects, "Investor not enrolled"
         assert trustee in self.subjects, "Trustee not enrolled"
 
