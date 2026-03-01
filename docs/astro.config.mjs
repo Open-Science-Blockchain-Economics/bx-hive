@@ -4,6 +4,9 @@ import starlight from '@astrojs/starlight';
 
 // https://astro.build/config
 export default defineConfig({
+	site: 'https://open-science-blockchain-economics.github.io',
+	base: '/bx-hive',
+	trailingSlash: 'always',
 	integrations: [
 		starlight({
 			title: 'bx-hive Docs',
