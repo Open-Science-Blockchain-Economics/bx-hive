@@ -4,11 +4,26 @@ import { TrustExperimentsClient } from '../contracts/TrustExperiments'
 import { TrustVariationClient } from '../contracts/TrustVariation'
 import { getAlgodConfigFromViteEnvironment } from './network/getAlgoClientConfigs'
 
+const STORAGE_KEY = 'bx-hive-network-config'
+
 let _algorand: AlgorandClient | null = null
+
+function getAlgodConfig() {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored) as { algod: { server: string; port: string | number; token: string } }
+      return parsed.algod
+    }
+  } catch {
+    // ignore
+  }
+  return getAlgodConfigFromViteEnvironment()
+}
 
 export function getAlgorandClient(): AlgorandClient {
   if (!_algorand) {
-    const config = getAlgodConfigFromViteEnvironment()
+    const config = getAlgodConfig()
     _algorand = AlgorandClient.fromConfig({
       algodConfig: {
         server: config.server,
@@ -18,6 +33,10 @@ export function getAlgorandClient(): AlgorandClient {
     })
   }
   return _algorand
+}
+
+export function resetAlgorandClient(): void {
+  _algorand = null
 }
 
 export function getRegistryClient(algorand: AlgorandClient, sender: string) {

@@ -23,7 +23,7 @@ export default function HeaderStatus() {
   if (!activeAddress) {
     return (
       <div className="dropdown dropdown-end">
-        <label tabIndex={0} className="btn btn-primary btn-sm">
+        <label tabIndex={0} className="btn btn-outline btn-sm w-40">
           Connect Wallet
         </label>
         <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-50">

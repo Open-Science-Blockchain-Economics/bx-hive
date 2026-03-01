@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react'
-import { FaFlask, FaUser, FaRegCopy, FaCheck, FaSignOutAlt } from 'react-icons/fa'
+import { FaFlask, FaUser, FaRegCopy, FaCheck, FaSignOutAlt, FaCog } from 'react-icons/fa'
+import NetworkSettingsModal from './NetworkSettingsModal'
 import { truncateAddress } from '../utils/address'
 import type { User } from '../types'
 
@@ -12,6 +13,7 @@ interface ConnectedWalletProps {
 
 export default function ConnectedWallet({ activeAddress, activeNetwork, activeUser, onDisconnect }: ConnectedWalletProps) {
   const [copied, setCopied] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const handleCopy = useCallback(() => {
     void navigator.clipboard.writeText(activeAddress).then(() => {
@@ -37,7 +39,7 @@ export default function ConnectedWallet({ activeAddress, activeNetwork, activeUs
 
   return (
     <div className="dropdown dropdown-end">
-      <button tabIndex={0} type="button" className="btn btn-ghost btn-sm gap-1.5 font-normal">
+      <button tabIndex={0} type="button" className="btn btn-outline btn-sm w-40 gap-1.5 font-normal">
         {roleIcon}
         <span className="max-w-[120px] truncate">{triggerLabel}</span>
       </button>
@@ -59,6 +61,17 @@ export default function ConnectedWallet({ activeAddress, activeNetwork, activeUs
         <div className="divider my-1" />
         <button
           type="button"
+          className="btn btn-ghost btn-sm w-full justify-start gap-2"
+          onClick={() => {
+            closeDropdown()
+            setSettingsOpen(true)
+          }}
+        >
+          <FaCog className="w-4 h-4" />
+          Settings
+        </button>
+        <button
+          type="button"
           className="btn btn-ghost btn-sm w-full justify-start text-error gap-2"
           onClick={() => {
             closeDropdown()
@@ -69,6 +82,7 @@ export default function ConnectedWallet({ activeAddress, activeNetwork, activeUs
           Disconnect
         </button>
       </div>
+      <NetworkSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   )
 }

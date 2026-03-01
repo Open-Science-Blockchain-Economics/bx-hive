@@ -5,6 +5,7 @@ import { WalletProvider } from '@txnlab/use-wallet-react'
 import App from './App'
 import './styles/App.css'
 import ErrorBoundary from './components/ErrorBoundary'
+import { NetworkConfigProvider } from './hooks/useNetworkConfig'
 import { getAlgodConfigFromViteEnvironment, getKmdConfigFromViteEnvironment } from './utils/network/getAlgoClientConfigs'
 
 const algodConfig = getAlgodConfigFromViteEnvironment()
@@ -40,7 +41,9 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <ErrorBoundary>
       <WalletProvider manager={walletManager}>
-        <App />
+        <NetworkConfigProvider>
+          <App />
+        </NetworkConfigProvider>
       </WalletProvider>
     </ErrorBoundary>
   </React.StrictMode>,
