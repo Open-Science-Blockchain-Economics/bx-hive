@@ -9,17 +9,11 @@ export default defineConfig({
 			title: 'bx-hive Docs',
 			social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/withastro/starlight' }],
 			sidebar: [
-				{
-					label: 'Guides',
-					items: [
-						// Each item here is one entry in the navigation menu.
-						{ label: 'Example Guide', slug: 'guides/example' },
-					],
-				},
-				{
-					label: 'Reference',
-					autogenerate: { directory: 'reference' },
-				},
+				{ label: 'Getting Started', autogenerate: { directory: 'getting-started' } },
+				{ label: 'Concepts', autogenerate: { directory: 'concepts' } },
+				{ label: 'Experimenters', autogenerate: { directory: 'experimenters' } },
+				{ label: 'Subjects', autogenerate: { directory: 'subjects' } },
+				{ label: 'Reference', autogenerate: { directory: 'reference' } },
 			],
 		}),
 	],
