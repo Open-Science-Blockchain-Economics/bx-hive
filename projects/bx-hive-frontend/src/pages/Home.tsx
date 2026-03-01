@@ -1,7 +1,4 @@
-import DataCleaner from '../components/DataCleaner'
-import DatabaseStatus from '../components/DatabaseStatus'
 import LocalnetAccountsTable from '../components/LocalnetAccountsTable'
-import SignUp from '../components/SignUp'
 
 export default function Home() {
   return (
@@ -12,18 +9,6 @@ export default function Home() {
 
       <section className="mb-10">
         <LocalnetAccountsTable />
-      </section>
-
-      <section
-        className="grid gap-6 mb-10"
-        style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))' }}
-      >
-        <SignUp />
-        <DataCleaner />
-      </section>
-
-      <section>
-        <DatabaseStatus />
       </section>
     </main>
   )
