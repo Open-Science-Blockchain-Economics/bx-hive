@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import HeaderStatus from '../HeaderStatus'
+import ThemeToggle from '../ThemeToggle'
 import { useActiveUser } from '../../hooks/useActiveUser'
 
 export default function HeaderBar() {
@@ -51,6 +52,7 @@ export default function HeaderBar() {
       </div>
 
       <div className="navbar-end">
+        <ThemeToggle />
         <HeaderStatus />
       </div>
     </header>
