@@ -2,29 +2,7 @@ import { useState } from 'react'
 import { useWallet } from '@txnlab/use-wallet-react'
 import { type LocalnetAccount, type LocalnetAccountRole, useLocalnetAccounts } from '../hooks/useLocalnetAccounts'
 import { truncateAddress } from '../utils/address'
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false)
-
-  function handleCopy(e: React.MouseEvent) {
-    e.stopPropagation()
-    void navigator.clipboard.writeText(text).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
-  }
-
-  return (
-    <button
-      type="button"
-      className="btn btn-ghost btn-sm btn-square ml-1 text-base opacity-40 hover:opacity-100"
-      onClick={handleCopy}
-      title="Copy address"
-    >
-      {copied ? '✓' : '⎘'}
-    </button>
-  )
-}
+import { CopyButton } from './ui'
 
 function AccountRow({
   account,
@@ -58,10 +36,7 @@ function AccountRow({
     }
   }
 
-  const roleBadgeClass =
-    account.role === 'experimenter'
-      ? 'badge badge-primary badge-sm'
-      : 'badge badge-secondary badge-sm'
+  const roleBadgeClass = account.role === 'experimenter' ? 'badge badge-primary badge-sm' : 'badge badge-secondary badge-sm'
 
   return (
     <>
@@ -95,15 +70,16 @@ function AccountRow({
               <button
                 type="button"
                 className="btn btn-xs btn-outline btn-success"
-                onClick={(e) => { e.stopPropagation(); void onConnect(account.address) }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void onConnect(account.address)
+                }}
               >
                 Connect
               </button>
             )
           ) : (
-            <span className="text-base-content/40 text-xs">
-              {isSelected ? '▲ close' : 'click to register'}
-            </span>
+            <span className="text-base-content/40 text-xs">{isSelected ? '▲ close' : 'click to register'}</span>
           )}
         </td>
       </tr>
@@ -131,12 +107,7 @@ function AccountRow({
                 <option value="subject">Subject</option>
                 <option value="experimenter">Experimenter</option>
               </select>
-              <button
-                type="button"
-                className="btn btn-sm btn-primary"
-                onClick={() => void handleRegister()}
-                disabled={registering}
-              >
+              <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRegister()} disabled={registering}>
                 {registering && <span className="loading loading-spinner loading-xs" />}
                 Register
               </button>
@@ -187,9 +158,7 @@ export default function LocalnetAccountsTable() {
         {!seeded && !loading && (
           <div className="alert alert-warning text-sm">
             <span>
-              No seeded accounts found. Run{' '}
-              <code className="font-mono bg-base-300 px-1 rounded">pnpm seed:localnet</code> then
-              refresh.
+              No seeded accounts found. Run <code className="font-mono bg-base-300 px-1 rounded">pnpm seed:localnet</code> then refresh.
             </span>
           </div>
         )}
@@ -218,11 +187,7 @@ export default function LocalnetAccountsTable() {
                     account={account}
                     isSelected={selectedAddress === account.address}
                     activeAddress={activeAddress ?? null}
-                    onSelect={() =>
-                      setSelectedAddress(
-                        selectedAddress === account.address ? null : account.address,
-                      )
-                    }
+                    onSelect={() => setSelectedAddress(selectedAddress === account.address ? null : account.address)}
                     onRegister={async (address, name, role) => {
                       await registerAccount(address, name, role)
                       setSelectedAddress(null)

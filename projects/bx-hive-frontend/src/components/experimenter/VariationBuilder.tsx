@@ -115,7 +115,10 @@ export function VariationBuilder({ parameterSchema, baseParameters, variations, 
               {variation.values.map((value, idx) => (
                 <div key={idx} className="badge badge-lg gap-2">
                   {value}
-                  <button className="btn btn-ghost btn-xs p-0 min-h-0 h-auto" onClick={() => handleRemoveValue(variation.parameterName, value)}>
+                  <button
+                    className="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
+                    onClick={() => handleRemoveValue(variation.parameterName, value)}
+                  >
                     ×
                   </button>
                 </div>
@@ -174,10 +177,7 @@ export function VariationBuilder({ parameterSchema, baseParameters, variations, 
               <div className="text-sm mt-2 space-y-1">
                 {combinations.map((combo, idx) => (
                   <div key={idx}>
-                    Variation {idx + 1}:{' '}
-                    {variations
-                      .map((v) => `${v.parameterName}=${combo[v.parameterName]}`)
-                      .join(', ')}
+                    Variation {idx + 1}: {variations.map((v) => `${v.parameterName}=${combo[v.parameterName]}`).join(', ')}
                   </div>
                 ))}
               </div>

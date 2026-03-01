@@ -72,11 +72,7 @@ export default function ExperimentCard({
 
         <div className="card-actions justify-end mt-4">
           {!isCompleted && !isRegistered && template && (
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => onRegister(template.playerCount)}
-              disabled={isRegistering}
-            >
+            <button className="btn btn-primary btn-sm" onClick={() => onRegister(template.playerCount)} disabled={isRegistering}>
               {isRegistering ? (
                 <>
                   <span className="loading loading-spinner loading-xs"></span>

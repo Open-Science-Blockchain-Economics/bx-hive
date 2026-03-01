@@ -1,20 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Link } from 'react-router-dom'
-import { VariationBuilder } from '../components/experimenter/VariationBuilder'
-import {
-  createExperiment as dbCreateExperiment,
-  createExperimentBatch,
-  getBatchesByExperimenter,
-  getExperimentsByBatchId,
-  getExperimentsByExperimenter,
-  getVariationLabel,
-} from '../db'
-import { experimentTemplates, getTemplateById } from '../experiment-logic/templates'
+import { getBatchesByExperimenter, getExperimentsByBatchId, getExperimentsByExperimenter } from '../db'
 import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments, type ExperimentGroup, type VariationInfo } from '../hooks/useTrustExperiments'
-import { useTrustVariation, STATUS_ACTIVE, STATUS_CLOSED, STATUS_COMPLETED, type VariationConfig } from '../hooks/useTrustVariation'
-import type { AssignmentStrategy, Experiment, ExperimentBatch, ParameterVariation } from '../types'
+import { useTrustVariation, type VariationConfig } from '../hooks/useTrustVariation'
+import type { Experiment, ExperimentBatch } from '../types'
+import CreateExperimentForm from '../components/experimenter/CreateExperimentForm'
+import ExperimentListTab from '../components/experimenter/ExperimentListTab'
 
 type TabType = 'experiments' | 'create'
 
@@ -27,53 +19,6 @@ interface OnChainExperiment {
   variations: VariationInfo[]
 }
 
-/** Expand parameter variations into factorial combinations */
-function generateVariationCombinations(
-  baseParams: Record<string, number | string>,
-  variations: ParameterVariation[],
-): Record<string, number | string>[] {
-  let combinations: Record<string, number | string>[] = [{ ...baseParams }]
-  for (const variation of variations) {
-    const next: Record<string, number | string>[] = []
-    for (const combo of combinations) {
-      for (const value of variation.values) {
-        next.push({ ...combo, [variation.parameterName]: value })
-      }
-    }
-    combinations = next
-  }
-  return combinations
-}
-
-/** Max escrow in ALGO for one variation given its params and max subjects */
-function computeEscrowAlgo(params: Record<string, number | string>, maxSubjects: number): number {
-  const e1 = Number(params.E1) || 0
-  const m = Number(params.m) || 1
-  const e2 = Number(params.E2) || 0
-  const numPairs = Math.floor(maxSubjects / 2)
-  return (e1 * m + e2) * numPairs
-}
-
-/** Match MBR in ALGO for one variation (88,300 microAlgo per match = per pair) */
-function computeMatchMbrAlgo(maxSubjects: number): number {
-  const numPairs = Math.floor(maxSubjects / 2)
-  return (88_300 * numPairs) / 1_000_000
-}
-
-/** Convert trust-game frontend params (ALGO) to contract args (microAlgo) */
-function toVariationParams(params: Record<string, number | string>, label: string, maxSubjects = 0, escrowAlgo = 0) {
-  return {
-    label,
-    e1: BigInt(Math.round(Number(params.E1) * 1_000_000)),
-    e2: BigInt(Math.round(Number(params.E2) * 1_000_000)),
-    multiplier: BigInt(Math.round(Number(params.m))),
-    unit: BigInt(Math.round(Number(params.UNIT) * 1_000_000)),
-    assetId: 0n,
-    maxSubjects: BigInt(maxSubjects),
-    escrowMicroAlgo: BigInt(Math.round(escrowAlgo * 1_000_000)),
-  }
-}
-
 export default function ExperimenterDashboard() {
   const { activeUser } = useActiveUser()
   const { algorand, activeAddress } = useAlgorand()
@@ -81,44 +26,16 @@ export default function ExperimenterDashboard() {
   const { getSubjectCount, getConfig } = useTrustVariation()
 
   const [activeTab, setActiveTab] = useState<TabType>('experiments')
-
-  // On-chain trust experiments
   const [onChainExps, setOnChainExps] = useState<OnChainExperiment[]>([])
-
-  // Local BRET experiments (IndexedDB)
   const [localExperiments, setLocalExperiments] = useState<Experiment[]>([])
   const [localBatches, setLocalBatches] = useState<BatchWithExperiments[]>([])
-
   const [loading, setLoading] = useState(true)
-
-  // Create form state
-  const [selectedTemplateId, setSelectedTemplateId] = useState(experimentTemplates[0]?.id || '')
-  const [experimentName, setExperimentName] = useState('')
-  const [parameters, setParameters] = useState<Record<string, number | string>>({})
-  const [creating, setCreating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  // Batch mode state
-  const [batchModeEnabled, setBatchModeEnabled] = useState(false)
-  const [variations, setVariations] = useState<ParameterVariation[]>([])
-  const [assignmentStrategy, setAssignmentStrategy] = useState<AssignmentStrategy>('round_robin')
-  const [maxPerVariation, setMaxPerVariation] = useState<string>('')
-
-  // Variation configs (status, etc) per variation appId as string
   const [variationConfigs, setVariationConfigs] = useState<Record<string, VariationConfig>>({})
-
-  // Subject counts per variation (appId string → count)
   const [subjectCounts, setSubjectCounts] = useState<Record<string, number>>({})
-
-  // Wallet balance in ALGO (null = not yet loaded)
   const [walletBalanceAlgo, setWalletBalanceAlgo] = useState<number | null>(null)
 
-  const selectedTemplate = getTemplateById(selectedTemplateId)
-
   useEffect(() => {
-    if (activeUser) {
-      void loadAll()
-    }
+    if (activeUser) void loadAll()
   }, [activeUser])
 
   useEffect(() => {
@@ -130,18 +47,6 @@ export default function ExperimenterDashboard() {
       setWalletBalanceAlgo(Number(info.balance.microAlgo) / 1_000_000)
     })
   }, [algorand, activeAddress])
-
-  useEffect(() => {
-    if (selectedTemplate) {
-      const defaults: Record<string, number | string> = {}
-      selectedTemplate.parameterSchema.forEach((param) => {
-        if (param.default !== undefined) defaults[param.name] = param.default
-      })
-      setParameters(defaults)
-      setBatchModeEnabled(false)
-      setVariations([])
-    }
-  }, [selectedTemplate])
 
   const loadAll = useCallback(async () => {
     if (!activeUser) return
@@ -172,7 +77,6 @@ export default function ExperimenterDashboard() {
       })
       setOnChainExps(valid)
 
-      // Load subject counts and variation configs for all variations
       const counts: Record<string, number> = {}
       const configs: Record<string, VariationConfig> = {}
       await Promise.all(
@@ -187,7 +91,7 @@ export default function ExperimenterDashboard() {
             try {
               configs[key] = await getConfig(v.appId)
             } catch {
-              // config unavailable — leave undefined
+              /* config unavailable */
             }
           }),
         ),
@@ -219,109 +123,6 @@ export default function ExperimenterDashboard() {
     }
   }
 
-  function handleParameterChange(name: string, value: string, type: 'number' | 'string') {
-    setParameters((prev) => ({
-      ...prev,
-      [name]: type === 'number' ? Number(value) : value,
-    }))
-  }
-
-  async function handleCreateExperiment() {
-    setError(null)
-    if (!experimentName.trim()) {
-      setError('Experiment name is required')
-      return
-    }
-    if (selectedTemplateId === 'trust-game' && (!maxPerVariation || Number(maxPerVariation) < 2)) {
-      setError('Max participants per variation must be at least 2 for trust game experiments')
-      return
-    }
-    if (!activeUser || !selectedTemplate) return
-
-    setCreating(true)
-    try {
-      if (selectedTemplateId === 'trust-game') {
-        await createTrustGameOnChain()
-      } else {
-        await createBretLocal()
-      }
-
-      setExperimentName('')
-      setBatchModeEnabled(false)
-      setVariations([])
-      setMaxPerVariation('')
-      await loadAll()
-      setActiveTab('experiments')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create experiment')
-    } finally {
-      setCreating(false)
-    }
-  }
-
-  async function createTrustGameOnChain() {
-    const maxSub = Number(maxPerVariation)
-    if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
-      const combos = generateVariationCombinations(parameters, variations)
-      // First combo: atomic combined call (experiment always has ≥1 variation)
-      const { expId } = await createExperimentWithVariation(
-        experimentName.trim(),
-        toVariationParams(combos[0], getVariationLabel(combos[0], variations), maxSub, computeEscrowAlgo(combos[0], maxSub)),
-      )
-      // Remaining combos: add variations to the existing experiment
-      for (let i = 1; i < combos.length; i++) {
-        await createVariation(expId, toVariationParams(combos[i], getVariationLabel(combos[i], variations), maxSub, computeEscrowAlgo(combos[i], maxSub)))
-      }
-    } else {
-      await createExperimentWithVariation(
-        experimentName.trim(),
-        toVariationParams(parameters, 'Default', maxSub, computeEscrowAlgo(parameters, maxSub)),
-      )
-    }
-  }
-
-  async function createBretLocal() {
-    if (!activeUser) return
-    if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
-      await createExperimentBatch(
-        selectedTemplateId,
-        activeUser.id,
-        experimentName.trim(),
-        parameters,
-        variations,
-        assignmentStrategy,
-        maxPerVariation ? Number(maxPerVariation) : undefined,
-      )
-    } else {
-      await dbCreateExperiment(selectedTemplateId, activeUser.id, experimentName.trim(), parameters)
-    }
-  }
-
-  const maxPayout =
-    selectedTemplateId === 'trust-game'
-      ? (Number(parameters.E1) || 0) * (Number(parameters.m) || 1) + (Number(parameters.E2) || 0)
-      : null
-
-  // Compute total escrow needed for the create button guard
-  const totalEscrowAlgo = (() => {
-    if (selectedTemplateId !== 'trust-game' || !maxPerVariation || Number(maxPerVariation) < 2) return 0
-    const maxSub = Number(maxPerVariation)
-    const combos =
-      batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
-        ? generateVariationCombinations(parameters, variations)
-        : [parameters]
-    return combos.reduce((sum, combo) => sum + computeEscrowAlgo(combo, maxSub), 0)
-  })()
-
-  const insufficientBalance =
-    selectedTemplateId === 'trust-game' &&
-    walletBalanceAlgo !== null &&
-    totalEscrowAlgo > 0 &&
-    totalEscrowAlgo > walletBalanceAlgo
-
-  const hasOnChain = onChainExps.length > 0
-  const hasLocal = localExperiments.length > 0 || localBatches.length > 0
-
   return (
     <div>
       <div className="mb-6">
@@ -338,428 +139,29 @@ export default function ExperimenterDashboard() {
         </a>
       </div>
 
-      {/* ── Experiments List ── */}
       {activeTab === 'experiments' && (
-        <div>
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <span className="loading loading-spinner loading-lg"></span>
-            </div>
-          ) : !hasOnChain && !hasLocal ? (
-            <div className="text-center py-12 text-base-content/70">
-              <p>No experiments yet. Create your first experiment!</p>
-              <button className="btn btn-primary mt-4" onClick={() => setActiveTab('create')}>
-                Create Experiment
-              </button>
-            </div>
-          ) : (
-            <div className="grid gap-6">
-              {/* ── On-chain Trust Game Experiments ── */}
-              {onChainExps.map(({ group, variations: vars }) => {
-                const totalSubjects = vars.reduce((sum, v) => sum + (subjectCounts[String(v.appId)] ?? 0), 0)
-                return (
-                  <Link
-                    key={group.expId}
-                    to={`/experimenter/trust/${group.expId}`}
-                    className="card bg-base-100 border border-base-300 hover:bg-base-200 cursor-pointer transition-colors"
-                  >
-                    <div className="card-body">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="card-title">{group.name}</h3>
-                          <p className="text-sm text-base-content/70">
-                            {Number(group.variationCount)} variation{Number(group.variationCount) !== 1 ? 's' : ''} · {totalSubjects} subject{totalSubjects !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-                        <span className="badge badge-primary badge-sm">TRUST</span>
-                      </div>
-
-                      {/* Variation status row */}
-                      <div className="flex flex-wrap gap-3 mt-2">
-                        {vars.map((v) => {
-                          const cfg = variationConfigs[String(v.appId)]
-                          const dotColor = !cfg ? 'bg-base-300'
-                            : cfg.status === STATUS_COMPLETED ? 'bg-error'
-                            : cfg.status === STATUS_CLOSED ? 'bg-warning'
-                            : 'bg-info'
-                          const label = !cfg ? 'loading'
-                            : cfg.status === STATUS_ACTIVE ? 'active'
-                            : cfg.status === STATUS_CLOSED ? 'closed'
-                            : 'ended'
-                          return (
-                            <span key={v.varId} className="text-xs text-base-content/70 flex items-center gap-1">
-                              Var {v.varId + 1}
-                              <span className={`inline-block w-2 h-2 rounded-full ${dotColor}`} aria-label={label} />
-                              {label}
-                            </span>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </Link>
-                )
-              })}
-
-              {/* ── Local BRET Batches ── */}
-              {localBatches.map((batch) => {
-                const template = getTemplateById(batch.templateId)
-                return (
-                  <div key={batch.id} className="card bg-base-100 border border-base-300">
-                    <div className="card-body">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="card-title">{batch.name}</h3>
-                          <p className="text-sm text-base-content/70">
-                            {template?.label || batch.templateId} • {batch.experiments.length} variations •{' '}
-                            {batch.assignmentStrategy === 'round_robin' ? 'Round Robin' : 'Fill Sequential'}
-                          </p>
-                        </div>
-                        <span className="badge badge-neutral">BATCH</span>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-3">
-                        {batch.experiments.map((exp, idx) => {
-                          const varLabel = getVariationLabel(exp.parameters, batch.variations)
-                          return (
-                            <div key={exp.id} className="bg-base-200 rounded-lg p-2 text-sm">
-                              <div className="font-medium">V{idx + 1}: {varLabel}</div>
-                              <div className="text-xs text-base-content/70">{exp.players.length} players</div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-
-              {/* ── Local BRET standalone ── */}
-              {localExperiments.map((experiment) => {
-                const template = getTemplateById(experiment.templateId)
-                return (
-                  <div key={experiment.id} className="card bg-base-100 border border-base-300">
-                    <div className="card-body">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="card-title">{experiment.name}</h3>
-                          <p className="text-sm text-base-content/70">{template?.label || experiment.templateId}</p>
-                        </div>
-                        <span
-                          className={`badge ${
-                            experiment.status === 'active' ? 'badge-success' : experiment.status === 'closed' ? 'badge-warning' : 'badge-neutral'
-                          }`}
-                        >
-                          {experiment.status}
-                        </span>
-                      </div>
-                      <div className="text-sm mt-2">
-                        <span className="text-base-content/70">Players: </span>
-                        <span className="font-medium">{experiment.players.length}</span>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
+        <ExperimentListTab
+          loading={loading}
+          onChainExps={onChainExps}
+          localBatches={localBatches}
+          localExperiments={localExperiments}
+          subjectCounts={subjectCounts}
+          variationConfigs={variationConfigs}
+          onCreateClick={() => setActiveTab('create')}
+        />
       )}
 
-      {/* ── Create Experiment ── */}
-      {activeTab === 'create' && (
-        <div className="card bg-base-100 shadow-xl">
-          <div className="card-body">
-            <h2 className="card-title text-2xl mb-4">Create New Experiment</h2>
-
-            <div className="space-y-3">
-              {/* Step 1: Template Selection */}
-              <div>
-                <h3 className="font-semibold text-lg mb-2">1. Select Template</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {experimentTemplates.map((template) => (
-                    <div
-                      key={template.id}
-                      className={`card bg-base-100 border-2 transition-all ${
-                        template.disabled
-                          ? 'opacity-40 cursor-not-allowed border-base-300'
-                          : selectedTemplateId === template.id
-                            ? 'cursor-pointer border-primary shadow-lg'
-                            : 'cursor-pointer border-base-300 hover:border-base-400'
-                      }`}
-                      onClick={() => !template.disabled && setSelectedTemplateId(template.id)}
-                    >
-                      <div className="card-body">
-                        <div className="flex justify-between items-start">
-                          <h4 className="card-title text-lg">{template.name}</h4>
-                          <div className="flex gap-1">
-                            {template.disabled && <span className="badge badge-ghost badge-sm">coming soon</span>}
-                            <span className="badge badge-neutral badge-sm">{template.playerCount}-player</span>
-                          </div>
-                        </div>
-                        <p className="text-sm text-base-content/70">{template.description}</p>
-                        {selectedTemplateId === template.id && (
-                          <div className="flex gap-2 mt-2">
-                            <span className="badge badge-primary">Selected</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Step 2: Name */}
-              <div className="divider"></div>
-              <div>
-                <h3 className="font-semibold text-lg mb-4">2. Experiment Details</h3>
-                <div className="form-control">
-                  <span className="label-text font-medium mb-2">Experiment Name</span>
-                  <input
-                    type="text"
-                    className="input input-bordered"
-                    value={experimentName}
-                    onChange={(e) => setExperimentName(e.target.value)}
-                    placeholder="e.g., Trust Experiment – Spring 2025"
-                  />
-                </div>
-              </div>
-
-              {/* Step 3: Parameters */}
-              {selectedTemplate && (
-                <>
-                  <div className="divider"></div>
-                  <div>
-                    <h3 className="font-semibold text-lg mb-2">3. Configure Base Parameters</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {selectedTemplate.parameterSchema.map((param) => (
-                        <div key={param.name} className="form-control">
-                          <label className="label">
-                            <span className="label-text font-medium">{param.label}</span>
-                          </label>
-                          <input
-                            type={param.type === 'number' ? 'number' : 'text'}
-                            className="input input-bordered"
-                            value={parameters[param.name] ?? ''}
-                            onChange={(e) => handleParameterChange(param.name, e.target.value, param.type)}
-                            min={param.min}
-                            max={param.max}
-                          />
-                          {param.description && (
-                            <label className="label">
-                              <span className="label-text-alt text-base-content/60">{param.description}</span>
-                            </label>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-
-                    {maxPayout !== null && !batchModeEnabled && (
-                      <div className="alert alert-info mt-4">
-                        <div>
-                          <div className="font-semibold">Max Payout Per Pair: {maxPayout} ALGO</div>
-                          <div className="text-xs text-base-content/70 mt-1">
-                            (E1 × m) + E2 = ({parameters.E1} × {parameters.m}) + {parameters.E2}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Step 4: Parameter Variations */}
-                  <div className="divider"></div>
-                  <div>
-                    <h3 className="font-semibold text-lg mb-4">4. Parameter Variations (Optional)</h3>
-                    <label className="label cursor-pointer justify-start gap-3">
-                      <input
-                        type="checkbox"
-                        className="checkbox checkbox-primary"
-                        checked={batchModeEnabled}
-                        onChange={(e) => {
-                          setBatchModeEnabled(e.target.checked)
-                          if (!e.target.checked) setVariations([])
-                        }}
-                      />
-                      <span className="label-text">Enable batch mode – create multiple variations</span>
-                    </label>
-
-                    {batchModeEnabled && (
-                      <div className="mt-4">
-                        <VariationBuilder
-                          parameterSchema={selectedTemplate.parameterSchema}
-                          baseParameters={parameters}
-                          variations={variations}
-                          onVariationsChange={setVariations}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Step 5: Participants — always shown for trust-game; batch-only for BRET */}
-                  {(selectedTemplateId === 'trust-game' ||
-                    (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0))) && (
-                    <>
-                      <div className="divider"></div>
-                      <div>
-                        <h3 className="font-semibold text-lg mb-4">5. Participants</h3>
-
-                        {/* Assignment strategy radios — BRET only */}
-                        {selectedTemplateId === 'bret' && batchModeEnabled && (
-                          <div className="space-y-3 mb-4">
-                            <label className="flex items-start gap-3 cursor-pointer p-3 border border-base-300 rounded-lg hover:bg-base-200">
-                              <input
-                                type="radio"
-                                name="assignmentStrategy"
-                                className="radio radio-primary mt-1"
-                                checked={assignmentStrategy === 'round_robin'}
-                                onChange={() => setAssignmentStrategy('round_robin')}
-                              />
-                              <div>
-                                <div className="font-medium">Round Robin (Recommended)</div>
-                                <div className="text-sm text-base-content/70">Distribute participants evenly across all variations</div>
-                              </div>
-                            </label>
-                            <label className="flex items-start gap-3 cursor-pointer p-3 border border-base-300 rounded-lg hover:bg-base-200">
-                              <input
-                                type="radio"
-                                name="assignmentStrategy"
-                                className="radio radio-primary mt-1"
-                                checked={assignmentStrategy === 'fill_sequential'}
-                                onChange={() => setAssignmentStrategy('fill_sequential')}
-                              />
-                              <div>
-                                <div className="font-medium">Fill Sequential</div>
-                                <div className="text-sm text-base-content/70">Fill each variation to capacity before moving to the next.</div>
-                              </div>
-                            </label>
-                          </div>
-                        )}
-
-                        {/* Trust Game info */}
-                        {selectedTemplateId === 'trust-game' && (
-                          <div className="alert alert-info mb-4">
-                            <span>Subjects self-enroll and are automatically distributed across variations using round robin.</span>
-                          </div>
-                        )}
-
-                        <div className="form-control">
-                          <label className="label">
-                            <span className="label-text font-medium">
-                              Max participants per variation{selectedTemplateId === 'trust-game' ? ' (required)' : ' (optional)'}
-                            </span>
-                          </label>
-                          <input
-                            type="number"
-                            className="input input-bordered w-48"
-                            placeholder={selectedTemplateId === 'trust-game' ? 'e.g. 20' : 'No limit'}
-                            min={selectedTemplateId === 'trust-game' ? 2 : 1}
-                            value={maxPerVariation}
-                            onChange={(e) => setMaxPerVariation(e.target.value)}
-                          />
-                        </div>
-
-                        {/* Funding Summary — trust-game only */}
-                        {selectedTemplateId === 'trust-game' && maxPerVariation && Number(maxPerVariation) >= 2 && (() => {
-                          const maxSub = Number(maxPerVariation)
-                          const combos = batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
-                            ? generateVariationCombinations(parameters, variations)
-                            : [parameters]
-                          const matchMbrPerVar = computeMatchMbrAlgo(maxSub)
-                          const rows = combos.map((combo, i) => ({
-                            label: batchModeEnabled ? getVariationLabel(combo, variations) : 'Default',
-                            escrow: computeEscrowAlgo(combo, maxSub),
-                            matchMbr: matchMbrPerVar,
-                            index: i,
-                          }))
-                          const totalEscrow = rows.reduce((sum, r) => sum + r.escrow, 0)
-                          const totalMatchMbr = rows.reduce((sum, r) => sum + r.matchMbr, 0)
-                          const total = totalEscrow + totalMatchMbr
-                          return (
-                            <>
-                              <div className="divider"></div>
-                              <div>
-                                <h4 className="font-semibold mb-3">Funding Summary</h4>
-                                <div className="overflow-x-auto">
-                                  <table className="table table-sm w-full">
-                                    <thead>
-                                      <tr>
-                                        <th>Variation</th>
-                                        <th className="text-right">Escrow (ALGO)</th>
-                                        <th className="text-right">Match MBR (ALGO)</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {rows.map((row) => (
-                                        <tr key={row.index}>
-                                          <td>{row.label}</td>
-                                          <td className="text-right">{row.escrow}</td>
-                                          <td className="text-right">{row.matchMbr.toFixed(4)}</td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                    <tfoot>
-                                      <tr className="font-bold">
-                                        <td>Total</td>
-                                        <td className="text-right">{totalEscrow} ALGO</td>
-                                        <td className="text-right">{totalMatchMbr.toFixed(4)} ALGO</td>
-                                      </tr>
-                                    </tfoot>
-                                  </table>
-                                </div>
-                                <div className="text-xs text-base-content/60 mt-2">
-                                  Escrow funds payouts to players. Match MBR (0.0883 ALGO/match) covers on-chain storage and is paid when matches are created.
-                                  Subjects pay 0.0169 ALGO each on self-enrollment.
-                                </div>
-                                {walletBalanceAlgo !== null && total > walletBalanceAlgo ? (
-                                  <div className="alert alert-error mt-3">
-                                    <span className="text-sm">
-                                      Insufficient balance. You need <strong>{total.toFixed(4)} ALGO</strong> total but your wallet only has{' '}
-                                      <strong>{walletBalanceAlgo.toFixed(2)} ALGO</strong>. Add funds before creating this experiment.
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <div className="alert alert-info mt-3">
-                                    <span className="text-sm">
-                                      Your wallet will be charged <strong>{totalEscrow} ALGO</strong> escrow at creation.
-                                      Match MBR (<strong>{totalMatchMbr.toFixed(4)} ALGO</strong>) is charged per match when matches are created.
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </>
-                          )
-                        })()}
-                      </div>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-
-            {error && (
-              <div className="alert alert-error mt-4">
-                <span>{error}</span>
-              </div>
-            )}
-
-            <div className="card-actions justify-end mt-6">
-              <button
-                className="btn btn-primary"
-                onClick={() => void handleCreateExperiment()}
-                disabled={creating || !experimentName.trim() || insufficientBalance}
-              >
-                {creating ? (
-                  <>
-                    <span className="loading loading-spinner loading-sm"></span>
-                    Creating...
-                  </>
-                ) : batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0) ? (
-                  `Create with ${variations.reduce((acc, v) => acc * v.values.length, 1)} Variations`
-                ) : (
-                  'Create Experiment'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+      {activeTab === 'create' && activeUser && (
+        <CreateExperimentForm
+          activeUserId={activeUser.id}
+          walletBalanceAlgo={walletBalanceAlgo}
+          createExperimentWithVariation={createExperimentWithVariation}
+          createVariation={createVariation}
+          onCreated={() => {
+            void loadAll()
+            setActiveTab('experiments')
+          }}
+        />
       )}
     </div>
   )

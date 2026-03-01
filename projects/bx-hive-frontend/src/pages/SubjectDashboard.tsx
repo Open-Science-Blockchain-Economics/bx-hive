@@ -1,15 +1,18 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Link } from 'react-router-dom'
 import ExperimentCard from '../components/subject/ExperimentCard'
+import ActiveMatchCard from '../components/subject/ActiveMatchCard'
+import CompletedMatchCard from '../components/subject/CompletedMatchCard'
+import EnrolledWaitingCard from '../components/subject/EnrolledWaitingCard'
+import JoinableExperimentCard from '../components/subject/JoinableExperimentCard'
+import { LoadingSpinner } from '../components/ui'
 import { getBatches, getExperiments, getExperimentsByBatchId, registerForBatch, registerForExperiment } from '../db'
 import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
-import { useTrustVariation, PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '../hooks/useTrustVariation'
+import { useTrustVariation, PHASE_COMPLETED } from '../hooks/useTrustVariation'
 import type { Match as OnChainMatch } from '../hooks/useTrustVariation'
 import { pickVariationRoundRobin, type VariationSlot } from '../utils/distributeSubjects'
-import { microAlgoToAlgo } from '../utils/amount'
 import type { Experiment, ExperimentBatch } from '../types'
 
 interface SubjectExperimentView {
@@ -29,8 +32,8 @@ interface OnChainMatchView {
 interface OnChainExperimentView {
   group: ExperimentGroup
   variations: VariationInfo[]
-  enrolled: boolean // subject is enrolled in at least one variation
-  hasMatch: boolean // subject has an active or completed match
+  enrolled: boolean
+  hasMatch: boolean
 }
 
 export default function SubjectDashboard() {
@@ -39,20 +42,21 @@ export default function SubjectDashboard() {
   const { listExperiments, listVariations } = useTrustExperiments()
   const { getPlayerMatch, selfEnroll, getSubjectCount, isSubjectEnrolled } = useTrustVariation()
 
-  // Local BRET state
   const [experimentViews, setExperimentViews] = useState<SubjectExperimentView[]>([])
   const [localLoading, setLocalLoading] = useState(true)
   const [registering, setRegistering] = useState<string | null>(null)
 
-  // On-chain trust game state
   const [onChainMatches, setOnChainMatches] = useState<OnChainMatchView[]>([])
   const [onChainExperiments, setOnChainExperiments] = useState<OnChainExperimentView[]>([])
   const [onChainLoading, setOnChainLoading] = useState(true)
-  const [joining, setJoining] = useState<number | null>(null) // exp_id being joined
+  const [joining, setJoining] = useState<number | null>(null)
   const [joinError, setJoinError] = useState<string | null>(null)
 
   const loadOnChainData = useCallback(async () => {
-    if (!activeAddress) { setOnChainLoading(false); return }
+    if (!activeAddress) {
+      setOnChainLoading(false)
+      return
+    }
     try {
       setOnChainLoading(true)
       const groups = await listExperiments()
@@ -73,7 +77,6 @@ export default function SubjectDashboard() {
           }
         }
 
-        // Check enrollment without match (subject enrolled but not yet paired)
         if (!enrolled) {
           for (const v of vars) {
             try {
@@ -82,7 +85,7 @@ export default function SubjectDashboard() {
                 break
               }
             } catch {
-              // ignore
+              /* ignore */
             }
           }
         }
@@ -109,12 +112,9 @@ export default function SubjectDashboard() {
     setJoining(expId)
     setJoinError(null)
     try {
-      // Query subject counts + max_subjects across all variations
       const slots: VariationSlot[] = await Promise.all(
         variations.map(async (v) => {
           const count = await getSubjectCount(v.appId)
-          // max_subjects is stored in global state; the contract enforces the cap
-          // on-chain regardless, so using 0 (unlimited) here is safe
           return { appId: v.appId, subjectCount: count, maxSubjects: 0 }
         }),
       )
@@ -161,7 +161,10 @@ export default function SubjectDashboard() {
         let userExperimentId: string | undefined
         if (activeUser) {
           for (const exp of batchExperiments) {
-            if (exp.players.some((p) => p.userId === activeUser.id)) { userExperimentId = exp.id; break }
+            if (exp.players.some((p) => p.userId === activeUser.id)) {
+              userExperimentId = exp.id
+              break
+            }
           }
         }
         const representative: Experiment = {
@@ -169,7 +172,14 @@ export default function SubjectDashboard() {
           players: batchExperiments.flatMap((e) => e.players),
           matches: batchExperiments.flatMap((e) => e.matches),
         }
-        views.push({ id: batch.id, isBatch: true, experiment: representative, totalPlayers, displayParameters: (batch as ExperimentBatch).baseParameters, userExperimentId })
+        views.push({
+          id: batch.id,
+          isBatch: true,
+          experiment: representative,
+          totalPlayers,
+          displayParameters: (batch as ExperimentBatch).baseParameters,
+          userExperimentId,
+        })
       }
 
       setExperimentViews(views)
@@ -214,9 +224,7 @@ export default function SubjectDashboard() {
 
   const activeOnChain = onChainMatches.filter((v) => v.match.phase !== PHASE_COMPLETED)
   const completedOnChain = onChainMatches.filter((v) => v.match.phase === PHASE_COMPLETED)
-  // Experiments available to join (not enrolled, not matched)
   const joinableExperiments = onChainExperiments.filter((e) => !e.enrolled && !e.hasMatch)
-  // Experiments enrolled but waiting for match
   const enrolledWaiting = onChainExperiments.filter((e) => e.enrolled && !e.hasMatch)
   const availableViews = experimentViews.filter((view) => !hasCompletedMatch(view))
   const completedViews = experimentViews.filter((view) => hasCompletedMatch(view))
@@ -231,162 +239,78 @@ export default function SubjectDashboard() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
+        <LoadingSpinner />
       ) : (
         <div className="space-y-8">
-
-          {/* ── Trust Game: Available to Join ── */}
+          {/* Trust Game: Available to Join */}
           {joinableExperiments.length > 0 && (
             <section>
               <h2 className="text-lg font-semibold mb-4">Trust Game — Available</h2>
               <div className="grid gap-4">
                 {joinableExperiments.map(({ group, variations }) => (
-                  <div key={group.expId} className="card bg-base-100 border border-base-300">
-                    <div className="card-body">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="card-title">{group.name}</h3>
-                          <p className="text-sm text-base-content/70">
-                            Trust Game · {Number(group.variationCount)} variation{Number(group.variationCount) !== 1 ? 's' : ''}
-                          </p>
-                        </div>
-                        <span className="badge badge-info">Open</span>
-                      </div>
-                      {joinError && joining === null && (
-                        <div className="text-error text-sm mt-2">{joinError}</div>
-                      )}
-                      <div className="card-actions justify-end mt-2">
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          disabled={joining !== null}
-                          onClick={() => void handleJoinExperiment(group.expId, variations)}
-                        >
-                          {joining === group.expId ? (
-                            <span className="loading loading-spinner loading-xs"></span>
-                          ) : (
-                            'Join Experiment'
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <JoinableExperimentCard
+                    key={group.expId}
+                    group={group}
+                    variations={variations}
+                    joining={joining}
+                    joinError={joinError}
+                    onJoin={handleJoinExperiment}
+                  />
                 ))}
               </div>
             </section>
           )}
 
-          {/* ── Trust Game: Enrolled, waiting for match ── */}
+          {/* Trust Game: Enrolled, waiting */}
           {enrolledWaiting.length > 0 && (
             <section>
               <h2 className="text-lg font-semibold mb-4">Trust Game — Enrolled</h2>
               <div className="grid gap-4">
                 {enrolledWaiting.map(({ group }) => (
-                  <div key={group.expId} className="card bg-base-100 border border-base-300">
-                    <div className="card-body">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="card-title">{group.name}</h3>
-                          <p className="text-sm text-base-content/70">Enrolled — waiting for match assignment</p>
-                        </div>
-                        <span className="badge badge-ghost">Waiting</span>
-                      </div>
-                    </div>
-                  </div>
+                  <EnrolledWaitingCard key={group.expId} group={group} />
                 ))}
               </div>
             </section>
           )}
 
-          {/* ── Active Trust Game matches ── */}
+          {/* Active Trust Game matches */}
           {activeOnChain.length > 0 && (
             <section>
               <h2 className="text-lg font-semibold mb-4">Trust Game — Active</h2>
               <div className="grid gap-4">
-                {activeOnChain.map(({ appId, match }) => {
-                  const isInvestor = match.investor === activeAddress
-                  const isMyTurn =
-                    (isInvestor && match.phase === PHASE_INVESTOR_DECISION) ||
-                    (!isInvestor && match.phase === PHASE_TRUSTEE_DECISION)
-
-                  return (
-                    <div key={String(appId)} className="card bg-base-100 border border-base-300">
-                      <div className="card-body">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3 className="card-title">Trust Game</h3>
-                            <p className="text-xs text-base-content/50 mt-1">
-                              Role: <span className="font-medium">{isInvestor ? 'Investor' : 'Trustee'}</span>
-                            </p>
-                          </div>
-                          <span className={`badge ${isMyTurn ? 'badge-warning' : 'badge-ghost'}`}>
-                            {isMyTurn ? 'Your Turn' : 'Waiting'}
-                          </span>
-                        </div>
-                        <div className="card-actions justify-end mt-2">
-                          {isMyTurn ? (
-                            <Link to={`/play/${String(appId)}`} className="btn btn-success btn-sm">
-                              Play
-                            </Link>
-                          ) : (
-                            <Link to={`/play/${String(appId)}`} className="btn btn-ghost btn-sm">
-                              View Status
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
+                {activeOnChain.map(({ appId, match }) => (
+                  <ActiveMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
+                ))}
               </div>
             </section>
           )}
 
-          {/* ── Completed Trust Game matches ── */}
+          {/* Completed Trust Game matches */}
           {completedOnChain.length > 0 && (
             <section>
               <h2 className="text-lg font-semibold mb-4">Trust Game — Completed</h2>
               <div className="grid gap-4">
                 {completedOnChain.map(({ appId, match }) => (
-                  <div key={String(appId)} className="card bg-base-100 border border-base-300">
-                    <div className="card-body">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="card-title">Trust Game</h3>
-                          <p className="text-xs text-base-content/50 mt-1">
-                            Payout:{' '}
-                            <span className="font-medium text-success">
-                              {microAlgoToAlgo(match.investor === activeAddress ? match.investorPayout : match.trusteePayout).toLocaleString()} ALGO
-                            </span>
-                          </p>
-                        </div>
-                        <span className="badge badge-success">Completed</span>
-                      </div>
-                      <div className="card-actions justify-end mt-2">
-                        <Link to={`/play/${String(appId)}`} className="btn btn-ghost btn-sm">
-                          View Results
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
+                  <CompletedMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
                 ))}
               </div>
             </section>
           )}
 
-          {/* No trust activity at all */}
-          {joinableExperiments.length === 0 && enrolledWaiting.length === 0 && activeOnChain.length === 0 && completedOnChain.length === 0 && (
-            <section>
-              <h2 className="text-lg font-semibold mb-4">Trust Game</h2>
-              <div className="text-center py-8 text-base-content/70 bg-base-200 rounded-lg">
-                <p>No Trust Game experiments available yet.</p>
-              </div>
-            </section>
-          )}
+          {/* No trust activity */}
+          {joinableExperiments.length === 0 &&
+            enrolledWaiting.length === 0 &&
+            activeOnChain.length === 0 &&
+            completedOnChain.length === 0 && (
+              <section>
+                <h2 className="text-lg font-semibold mb-4">Trust Game</h2>
+                <div className="text-center py-8 text-base-content/70 bg-base-200 rounded-lg">
+                  <p>No Trust Game experiments available yet.</p>
+                </div>
+              </section>
+            )}
 
-          {/* ── BRET (local) experiments ── */}
+          {/* BRET experiments */}
           {(availableViews.length > 0 || completedViews.length > 0) && (
             <>
               {availableViews.length > 0 && (
