@@ -9,6 +9,9 @@
     },
     {
       "path": "./projects/bx-hive-frontend"
+    },
+    {
+      "path": "./docs"
     }
   ],
   "settings": {
