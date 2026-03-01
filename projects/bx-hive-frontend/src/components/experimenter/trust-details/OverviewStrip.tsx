@@ -11,7 +11,6 @@ interface SubjectEntry {
 }
 
 interface OverviewStripProps {
-  name: string
   variations: VariationInfo[]
   subjects: Record<string, SubjectEntry[]>
   matches: Record<string, Match[]>
@@ -22,7 +21,6 @@ interface OverviewStripProps {
 }
 
 export default function OverviewStrip({
-  name,
   variations,
   subjects,
   matches,
@@ -50,7 +48,7 @@ export default function OverviewStrip({
     <div className="bg-base-200 rounded-box p-4 mb-6">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1 text-xs">
-          <h2 className="text-sm font-semibold text-base-content/60">{name} Overview</h2>
+          <h2 className="text-sm font-semibold text-base-content/60">Overview</h2>
           {autoRefresh ? (
             <>
               <span className="tooltip tooltip-bottom" data-tip="Pause auto-refresh">

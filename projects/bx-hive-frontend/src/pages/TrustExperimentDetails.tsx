@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
 import VariationPanel from '../components/experimenter/trust-details/VariationPanel'
-import { LoadingSpinner, ErrorMessage, StatusDot } from '../components/ui'
+import { LoadingSpinner, ErrorMessage, PageHeader, StatusDot } from '../components/ui'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import { useTrustVariation } from '../hooks/useTrustVariation'
@@ -112,12 +112,13 @@ export default function TrustExperimentDetails() {
 
   return (
     <div>
-      <Link to="/dashboard/experimenter" className="btn btn-ghost btn-sm mb-4">
-        &larr; Experimenter Dashboard
-      </Link>
+      <PageHeader
+        title={group.name}
+        backTo="/dashboard/experimenter"
+        backTooltip="Back to Experimenter Dashboard"
+      />
 
       <OverviewStrip
-        name={group.name}
         variations={variations}
         subjects={subjects}
         matches={matches}

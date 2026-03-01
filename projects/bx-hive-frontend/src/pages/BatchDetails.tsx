@@ -122,6 +122,7 @@ export default function BatchDetails() {
       <PageHeader
         title={batch.name}
         backTo="/dashboard/experimenter"
+        backTooltip="Back to Experimenter Dashboard"
         subtitle={
           <>
             <span className="text-base-content/70">{template?.label || template?.name || batch.templateId}</span>
