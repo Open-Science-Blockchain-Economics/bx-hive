@@ -2,5 +2,25 @@
   // Disabled due to matangover.mypy extension not supporting monorepos
   // To be addressed as part of https://github.com/matangover/mypy-vscode/issues/82
   "mypy.enabled": false,
-  "window.zoomLevel": 1.2
+  "window.zoomLevel": 1.2,
+  "workbench.colorCustomizations": {
+    "activityBar.activeBackground": "#eeca28",
+    "activityBar.background": "#eeca28",
+    "activityBar.foreground": "#15202b",
+    "activityBar.inactiveForeground": "#15202b99",
+    "activityBarBadge.background": "#0c947b",
+    "activityBarBadge.foreground": "#e7e7e7",
+    "commandCenter.border": "#15202b99",
+    "sash.hoverBorder": "#eeca28",
+    "statusBar.background": "#d2af11",
+    "statusBar.foreground": "#15202b",
+    "statusBarItem.hoverBackground": "#a3880d",
+    "statusBarItem.remoteBackground": "#d2af11",
+    "statusBarItem.remoteForeground": "#15202b",
+    "titleBar.activeBackground": "#d2af11",
+    "titleBar.activeForeground": "#15202b",
+    "titleBar.inactiveBackground": "#d2af1199",
+    "titleBar.inactiveForeground": "#15202b99"
+  },
+  "peacock.color": "#d2af11"
 }
