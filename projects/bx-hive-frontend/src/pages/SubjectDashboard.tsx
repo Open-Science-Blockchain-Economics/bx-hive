@@ -1,10 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ExperimentCard from '../components/subject/ExperimentCard'
 import ActiveMatchCard from '../components/subject/ActiveMatchCard'
 import CompletedMatchCard from '../components/subject/CompletedMatchCard'
 import EnrolledWaitingCard from '../components/subject/EnrolledWaitingCard'
 import JoinableExperimentCard from '../components/subject/JoinableExperimentCard'
-import { LoadingSpinner } from '../components/ui'
 import { getBatches, getExperiments, getExperimentsByBatchId, registerForBatch, registerForExperiment } from '../db'
 import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
@@ -49,8 +48,8 @@ export default function SubjectDashboard() {
   const { getPlayerMatch, selfEnroll, getSubjectCount, isSubjectEnrolled } = useTrustVariation()
   const queryClient = useQueryClient()
 
-  const { data: onChainData, isLoading: onChainLoading } = useQuery<OnChainData>({
-    queryKey: queryKeys.subjectOnChain(activeAddress ?? ''),
+  const { data: onChainData } = useSuspenseQuery<OnChainData>({
+    queryKey: queryKeys.subjectOnChain(activeAddress!),
     queryFn: async () => {
       const groups = await listExperiments()
       const matchViews: OnChainMatchView[] = []
@@ -88,10 +87,9 @@ export default function SubjectDashboard() {
 
       return { matchViews, expViews }
     },
-    enabled: !!activeAddress,
   })
 
-  const { data: localData, isLoading: localLoading } = useQuery<SubjectExperimentView[]>({
+  const { data: localData } = useSuspenseQuery<SubjectExperimentView[]>({
     queryKey: queryKeys.subjectLocal(activeUser?.id ?? ''),
     queryFn: async () => {
       const allExperiments = await getExperiments()
@@ -134,7 +132,6 @@ export default function SubjectDashboard() {
 
       return views
     },
-    enabled: true,
   })
 
   const joinMutation = useMutation({
@@ -191,9 +188,9 @@ export default function SubjectDashboard() {
     return view.experiment.matches.some((m) => (m.player1Id === activeUser.id || m.player2Id === activeUser.id) && m.status === 'completed')
   }
 
-  const onChainMatches = onChainData?.matchViews ?? []
-  const onChainExperiments = onChainData?.expViews ?? []
-  const experimentViews = localData ?? []
+  const onChainMatches = onChainData.matchViews
+  const onChainExperiments = onChainData.expViews
+  const experimentViews = localData
 
   const activeOnChain = onChainMatches.filter((v) => v.match.phase !== PHASE_COMPLETED)
   const completedOnChain = onChainMatches.filter((v) => v.match.phase === PHASE_COMPLETED)
@@ -202,8 +199,6 @@ export default function SubjectDashboard() {
   const availableViews = experimentViews.filter((view) => !hasCompletedMatch(view))
   const completedViews = experimentViews.filter((view) => hasCompletedMatch(view))
 
-  const isLoading = localLoading || onChainLoading
-
   return (
     <div>
       <div className="mb-6">
@@ -211,10 +206,7 @@ export default function SubjectDashboard() {
         <p className="text-base-content/70 mt-2">View and participate in experiments</p>
       </div>
 
-      {isLoading ? (
-        <LoadingSpinner />
-      ) : (
-        <div className="space-y-8">
+      <div className="space-y-8">
           {/* Trust Game: Available to Join */}
           {joinableExperiments.length > 0 && (
             <section>
@@ -334,7 +326,6 @@ export default function SubjectDashboard() {
             </>
           )}
         </div>
-      )}
     </div>
   )
 }

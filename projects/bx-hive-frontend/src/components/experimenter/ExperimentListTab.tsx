@@ -1,7 +1,6 @@
 import type { ExperimentGroup, VariationInfo } from '../../hooks/useTrustExperiments'
 import type { VariationConfig } from '../../hooks/useTrustVariation'
 import type { Experiment, ExperimentBatch } from '../../types'
-import { LoadingSpinner } from '../ui'
 import LocalBatchCard from './LocalBatchCard'
 import LocalExperimentCard from './LocalExperimentCard'
 import OnChainExperimentCard from './OnChainExperimentCard'
@@ -16,7 +15,6 @@ interface BatchWithExperiments extends ExperimentBatch {
 }
 
 interface ExperimentListTabProps {
-  loading: boolean
   onChainExps: OnChainExperiment[]
   localBatches: BatchWithExperiments[]
   localExperiments: Experiment[]
@@ -26,7 +24,6 @@ interface ExperimentListTabProps {
 }
 
 export default function ExperimentListTab({
-  loading,
   onChainExps,
   localBatches,
   localExperiments,
@@ -36,10 +33,6 @@ export default function ExperimentListTab({
 }: ExperimentListTabProps) {
   const hasOnChain = onChainExps.length > 0
   const hasLocal = localExperiments.length > 0 || localBatches.length > 0
-
-  if (loading) {
-    return <LoadingSpinner />
-  }
 
   if (!hasOnChain && !hasLocal) {
     return (

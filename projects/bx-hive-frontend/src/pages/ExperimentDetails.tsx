@@ -1,28 +1,21 @@
 import { Link, useParams } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { EXPERIMENT_RESULTS_COMPONENTS } from '../components/experimenter/results'
 import { closeExperimentRegistration, getExperimentById, getUsers, updateExperimentStatus } from '../db'
 import { getTemplateById } from '../experiment-logic/templates'
-import { useActiveUser } from '../hooks/useActiveUser'
 import { queryKeys } from '../lib/queryKeys'
 
 export default function ExperimentDetails() {
   const { experimentId } = useParams<{ experimentId: string }>()
-  const { activeUser } = useActiveUser()
   const queryClient = useQueryClient()
 
-  const {
-    data,
-    isLoading,
-    error: queryError,
-  } = useQuery({
-    queryKey: queryKeys.experimentDetails(experimentId ?? ''),
+  const { data } = useSuspenseQuery({
+    queryKey: queryKeys.experimentDetails(experimentId!),
     queryFn: async () => {
       const [experiment, users] = await Promise.all([getExperimentById(experimentId!), getUsers()])
       if (!experiment) throw new Error('Experiment not found')
       return { experiment, users }
     },
-    enabled: !!experimentId && !!activeUser,
   })
 
   const closeRegistrationMutation = useMutation({
@@ -38,27 +31,6 @@ export default function ExperimentDetails() {
   const actionInProgress = closeRegistrationMutation.isPending || reopenRegistrationMutation.isPending
   const actionError =
     (closeRegistrationMutation.error ?? reopenRegistrationMutation.error)?.message ?? null
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <span className="loading loading-spinner loading-lg"></span>
-      </div>
-    )
-  }
-
-  const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load experiment data' : null
-
-  if (error || !data || !activeUser) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-error">{error || 'Something went wrong'}</p>
-        <Link to="/dashboard/experimenter" className="btn btn-primary mt-4">
-          Back to Dashboard
-        </Link>
-      </div>
-    )
-  }
 
   const { experiment, users } = data
   const template = getTemplateById(experiment.templateId)

@@ -121,7 +121,7 @@ function AccountRow({
 }
 
 export default function LocalnetAccountsTable() {
-  const { accounts, loading, seeded, registerAccount, refresh } = useLocalnetAccounts()
+  const { accounts, seeded, registerAccount, refresh } = useLocalnetAccounts()
   const { wallets, activeAddress } = useWallet()
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null)
 
@@ -144,7 +144,7 @@ export default function LocalnetAccountsTable() {
         <div className="flex items-center justify-between mb-2">
           <div>
             <h2 className="card-title">Test Accounts</h2>
-            {!loading && seeded && (
+            {seeded && (
               <p className="text-xs text-base-content/50 mt-0.5">
                 {registeredCount}/{accounts.length} registered — click an unregistered row to set up
               </p>
@@ -155,7 +155,7 @@ export default function LocalnetAccountsTable() {
           </button>
         </div>
 
-        {!seeded && !loading && (
+        {!seeded && (
           <div className="alert alert-warning text-sm">
             <span>
               No seeded accounts found. Run <code className="font-mono bg-base-300 px-1 rounded">pnpm seed:localnet</code> then refresh.
@@ -163,13 +163,7 @@ export default function LocalnetAccountsTable() {
           </div>
         )}
 
-        {loading && (
-          <div className="flex justify-center py-6">
-            <span className="loading loading-spinner loading-md" />
-          </div>
-        )}
-
-        {seeded && !loading && (
+        {seeded && (
           <div className="overflow-x-auto">
             <table className="table table-sm">
               <thead>

@@ -1,6 +1,12 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, useRouteError } from 'react-router-dom'
 import Layout from './components/layout/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import QueryBoundary, { RouteErrorFallback } from './components/QueryBoundary'
+
+function RootErrorElement() {
+  const error = useRouteError()
+  return <RouteErrorFallback error={error} resetErrorBoundary={() => window.location.reload()} />
+}
 import BatchDetails from './pages/BatchDetails'
 import ExperimentDetails from './pages/ExperimentDetails'
 import ExperimenterDashboard from './pages/ExperimenterDashboard'
@@ -13,13 +19,16 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <Layout />,
+    errorElement: <RootErrorElement />,
     children: [
-      { index: true, element: <Home /> },
+      { index: true, element: <QueryBoundary><Home /></QueryBoundary> },
       {
         path: 'dashboard/experimenter',
         element: (
           <ProtectedRoute requiredRole="experimenter">
-            <ExperimenterDashboard />
+            <QueryBoundary>
+              <ExperimenterDashboard />
+            </QueryBoundary>
           </ProtectedRoute>
         ),
       },
@@ -27,7 +36,9 @@ export const router = createBrowserRouter([
         path: 'experimenter/experiment/:experimentId',
         element: (
           <ProtectedRoute requiredRole="experimenter">
-            <ExperimentDetails />
+            <QueryBoundary>
+              <ExperimentDetails />
+            </QueryBoundary>
           </ProtectedRoute>
         ),
       },
@@ -35,7 +46,9 @@ export const router = createBrowserRouter([
         path: 'experimenter/batch/:batchId',
         element: (
           <ProtectedRoute requiredRole="experimenter">
-            <BatchDetails />
+            <QueryBoundary>
+              <BatchDetails />
+            </QueryBoundary>
           </ProtectedRoute>
         ),
       },
@@ -43,7 +56,9 @@ export const router = createBrowserRouter([
         path: 'dashboard/subject',
         element: (
           <ProtectedRoute requiredRole="subject">
-            <SubjectDashboard />
+            <QueryBoundary>
+              <SubjectDashboard />
+            </QueryBoundary>
           </ProtectedRoute>
         ),
       },
@@ -51,7 +66,9 @@ export const router = createBrowserRouter([
         path: 'experimenter/trust/:expId',
         element: (
           <ProtectedRoute requiredRole="experimenter">
-            <TrustExperimentDetails />
+            <QueryBoundary>
+              <TrustExperimentDetails />
+            </QueryBoundary>
           </ProtectedRoute>
         ),
       },
@@ -59,7 +76,9 @@ export const router = createBrowserRouter([
         path: 'play/:experimentId',
         element: (
           <ProtectedRoute requiredRole="subject">
-            <PlayExperiment />
+            <QueryBoundary>
+              <PlayExperiment />
+            </QueryBoundary>
           </ProtectedRoute>
         ),
       },

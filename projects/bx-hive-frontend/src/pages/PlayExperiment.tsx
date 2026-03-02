@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import BRETExperiment from '../components/experiment-types/bret/BRETExperiment'
 import TrustExperiment from '../components/experiment-types/trust/TrustExperiment'
 import { getExperimentById } from '../db'
@@ -73,12 +73,7 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
 // ── Local (BRET) view ────────────────────────────────────────────────────────
 
 function LocalExperiment({ experimentId, activeUser }: { experimentId: string; activeUser: { id: string } }) {
-  const {
-    data,
-    isLoading,
-    error: queryError,
-    refetch,
-  } = useQuery({
+  const { data, refetch } = useSuspenseQuery({
     queryKey: queryKeys.localExperiment(experimentId),
     queryFn: async () => {
       const experiment = await getExperimentById(experimentId)
@@ -88,27 +83,6 @@ function LocalExperiment({ experimentId, activeUser }: { experimentId: string; a
       return { experiment, match } as { experiment: NonNullable<typeof experiment>; match: LocalMatch }
     },
   })
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <span className="loading loading-spinner loading-lg"></span>
-      </div>
-    )
-  }
-
-  const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load experiment' : null
-
-  if (error || !data) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-error">{error || 'Something went wrong'}</p>
-        <Link to="/dashboard/subject" className="btn btn-primary mt-4">
-          Back to Dashboard
-        </Link>
-      </div>
-    )
-  }
 
   return (
     <div>

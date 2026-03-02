@@ -1,5 +1,5 @@
 import { AlgorandClient, algo } from '@algorandfoundation/algokit-utils'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getRegistryClient } from '../utils/algorand'
 import { getAlgodConfigFromViteEnvironment, getKmdConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs'
 import { queryKeys } from '../lib/queryKeys'
@@ -51,8 +51,14 @@ async function fetchLocalnetAccounts(): Promise<LocalnetAccountsData> {
             onChainName: user.name,
           } satisfies LocalnetAccount
         }
-      } catch {
-        // Not registered yet — that's fine
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : ''
+        if (msg.includes('User not found')) {
+          // eslint-disable-next-line no-console
+          console.warn(`[localnet] User not found for ${address}`)
+        } else {
+          throw err
+        }
       }
       return { name, address, registered: false } satisfies LocalnetAccount
     }),
@@ -64,7 +70,7 @@ async function fetchLocalnetAccounts(): Promise<LocalnetAccountsData> {
 export function useLocalnetAccounts() {
   const queryClient = useQueryClient()
 
-  const { data, isLoading, refetch } = useQuery({
+  const { data, refetch } = useSuspenseQuery({
     queryKey: queryKeys.localnetAccounts(),
     queryFn: fetchLocalnetAccounts,
   })
@@ -113,9 +119,8 @@ export function useLocalnetAccounts() {
   })
 
   return {
-    accounts: data?.accounts ?? [],
-    loading: isLoading,
-    seeded: data?.seeded ?? false,
+    accounts: data.accounts,
+    seeded: data.seeded,
     registerAccount: (address: string, name: string, role: LocalnetAccountRole) =>
       registerMutation.mutateAsync({ address, name, role }),
     refresh: refetch,

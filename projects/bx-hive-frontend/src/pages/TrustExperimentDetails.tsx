@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
 import VariationPanel from '../components/experimenter/trust-details/VariationPanel'
-import { LoadingSpinner, ErrorMessage, PageHeader, StatusDot } from '../components/ui'
+import { PageHeader, StatusDot } from '../components/ui'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import { useTrustVariation } from '../hooks/useTrustVariation'
@@ -42,11 +42,9 @@ export default function TrustExperimentDetails() {
 
   const {
     data,
-    isLoading,
     isFetching,
-    error: queryError,
     refetch,
-  } = useQuery<ExperimentDetailsData>({
+  } = useSuspenseQuery<ExperimentDetailsData>({
     queryKey: queryKeys.trustExperimentDetails(expId),
     queryFn: async () => {
       const g = await getExperiment(expId)
@@ -73,7 +71,6 @@ export default function TrustExperimentDetails() {
       return { group: g, variations: vars, subjects, matches, configs }
     },
     refetchInterval: autoRefresh ? 5000 : false,
-    enabled: !!expId,
   })
 
   const createMatchMutation = useMutation({
@@ -83,14 +80,6 @@ export default function TrustExperimentDetails() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) })
     },
   })
-
-  if (isLoading) return <LoadingSpinner className="flex justify-center py-16" />
-
-  const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load experiment' : null
-
-  if (error || !data) {
-    return <ErrorMessage message={error ?? 'Experiment not found'} />
-  }
 
   const { group, variations, subjects, matches, configs } = data
   const selectedVar = variations[selectedVarIdx]

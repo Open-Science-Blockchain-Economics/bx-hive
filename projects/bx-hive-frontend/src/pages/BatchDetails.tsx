@@ -1,37 +1,30 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { EXPERIMENT_RESULTS_COMPONENTS } from '../components/experimenter/results'
 import AggregateResultsTable from '../components/experimenter/batch-details/AggregateResultsTable'
 import BatchConfigCard from '../components/experimenter/batch-details/BatchConfigCard'
 import BatchManagementCard from '../components/experimenter/batch-details/BatchManagementCard'
 import VariationDetail from '../components/experimenter/batch-details/VariationDetail'
-import { LoadingSpinner, ErrorMessage, PageHeader, StatusBadge } from '../components/ui'
+import { PageHeader, StatusBadge } from '../components/ui'
 import { getBatchById, getExperimentsByBatchId, getUsers, getVariationLabel, updateBatch, updateExperimentStatus } from '../db'
 import { getTemplateById } from '../experiment-logic/templates'
-import { useActiveUser } from '../hooks/useActiveUser'
 import { queryKeys } from '../lib/queryKeys'
 
 export default function BatchDetails() {
   const { batchId } = useParams<{ batchId: string }>()
-  const { activeUser } = useActiveUser()
   const queryClient = useQueryClient()
 
   const [activeVariationTab, setActiveVariationTab] = useState<number | 'all'>('all')
 
-  const {
-    data,
-    isLoading,
-    error: queryError,
-  } = useQuery({
-    queryKey: queryKeys.batchDetails(batchId ?? ''),
+  const { data } = useSuspenseQuery({
+    queryKey: queryKeys.batchDetails(batchId!),
     queryFn: async () => {
       const [batch, users] = await Promise.all([getBatchById(batchId!), getUsers()])
       if (!batch) throw new Error('Batch not found')
       const experiments = await getExperimentsByBatchId(batchId!)
       return { batch, experiments, users }
     },
-    enabled: !!batchId && !!activeUser,
   })
 
   function invalidate() {
@@ -72,14 +65,6 @@ export default function BatchDetails() {
 
   const actionInProgress =
     closeVariationMutation.isPending || reopenVariationMutation.isPending || closeBatchMutation.isPending || reopenBatchMutation.isPending
-
-  if (isLoading) return <LoadingSpinner />
-
-  const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load batch data' : null
-
-  if (error || !data || !activeUser) {
-    return <ErrorMessage message={error || 'Something went wrong'} />
-  }
 
   const { batch, experiments, users } = data
   const template = getTemplateById(batch.templateId)

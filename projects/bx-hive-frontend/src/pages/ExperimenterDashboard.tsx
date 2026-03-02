@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
 import { getBatchesByExperimenter, getExperimentsByBatchId, getExperimentsByExperimenter } from '../db'
 import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
@@ -41,15 +41,14 @@ export default function ExperimenterDashboard() {
 
   const [activeTab, setActiveTab] = useState<TabType>('experiments')
 
-  const { data: walletBalanceAlgo = null } = useQuery({
-    queryKey: queryKeys.walletBalance(activeAddress ?? ''),
+  const { data: walletBalanceAlgo } = useSuspenseQuery({
+    queryKey: queryKeys.walletBalance(activeAddress!),
     queryFn: () =>
       algorand!.account.getInformation(activeAddress!).then((info) => Number(info.balance.microAlgo) / 1_000_000),
-    enabled: !!algorand && !!activeAddress,
   })
 
-  const { data: onChainData, isLoading: onChainLoading } = useQuery<OnChainData>({
-    queryKey: queryKeys.onChainExperiments(activeAddress ?? ''),
+  const { data: onChainData } = useSuspenseQuery<OnChainData>({
+    queryKey: queryKeys.onChainExperiments(activeAddress!),
     queryFn: async () => {
       const groups = await listExperiments()
       const mine = groups.filter((g) => g.owner === activeAddress)
@@ -89,11 +88,10 @@ export default function ExperimenterDashboard() {
 
       return { onChainExps, subjectCounts: counts, variationConfigs: configs }
     },
-    enabled: !!activeAddress,
   })
 
-  const { data: localData, isLoading: localLoading } = useQuery<LocalData>({
-    queryKey: queryKeys.localExperiments(activeUser?.id ?? ''),
+  const { data: localData } = useSuspenseQuery<LocalData>({
+    queryKey: queryKeys.localExperiments(activeUser!.id),
     queryFn: async () => {
       const allExps = await getExperimentsByExperimenter(activeUser!.id)
       const localExperiments = allExps.filter((e) => e.templateId === 'bret' && !e.batchId)
@@ -109,10 +107,7 @@ export default function ExperimenterDashboard() {
 
       return { localExperiments, localBatches }
     },
-    enabled: !!activeUser,
   })
-
-  const loading = onChainLoading || localLoading
 
   return (
     <div>
@@ -132,12 +127,11 @@ export default function ExperimenterDashboard() {
 
       {activeTab === 'experiments' && (
         <ExperimentListTab
-          loading={loading}
-          onChainExps={onChainData?.onChainExps ?? []}
-          localBatches={localData?.localBatches ?? []}
-          localExperiments={localData?.localExperiments ?? []}
-          subjectCounts={onChainData?.subjectCounts ?? {}}
-          variationConfigs={onChainData?.variationConfigs ?? {}}
+          onChainExps={onChainData.onChainExps}
+          localBatches={localData.localBatches}
+          localExperiments={localData.localExperiments}
+          subjectCounts={onChainData.subjectCounts}
+          variationConfigs={onChainData.variationConfigs}
           onCreateClick={() => setActiveTab('create')}
         />
       )}
