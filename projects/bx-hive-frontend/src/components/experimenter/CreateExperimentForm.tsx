@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useMutation } from '@tanstack/react-query'
 
 const DOCS_LINKS = {
   participants: '/docs/participants',
@@ -32,8 +33,6 @@ export default function CreateExperimentForm({
   const [selectedTemplateId, setSelectedTemplateId] = useState(experimentTemplates[0]?.id || '')
   const [experimentName, setExperimentName] = useState('')
   const [parameters, setParameters] = useState<Record<string, number | string>>({})
-  const [creating, setCreating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const [batchModeEnabled, setBatchModeEnabled] = useState(false)
   const [variations, setVariations] = useState<ParameterVariation[]>([])
@@ -61,74 +60,88 @@ export default function CreateExperimentForm({
     }))
   }
 
-  async function handleCreateExperiment() {
-    setError(null)
-    if (!experimentName.trim()) {
-      setError('Experiment name is required')
-      return
-    }
-    if (selectedTemplateId === 'trust-game' && (!maxPerVariation || Number(maxPerVariation) < 1)) {
-      setError('Max matches per variation must be at least 1 for trust game experiments')
-      return
-    }
-    if (!selectedTemplate) return
-
-    setCreating(true)
-    try {
-      if (selectedTemplateId === 'trust-game') {
-        await createTrustGameOnChain()
-      } else {
-        await createBretLocal()
-      }
-      setExperimentName('')
-      setBatchModeEnabled(false)
-      setVariations([])
-      setMaxPerVariation('')
-      onCreated()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create experiment')
-    } finally {
-      setCreating(false)
-    }
+  function resetForm() {
+    setExperimentName('')
+    setBatchModeEnabled(false)
+    setVariations([])
+    setMaxPerVariation('')
   }
 
-  async function createTrustGameOnChain() {
-    const maxSub = Number(maxPerVariation) * 2
-    if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
-      const combos = generateVariationCombinations(parameters, variations)
-      const { expId } = await createExperimentWithVariation(
-        experimentName.trim(),
-        toVariationParams(combos[0], getVariationLabel(combos[0], variations), maxSub, computeEscrowAlgo(combos[0], maxSub)),
-      )
-      for (let i = 1; i < combos.length; i++) {
-        await createVariation(
-          expId,
-          toVariationParams(combos[i], getVariationLabel(combos[i], variations), maxSub, computeEscrowAlgo(combos[i], maxSub)),
+  const trustMutation = useMutation({
+    mutationFn: async () => {
+      const maxSub = Number(maxPerVariation) * 2
+      if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
+        const combos = generateVariationCombinations(parameters, variations)
+        const { expId } = await createExperimentWithVariation(
+          experimentName.trim(),
+          toVariationParams(combos[0], getVariationLabel(combos[0], variations), maxSub, computeEscrowAlgo(combos[0], maxSub)),
+        )
+        for (let i = 1; i < combos.length; i++) {
+          await createVariation(
+            expId,
+            toVariationParams(combos[i], getVariationLabel(combos[i], variations), maxSub, computeEscrowAlgo(combos[i], maxSub)),
+          )
+        }
+      } else {
+        await createExperimentWithVariation(
+          experimentName.trim(),
+          toVariationParams(parameters, 'Default', maxSub, computeEscrowAlgo(parameters, maxSub)),
         )
       }
+    },
+    onSuccess: () => {
+      resetForm()
+      onCreated()
+    },
+  })
+
+  const bretMutation = useMutation({
+    mutationFn: async () => {
+      if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
+        await createExperimentBatch(
+          selectedTemplateId,
+          activeUserId,
+          experimentName.trim(),
+          parameters,
+          variations,
+          assignmentStrategy,
+          maxPerVariation ? Number(maxPerVariation) : undefined,
+        )
+      } else {
+        await dbCreateExperiment(selectedTemplateId, activeUserId, experimentName.trim(), parameters)
+      }
+    },
+    onSuccess: () => {
+      resetForm()
+      onCreated()
+    },
+  })
+
+  const creating = trustMutation.isPending || bretMutation.isPending
+  const error = (trustMutation.error ?? bretMutation.error)?.message ?? null
+
+  function handleCreateExperiment() {
+    if (!experimentName.trim()) {
+      trustMutation.reset()
+      bretMutation.reset()
+      return
+    }
+    if (selectedTemplateId === 'trust-game' && (!maxPerVariation || Number(maxPerVariation) < 1)) return
+    if (!selectedTemplate) return
+
+    if (selectedTemplateId === 'trust-game') {
+      trustMutation.mutate()
     } else {
-      await createExperimentWithVariation(
-        experimentName.trim(),
-        toVariationParams(parameters, 'Default', maxSub, computeEscrowAlgo(parameters, maxSub)),
-      )
+      bretMutation.mutate()
     }
   }
 
-  async function createBretLocal() {
-    if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
-      await createExperimentBatch(
-        selectedTemplateId,
-        activeUserId,
-        experimentName.trim(),
-        parameters,
-        variations,
-        assignmentStrategy,
-        maxPerVariation ? Number(maxPerVariation) : undefined,
-      )
-    } else {
-      await dbCreateExperiment(selectedTemplateId, activeUserId, experimentName.trim(), parameters)
-    }
-  }
+  // Validation errors shown inline (not from mutation)
+  const validationError = !experimentName.trim()
+    ? 'Experiment name is required'
+    : selectedTemplateId === 'trust-game' && (!maxPerVariation || Number(maxPerVariation) < 1)
+      ? 'Max matches per variation must be at least 1 for trust game experiments'
+      : null
 
   const maxPayout =
     selectedTemplateId === 'trust-game' ? (Number(parameters.E1) || 0) * (Number(parameters.m) || 1) + (Number(parameters.E2) || 0) : null
@@ -318,16 +331,16 @@ export default function CreateExperimentForm({
           )}
         </div>
 
-        {error && (
+        {(error ?? validationError) && (
           <div className="alert alert-error mt-4">
-            <span>{error}</span>
+            <span>{error ?? validationError}</span>
           </div>
         )}
 
         <div className="card-actions justify-end mt-6">
           <button
             className="btn btn-primary"
-            onClick={() => void handleCreateExperiment()}
+            onClick={handleCreateExperiment}
             disabled={creating || !experimentName.trim() || insufficientBalance}
           >
             {creating ? (
