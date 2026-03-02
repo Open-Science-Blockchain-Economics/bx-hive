@@ -3,8 +3,8 @@ title: Creating an Account
 description: Sign up as an Experimenter or Subject on bx-hive.
 ---
 
-## Choosing a Role
+:::note
+The account creation workflow is currently under development. This page will be updated once the registration flow is available in the app.
+:::
 
-## Signing Up
-
-## Account Details
+In the meantime, see the [Platform Overview](../overview/) to learn about the two roles (Experimenter and Subject) and how bx-hive works.
