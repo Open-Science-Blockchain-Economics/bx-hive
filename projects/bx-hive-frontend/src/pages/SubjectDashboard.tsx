@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ExperimentCard from '../components/subject/ExperimentCard'
 import ActiveMatchCard from '../components/subject/ActiveMatchCard'
 import CompletedMatchCard from '../components/subject/CompletedMatchCard'
@@ -12,6 +12,7 @@ import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustVariation, PHASE_COMPLETED } from '../hooks/useTrustVariation'
 import type { Match as OnChainMatch } from '../hooks/useTrustVariation'
+import { queryKeys } from '../lib/queryKeys'
 import { pickVariationRoundRobin, type VariationSlot } from '../utils/distributeSubjects'
 import type { Experiment, ExperimentBatch } from '../types'
 
@@ -36,29 +37,21 @@ interface OnChainExperimentView {
   hasMatch: boolean
 }
 
+interface OnChainData {
+  matchViews: OnChainMatchView[]
+  expViews: OnChainExperimentView[]
+}
+
 export default function SubjectDashboard() {
   const { activeUser } = useActiveUser()
   const { activeAddress } = useAlgorand()
   const { listExperiments, listVariations } = useTrustExperiments()
   const { getPlayerMatch, selfEnroll, getSubjectCount, isSubjectEnrolled } = useTrustVariation()
+  const queryClient = useQueryClient()
 
-  const [experimentViews, setExperimentViews] = useState<SubjectExperimentView[]>([])
-  const [localLoading, setLocalLoading] = useState(true)
-  const [registering, setRegistering] = useState<string | null>(null)
-
-  const [onChainMatches, setOnChainMatches] = useState<OnChainMatchView[]>([])
-  const [onChainExperiments, setOnChainExperiments] = useState<OnChainExperimentView[]>([])
-  const [onChainLoading, setOnChainLoading] = useState(true)
-  const [joining, setJoining] = useState<number | null>(null)
-  const [joinError, setJoinError] = useState<string | null>(null)
-
-  const loadOnChainData = useCallback(async () => {
-    if (!activeAddress) {
-      setOnChainLoading(false)
-      return
-    }
-    try {
-      setOnChainLoading(true)
+  const { data: onChainData, isLoading: onChainLoading } = useQuery<OnChainData>({
+    queryKey: queryKeys.subjectOnChain(activeAddress ?? ''),
+    queryFn: async () => {
       const groups = await listExperiments()
       const matchViews: OnChainMatchView[] = []
       const expViews: OnChainExperimentView[] = []
@@ -69,7 +62,7 @@ export default function SubjectDashboard() {
         let hasMatch = false
 
         for (const v of vars) {
-          const match = await getPlayerMatch(v.appId, activeAddress)
+          const match = await getPlayerMatch(v.appId, activeAddress!)
           if (match) {
             matchViews.push({ appId: v.appId, match })
             enrolled = true
@@ -80,7 +73,7 @@ export default function SubjectDashboard() {
         if (!enrolled) {
           for (const v of vars) {
             try {
-              if (await isSubjectEnrolled(v.appId, activeAddress)) {
+              if (await isSubjectEnrolled(v.appId, activeAddress!)) {
                 enrolled = true
                 break
               }
@@ -93,57 +86,14 @@ export default function SubjectDashboard() {
         expViews.push({ group, variations: vars, enrolled, hasMatch })
       }
 
-      setOnChainMatches(matchViews)
-      setOnChainExperiments(expViews)
-    } catch (err) {
-      console.error('Failed to load on-chain data:', err)
-    } finally {
-      setOnChainLoading(false)
-    }
-  }, [activeAddress, listExperiments, listVariations, getPlayerMatch, isSubjectEnrolled])
+      return { matchViews, expViews }
+    },
+    enabled: !!activeAddress,
+  })
 
-  useEffect(() => {
-    void loadLocalExperiments()
-    void loadOnChainData()
-  }, [activeAddress, loadOnChainData])
-
-  async function handleJoinExperiment(expId: number, variations: VariationInfo[]) {
-    if (!activeAddress) return
-    setJoining(expId)
-    setJoinError(null)
-    try {
-      const slots: VariationSlot[] = await Promise.all(
-        variations.map(async (v) => {
-          const count = await getSubjectCount(v.appId)
-          return { appId: v.appId, subjectCount: count, maxSubjects: 0 }
-        }),
-      )
-
-      const chosenAppId = pickVariationRoundRobin(slots)
-      if (!chosenAppId) {
-        setJoinError('All variations are full')
-        return
-      }
-
-      await selfEnroll(chosenAppId)
-      await loadOnChainData()
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to join experiment'
-      if (msg.includes('Already enrolled')) {
-        setJoinError('You are already enrolled in this experiment')
-      } else if (msg.includes('User not found')) {
-        setJoinError('Please register your account first (Sign Up page)')
-      } else {
-        setJoinError(msg)
-      }
-    } finally {
-      setJoining(null)
-    }
-  }
-
-  async function loadLocalExperiments() {
-    try {
-      setLocalLoading(true)
+  const { data: localData, isLoading: localLoading } = useQuery<SubjectExperimentView[]>({
+    queryKey: queryKeys.subjectLocal(activeUser?.id ?? ''),
+    queryFn: async () => {
       const allExperiments = await getExperiments()
       const allBatches = await getBatches()
       const views: SubjectExperimentView[] = []
@@ -182,12 +132,48 @@ export default function SubjectDashboard() {
         })
       }
 
-      setExperimentViews(views)
-    } catch (err) {
-      console.error('Failed to load local experiments:', err)
-    } finally {
-      setLocalLoading(false)
-    }
+      return views
+    },
+    enabled: true,
+  })
+
+  const joinMutation = useMutation({
+    mutationFn: async ({ variations }: { expId: number; variations: VariationInfo[] }) => {
+      const slots: VariationSlot[] = await Promise.all(
+        variations.map(async (v) => {
+          const count = await getSubjectCount(v.appId)
+          return { appId: v.appId, subjectCount: count, maxSubjects: 0 }
+        }),
+      )
+      const chosenAppId = pickVariationRoundRobin(slots)
+      if (!chosenAppId) throw new Error('All variations are full')
+      await selfEnroll(chosenAppId)
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.subjectOnChain(activeAddress ?? '') })
+    },
+  })
+
+  const registerMutation = useMutation({
+    mutationFn: async ({ view, playerCount }: { view: SubjectExperimentView; playerCount: 1 | 2 }) => {
+      if (!activeUser) return
+      if (view.isBatch) {
+        await registerForBatch(view.id, activeUser.id, playerCount)
+      } else {
+        await registerForExperiment(view.id, activeUser.id, playerCount)
+      }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.subjectLocal(activeUser?.id ?? '') })
+    },
+  })
+
+  function getJoinError(expId: number): string | null {
+    if (!joinMutation.isError || joinMutation.variables?.expId !== expId) return null
+    const msg = joinMutation.error?.message ?? 'Failed to join experiment'
+    if (msg.includes('Already enrolled')) return 'You are already enrolled in this experiment'
+    if (msg.includes('User not found')) return 'Please register your account first (Sign Up page)'
+    return msg
   }
 
   function isRegistered(view: SubjectExperimentView): boolean {
@@ -205,22 +191,9 @@ export default function SubjectDashboard() {
     return view.experiment.matches.some((m) => (m.player1Id === activeUser.id || m.player2Id === activeUser.id) && m.status === 'completed')
   }
 
-  async function handleRegister(view: SubjectExperimentView, playerCount: 1 | 2) {
-    if (!activeUser) return
-    try {
-      setRegistering(view.id)
-      if (view.isBatch) {
-        await registerForBatch(view.id, activeUser.id, playerCount)
-      } else {
-        await registerForExperiment(view.id, activeUser.id, playerCount)
-      }
-      await loadLocalExperiments()
-    } catch (err) {
-      console.error('Failed to register:', err)
-    } finally {
-      setRegistering(null)
-    }
-  }
+  const onChainMatches = onChainData?.matchViews ?? []
+  const onChainExperiments = onChainData?.expViews ?? []
+  const experimentViews = localData ?? []
 
   const activeOnChain = onChainMatches.filter((v) => v.match.phase !== PHASE_COMPLETED)
   const completedOnChain = onChainMatches.filter((v) => v.match.phase === PHASE_COMPLETED)
@@ -252,9 +225,9 @@ export default function SubjectDashboard() {
                     key={group.expId}
                     group={group}
                     variations={variations}
-                    joining={joining}
-                    joinError={joinError}
-                    onJoin={handleJoinExperiment}
+                    joining={joinMutation.isPending ? joinMutation.variables?.expId ?? null : null}
+                    joinError={getJoinError(group.expId)}
+                    onJoin={(expId, vars) => joinMutation.mutate({ expId, variations: vars })}
                   />
                 ))}
               </div>
@@ -324,8 +297,8 @@ export default function SubjectDashboard() {
                         isCompleted={false}
                         isRegistered={isRegistered(view)}
                         hasActiveMatch={hasActiveMatch(view)}
-                        isRegistering={registering === view.id}
-                        onRegister={(playerCount) => void handleRegister(view, playerCount)}
+                        isRegistering={registerMutation.isPending && registerMutation.variables?.view.id === view.id}
+                        onRegister={(playerCount) => registerMutation.mutate({ view, playerCount })}
                         isBatch={view.isBatch}
                         totalPlayers={view.totalPlayers}
                         playExperimentId={view.userExperimentId ?? view.experiment.id}
