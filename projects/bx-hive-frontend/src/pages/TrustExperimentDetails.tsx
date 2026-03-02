@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
 import VariationPanel from '../components/experimenter/trust-details/VariationPanel'
@@ -8,12 +9,21 @@ import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import { useTrustVariation } from '../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../hooks/useTrustVariation'
 import { useExperimentManager } from '../hooks/useExperimentManager'
+import { queryKeys } from '../lib/queryKeys'
 import { statusDotColor, statusLabel, variationTooltip } from '../utils/variationStatus'
 
 interface SubjectEntry {
   address: string
   enrolled: number
   assigned: number
+}
+
+interface ExperimentDetailsData {
+  group: ExperimentGroup
+  variations: VariationInfo[]
+  subjects: Record<string, SubjectEntry[]>
+  matches: Record<string, Match[]>
+  configs: Record<string, VariationConfig>
 }
 
 export default function TrustExperimentDetails() {
@@ -23,90 +33,66 @@ export default function TrustExperimentDetails() {
   const { getExperiment, listVariations } = useTrustExperiments()
   const { getEnrolledSubjects, getMatches, getConfig, createMatch } = useTrustVariation()
   const { getExpConfig, setExpConfig, getVarConfig, setVarConfig } = useExperimentManager()
+  const queryClient = useQueryClient()
 
-  const [group, setGroup] = useState<ExperimentGroup | null>(null)
-  const [variations, setVariations] = useState<VariationInfo[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [selectedVarIdx, setSelectedVarIdx] = useState(0)
-
-  const [subjects, setSubjects] = useState<Record<string, SubjectEntry[]>>({})
-  const [matches, setMatches] = useState<Record<string, Match[]>>({})
-  const [configs, setConfigs] = useState<Record<string, VariationConfig>>({})
-  const [loadingVar, setLoadingVar] = useState<Record<string, boolean>>({})
 
   const autoRefresh = getExpConfig(expId).autoRefresh
   const setAutoRefresh = (val: boolean) => setExpConfig(expId, { autoRefresh: val })
 
-  useEffect(() => {
-    async function load() {
-      try {
-        setLoading(true)
-        const g = await getExperiment(expId)
-        setGroup(g)
-        const vars = await listVariations(expId, Number(g.variationCount))
-        setVariations(vars)
-        if (vars.length > 0) {
-          await Promise.all(vars.map((v) => loadVariationData(v.appId)))
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load experiment')
-      } finally {
-        setLoading(false)
-      }
-    }
-    void load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expId])
+  const {
+    data,
+    isLoading,
+    isFetching,
+    error: queryError,
+    refetch,
+  } = useQuery<ExperimentDetailsData>({
+    queryKey: queryKeys.trustExperimentDetails(expId),
+    queryFn: async () => {
+      const g = await getExperiment(expId)
+      const vars = await listVariations(expId, Number(g.variationCount))
 
-  const loadVariationData = useCallback(
-    async (appId: bigint) => {
-      const key = String(appId)
-      setLoadingVar((p) => ({ ...p, [key]: true }))
-      try {
-        const [subs, matchList, cfg] = await Promise.all([getEnrolledSubjects(appId), getMatches(appId), getConfig(appId)])
-        setSubjects((p) => ({ ...p, [key]: subs }))
-        setMatches((p) => ({ ...p, [key]: matchList }))
-        setConfigs((p) => ({ ...p, [key]: cfg }))
-      } catch {
-        // ignore per-variation errors silently
-      } finally {
-        setLoadingVar((p) => ({ ...p, [key]: false }))
-      }
+      const subjects: Record<string, SubjectEntry[]> = {}
+      const matches: Record<string, Match[]> = {}
+      const configs: Record<string, VariationConfig> = {}
+
+      await Promise.all(
+        vars.map(async (v) => {
+          const key = String(v.appId)
+          try {
+            const [subs, matchList, cfg] = await Promise.all([getEnrolledSubjects(v.appId), getMatches(v.appId), getConfig(v.appId)])
+            subjects[key] = subs
+            matches[key] = matchList
+            configs[key] = cfg
+          } catch {
+            // ignore per-variation errors silently
+          }
+        }),
+      )
+
+      return { group: g, variations: vars, subjects, matches, configs }
     },
-    [getEnrolledSubjects, getMatches, getConfig],
-  )
+    refetchInterval: autoRefresh ? 5000 : false,
+    enabled: !!expId,
+  })
 
-  const refreshAll = useCallback(async () => {
-    if (variations.length === 0) return
-    await Promise.all(variations.map((v) => loadVariationData(v.appId)))
-  }, [variations, loadVariationData])
+  const createMatchMutation = useMutation({
+    mutationFn: ({ appId, investor, trustee }: { appId: bigint; investor: string; trustee: string }) =>
+      createMatch(appId, investor, trustee),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) })
+    },
+  })
 
-  useEffect(() => {
-    if (!autoRefresh || variations.length === 0) return
-    const id = setInterval(() => void refreshAll(), 5000)
-    return () => clearInterval(id)
-  }, [autoRefresh, variations, refreshAll])
+  if (isLoading) return <LoadingSpinner className="flex justify-center py-16" />
 
-  function selectTab(idx: number, appId: bigint) {
-    setSelectedVarIdx(idx)
-    const key = String(appId)
-    if (!subjects[key] && !loadingVar[key]) {
-      void loadVariationData(appId)
-    }
-  }
+  const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load experiment' : null
 
-  async function handleCreateMatch(appId: bigint, investor: string, trustee: string) {
-    await createMatch(appId, investor, trustee)
-    await loadVariationData(appId)
-  }
-
-  if (loading) return <LoadingSpinner className="flex justify-center py-16" />
-
-  if (error || !group) {
+  if (error || !data) {
     return <ErrorMessage message={error ?? 'Experiment not found'} />
   }
 
+  const { group, variations, subjects, matches, configs } = data
   const selectedVar = variations[selectedVarIdx]
   const varKey = selectedVar ? String(selectedVar.appId) : ''
 
@@ -125,7 +111,7 @@ export default function TrustExperimentDetails() {
         configs={configs}
         autoRefresh={autoRefresh}
         onToggleAutoRefresh={setAutoRefresh}
-        onRefresh={() => void refreshAll()}
+        onRefresh={() => void refetch()}
       />
 
       <h2 className="text-xs uppercase tracking-wide text-base-content/50 mb-3">Variation Details</h2>
@@ -145,7 +131,7 @@ export default function TrustExperimentDetails() {
                   role="tab"
                   type="button"
                   className={`tab${selectedVarIdx === idx ? ' tab-active' : ''}`}
-                  onClick={() => selectTab(idx, v.appId)}
+                  onClick={() => setSelectedVarIdx(idx)}
                 >
                   <span className="tooltip tooltip-bottom flex gap-1 items-center" data-tip={variationTooltip(v, cfg)}>
                     Var {v.varId + 1}
@@ -162,10 +148,12 @@ export default function TrustExperimentDetails() {
               subjects={subjects[varKey] ?? []}
               matches={matches[varKey] ?? []}
               config={configs[varKey]}
-              isLoading={loadingVar[varKey] ?? false}
+              isLoading={isFetching}
               autoMatch={getVarConfig(selectedVar.appId).autoMatch}
               onToggleAutoMatch={(val) => setVarConfig(selectedVar.appId, { autoMatch: val })}
-              onCreateMatch={handleCreateMatch}
+              onCreateMatch={async (appId, investor, trustee) => {
+                await createMatchMutation.mutateAsync({ appId, investor, trustee })
+              }}
             />
           )}
         </>
