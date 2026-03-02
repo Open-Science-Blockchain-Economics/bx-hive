@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { EXPERIMENT_RESULTS_COMPONENTS } from '../components/experimenter/results'
 import AggregateResultsTable from '../components/experimenter/batch-details/AggregateResultsTable'
 import BatchConfigCard from '../components/experimenter/batch-details/BatchConfigCard'
@@ -9,111 +10,78 @@ import { LoadingSpinner, ErrorMessage, PageHeader, StatusBadge } from '../compon
 import { getBatchById, getExperimentsByBatchId, getUsers, getVariationLabel, updateBatch, updateExperimentStatus } from '../db'
 import { getTemplateById } from '../experiment-logic/templates'
 import { useActiveUser } from '../hooks/useActiveUser'
-import type { Experiment, ExperimentBatch, User } from '../types'
+import { queryKeys } from '../lib/queryKeys'
 
 export default function BatchDetails() {
   const { batchId } = useParams<{ batchId: string }>()
   const { activeUser } = useActiveUser()
-  const [batch, setBatch] = useState<ExperimentBatch | null>(null)
-  const [experiments, setExperiments] = useState<Experiment[]>([])
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [actionInProgress, setActionInProgress] = useState(false)
+  const queryClient = useQueryClient()
+
   const [activeVariationTab, setActiveVariationTab] = useState<number | 'all'>('all')
 
-  useEffect(() => {
-    if (batchId && activeUser) loadBatchData()
-  }, [batchId, activeUser])
+  const {
+    data,
+    isLoading,
+    error: queryError,
+  } = useQuery({
+    queryKey: queryKeys.batchDetails(batchId ?? ''),
+    queryFn: async () => {
+      const [batch, users] = await Promise.all([getBatchById(batchId!), getUsers()])
+      if (!batch) throw new Error('Batch not found')
+      const experiments = await getExperimentsByBatchId(batchId!)
+      return { batch, experiments, users }
+    },
+    enabled: !!batchId && !!activeUser,
+  })
 
-  async function loadBatchData() {
-    if (!batchId) return
-    try {
-      setLoading(true)
-      setError(null)
-      const [batchData, allUsers] = await Promise.all([getBatchById(batchId), getUsers()])
-      if (!batchData) {
-        setError('Batch not found')
-        return
-      }
-      const batchExperiments = await getExperimentsByBatchId(batchId)
-      setBatch(batchData)
-      setExperiments(batchExperiments)
-      setUsers(allUsers)
-    } catch (err) {
-      console.error('Failed to load batch:', err)
-      setError('Failed to load batch data')
-    } finally {
-      setLoading(false)
-    }
+  function invalidate() {
+    return queryClient.invalidateQueries({ queryKey: queryKeys.batchDetails(batchId ?? '') })
   }
 
-  async function handleCloseVariation(experimentId: string) {
-    try {
-      setActionInProgress(true)
-      await updateExperimentStatus(experimentId, 'closed')
-      await loadBatchData()
-    } catch (err) {
-      console.error('Failed to close variation:', err)
-      setError(err instanceof Error ? err.message : 'Failed to close variation')
-    } finally {
-      setActionInProgress(false)
-    }
-  }
+  const closeVariationMutation = useMutation({
+    mutationFn: (experimentId: string) => updateExperimentStatus(experimentId, 'closed'),
+    onSuccess: invalidate,
+  })
 
-  async function handleReopenVariation(experimentId: string) {
-    try {
-      setActionInProgress(true)
-      await updateExperimentStatus(experimentId, 'active')
-      await loadBatchData()
-    } catch (err) {
-      console.error('Failed to reopen variation:', err)
-      setError(err instanceof Error ? err.message : 'Failed to reopen variation')
-    } finally {
-      setActionInProgress(false)
-    }
-  }
+  const reopenVariationMutation = useMutation({
+    mutationFn: (experimentId: string) => updateExperimentStatus(experimentId, 'active'),
+    onSuccess: invalidate,
+  })
 
-  async function handleCloseBatch() {
-    if (!batch) return
-    try {
-      setActionInProgress(true)
-      for (const exp of experiments) {
+  const closeBatchMutation = useMutation({
+    mutationFn: async () => {
+      if (!data) return
+      for (const exp of data.experiments) {
         if (exp.status === 'active') await updateExperimentStatus(exp.id, 'closed')
       }
-      await updateBatch({ ...batch, status: 'closed' })
-      await loadBatchData()
-    } catch (err) {
-      console.error('Failed to close batch:', err)
-      setError(err instanceof Error ? err.message : 'Failed to close batch')
-    } finally {
-      setActionInProgress(false)
-    }
-  }
+      await updateBatch({ ...data.batch, status: 'closed' })
+    },
+    onSuccess: invalidate,
+  })
 
-  async function handleReopenBatch() {
-    if (!batch) return
-    try {
-      setActionInProgress(true)
-      for (const exp of experiments) {
+  const reopenBatchMutation = useMutation({
+    mutationFn: async () => {
+      if (!data) return
+      for (const exp of data.experiments) {
         if (exp.status === 'closed') await updateExperimentStatus(exp.id, 'active')
       }
-      await updateBatch({ ...batch, status: 'active' })
-      await loadBatchData()
-    } catch (err) {
-      console.error('Failed to reopen batch:', err)
-      setError(err instanceof Error ? err.message : 'Failed to reopen batch')
-    } finally {
-      setActionInProgress(false)
-    }
-  }
+      await updateBatch({ ...data.batch, status: 'active' })
+    },
+    onSuccess: invalidate,
+  })
 
-  if (loading) return <LoadingSpinner />
+  const actionInProgress =
+    closeVariationMutation.isPending || reopenVariationMutation.isPending || closeBatchMutation.isPending || reopenBatchMutation.isPending
 
-  if (error || !batch || !activeUser) {
+  if (isLoading) return <LoadingSpinner />
+
+  const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load batch data' : null
+
+  if (error || !data || !activeUser) {
     return <ErrorMessage message={error || 'Something went wrong'} />
   }
 
+  const { batch, experiments, users } = data
   const template = getTemplateById(batch.templateId)
   const displayedExperiments = activeVariationTab === 'all' ? experiments : [experiments[activeVariationTab]]
 
@@ -144,8 +112,8 @@ export default function BatchDetails() {
         batch={batch}
         experiments={experiments}
         actionInProgress={actionInProgress}
-        onCloseBatch={() => void handleCloseBatch()}
-        onReopenBatch={() => void handleReopenBatch()}
+        onCloseBatch={() => closeBatchMutation.mutate()}
+        onReopenBatch={() => reopenBatchMutation.mutate()}
       />
 
       {/* Variation Tabs */}
@@ -185,8 +153,8 @@ export default function BatchDetails() {
                   users={users}
                   showPlayers={activeVariationTab !== 'all'}
                   actionInProgress={actionInProgress}
-                  onClose={handleCloseVariation}
-                  onReopen={handleReopenVariation}
+                  onClose={closeVariationMutation.mutate}
+                  onReopen={reopenVariationMutation.mutate}
                 />
               )
             })}

@@ -1,81 +1,45 @@
-import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { EXPERIMENT_RESULTS_COMPONENTS } from '../components/experimenter/results'
 import { closeExperimentRegistration, getExperimentById, getUsers, updateExperimentStatus } from '../db'
 import { getTemplateById } from '../experiment-logic/templates'
 import { useActiveUser } from '../hooks/useActiveUser'
-import type { Experiment, User } from '../types'
+import { queryKeys } from '../lib/queryKeys'
 
 export default function ExperimentDetails() {
   const { experimentId } = useParams<{ experimentId: string }>()
   const { activeUser } = useActiveUser()
-  const [experiment, setExperiment] = useState<Experiment | null>(null)
-  const [users, setUsers] = useState<User[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [actionInProgress, setActionInProgress] = useState(false)
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    if (experimentId && activeUser) {
-      loadExperimentData()
-    }
-  }, [experimentId, activeUser])
+  const {
+    data,
+    isLoading,
+    error: queryError,
+  } = useQuery({
+    queryKey: queryKeys.experimentDetails(experimentId ?? ''),
+    queryFn: async () => {
+      const [experiment, users] = await Promise.all([getExperimentById(experimentId!), getUsers()])
+      if (!experiment) throw new Error('Experiment not found')
+      return { experiment, users }
+    },
+    enabled: !!experimentId && !!activeUser,
+  })
 
-  async function loadExperimentData() {
-    if (!experimentId) return
+  const closeRegistrationMutation = useMutation({
+    mutationFn: () => closeExperimentRegistration(experimentId!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.experimentDetails(experimentId ?? '') }),
+  })
 
-    try {
-      setLoading(true)
-      setError(null)
+  const reopenRegistrationMutation = useMutation({
+    mutationFn: () => updateExperimentStatus(experimentId!, 'active'),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.experimentDetails(experimentId ?? '') }),
+  })
 
-      const [experimentData, allUsers] = await Promise.all([getExperimentById(experimentId), getUsers()])
+  const actionInProgress = closeRegistrationMutation.isPending || reopenRegistrationMutation.isPending
+  const actionError =
+    (closeRegistrationMutation.error ?? reopenRegistrationMutation.error)?.message ?? null
 
-      if (!experimentData) {
-        setError('Experiment not found')
-        return
-      }
-
-      setExperiment(experimentData)
-      setUsers(allUsers)
-    } catch (err) {
-      console.error('Failed to load experiment:', err)
-      setError('Failed to load experiment data')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleCloseRegistration() {
-    if (!experimentId) return
-
-    try {
-      setActionInProgress(true)
-      await closeExperimentRegistration(experimentId)
-      await loadExperimentData()
-    } catch (err) {
-      console.error('Failed to close registration:', err)
-      setError(err instanceof Error ? err.message : 'Failed to close registration')
-    } finally {
-      setActionInProgress(false)
-    }
-  }
-
-  async function handleReopenRegistration() {
-    if (!experimentId) return
-
-    try {
-      setActionInProgress(true)
-      await updateExperimentStatus(experimentId, 'active')
-      await loadExperimentData()
-    } catch (err) {
-      console.error('Failed to reopen registration:', err)
-      setError(err instanceof Error ? err.message : 'Failed to reopen registration')
-    } finally {
-      setActionInProgress(false)
-    }
-  }
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <span className="loading loading-spinner loading-lg"></span>
@@ -83,7 +47,9 @@ export default function ExperimentDetails() {
     )
   }
 
-  if (error || !experiment || !activeUser) {
+  const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load experiment data' : null
+
+  if (error || !data || !activeUser) {
     return (
       <div className="text-center py-12">
         <p className="text-error">{error || 'Something went wrong'}</p>
@@ -94,6 +60,7 @@ export default function ExperimentDetails() {
     )
   }
 
+  const { experiment, users } = data
   const template = getTemplateById(experiment.templateId)
   const playingMatches = experiment.matches.filter((m) => m.status === 'playing')
   const completedMatches = experiment.matches.filter((m) => m.status === 'completed')
@@ -189,8 +156,8 @@ export default function ExperimentDetails() {
 
             <div className="flex flex-col gap-2">
               {experiment.status === 'active' && (
-                <button className="btn btn-warning" onClick={handleCloseRegistration} disabled={actionInProgress}>
-                  {actionInProgress ? (
+                <button className="btn btn-warning" onClick={() => closeRegistrationMutation.mutate()} disabled={actionInProgress}>
+                  {closeRegistrationMutation.isPending ? (
                     <>
                       <span className="loading loading-spinner loading-sm"></span>
                       Closing...
@@ -202,8 +169,8 @@ export default function ExperimentDetails() {
               )}
 
               {experiment.status === 'closed' && (
-                <button className="btn btn-success" onClick={handleReopenRegistration} disabled={actionInProgress}>
-                  {actionInProgress ? (
+                <button className="btn btn-success" onClick={() => reopenRegistrationMutation.mutate()} disabled={actionInProgress}>
+                  {reopenRegistrationMutation.isPending ? (
                     <>
                       <span className="loading loading-spinner loading-sm"></span>
                       Reopening...
@@ -215,6 +182,12 @@ export default function ExperimentDetails() {
               )}
             </div>
           </div>
+
+          {actionError && (
+            <div className="alert alert-error mt-4">
+              <span className="text-sm">{actionError}</span>
+            </div>
+          )}
 
           {experiment.status === 'active' && (
             <div className="alert alert-info mt-4">
