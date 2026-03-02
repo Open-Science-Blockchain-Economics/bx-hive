@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { NetworkConfigBuilder, WalletId, WalletManager } from '@txnlab/use-wallet'
 import { WalletProvider } from '@txnlab/use-wallet-react'
 import App from './App'
@@ -10,6 +11,8 @@ import { getAlgodConfigFromViteEnvironment, getKmdConfigFromViteEnvironment } fr
 
 const algodConfig = getAlgodConfigFromViteEnvironment()
 const kmdConfig = getKmdConfigFromViteEnvironment()
+
+const queryClient = new QueryClient()
 
 const walletManager = new WalletManager({
   wallets: [
@@ -41,9 +44,11 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <ErrorBoundary>
       <WalletProvider manager={walletManager}>
-        <NetworkConfigProvider>
-          <App />
-        </NetworkConfigProvider>
+        <QueryClientProvider client={queryClient}>
+          <NetworkConfigProvider>
+            <App />
+          </NetworkConfigProvider>
+        </QueryClientProvider>
       </WalletProvider>
     </ErrorBoundary>
   </React.StrictMode>,
