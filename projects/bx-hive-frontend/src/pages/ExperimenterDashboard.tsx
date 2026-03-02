@@ -1,9 +1,11 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getBatchesByExperimenter, getExperimentsByBatchId, getExperimentsByExperimenter } from '../db'
 import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments, type ExperimentGroup, type VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustVariation, type VariationConfig } from '../hooks/useTrustVariation'
+import { queryKeys } from '../lib/queryKeys'
 import type { Experiment, ExperimentBatch } from '../types'
 import CreateExperimentForm from '../components/experimenter/CreateExperimentForm'
 import ExperimentListTab from '../components/experimenter/ExperimentListTab'
@@ -19,47 +21,36 @@ interface OnChainExperiment {
   variations: VariationInfo[]
 }
 
+interface OnChainData {
+  onChainExps: OnChainExperiment[]
+  subjectCounts: Record<string, number>
+  variationConfigs: Record<string, VariationConfig>
+}
+
+interface LocalData {
+  localExperiments: Experiment[]
+  localBatches: BatchWithExperiments[]
+}
+
 export default function ExperimenterDashboard() {
   const { activeUser } = useActiveUser()
   const { algorand, activeAddress } = useAlgorand()
   const { createExperimentWithVariation, createVariation, listExperiments, listVariations } = useTrustExperiments()
   const { getSubjectCount, getConfig } = useTrustVariation()
+  const queryClient = useQueryClient()
 
   const [activeTab, setActiveTab] = useState<TabType>('experiments')
-  const [onChainExps, setOnChainExps] = useState<OnChainExperiment[]>([])
-  const [localExperiments, setLocalExperiments] = useState<Experiment[]>([])
-  const [localBatches, setLocalBatches] = useState<BatchWithExperiments[]>([])
-  const [loading, setLoading] = useState(true)
-  const [variationConfigs, setVariationConfigs] = useState<Record<string, VariationConfig>>({})
-  const [subjectCounts, setSubjectCounts] = useState<Record<string, number>>({})
-  const [walletBalanceAlgo, setWalletBalanceAlgo] = useState<number | null>(null)
 
-  useEffect(() => {
-    if (activeUser) void loadAll()
-  }, [activeUser])
+  const { data: walletBalanceAlgo = null } = useQuery({
+    queryKey: queryKeys.walletBalance(activeAddress ?? ''),
+    queryFn: () =>
+      algorand!.account.getInformation(activeAddress!).then((info) => Number(info.balance.microAlgo) / 1_000_000),
+    enabled: !!algorand && !!activeAddress,
+  })
 
-  useEffect(() => {
-    if (!algorand || !activeAddress) {
-      setWalletBalanceAlgo(null)
-      return
-    }
-    void algorand.account.getInformation(activeAddress).then((info) => {
-      setWalletBalanceAlgo(Number(info.balance.microAlgo) / 1_000_000)
-    })
-  }, [algorand, activeAddress])
-
-  const loadAll = useCallback(async () => {
-    if (!activeUser) return
-    setLoading(true)
-    try {
-      await Promise.all([loadOnChainExperiments(), loadLocalExperiments()])
-    } finally {
-      setLoading(false)
-    }
-  }, [activeUser])
-
-  async function loadOnChainExperiments() {
-    try {
+  const { data: onChainData, isLoading: onChainLoading } = useQuery<OnChainData>({
+    queryKey: queryKeys.onChainExperiments(activeAddress ?? ''),
+    queryFn: async () => {
       const groups = await listExperiments()
       const mine = groups.filter((g) => g.owner === activeAddress)
       const withVariations = await Promise.all(
@@ -68,19 +59,18 @@ export default function ExperimenterDashboard() {
           variations: await listVariations(group.expId, Number(group.variationCount)),
         })),
       )
-      const valid = withVariations.filter(({ group }) => {
+      const onChainExps = withVariations.filter(({ group }) => {
         if (Number(group.variationCount) === 0) {
           console.warn(`[bx-hive] Orphaned experiment exp_id=${group.expId} name="${group.name}" has 0 variations — hiding from UI`)
           return false
         }
         return true
       })
-      setOnChainExps(valid)
 
       const counts: Record<string, number> = {}
       const configs: Record<string, VariationConfig> = {}
       await Promise.all(
-        valid.flatMap(({ variations: vars }) =>
+        onChainExps.flatMap(({ variations: vars }) =>
           vars.map(async (v) => {
             const key = String(v.appId)
             try {
@@ -96,32 +86,33 @@ export default function ExperimenterDashboard() {
           }),
         ),
       )
-      setSubjectCounts(counts)
-      setVariationConfigs(configs)
-    } catch (err) {
-      console.error('Failed to load on-chain experiments:', err)
-    }
-  }
 
-  async function loadLocalExperiments() {
-    if (!activeUser) return
-    try {
-      const allExps = await getExperimentsByExperimenter(activeUser.id)
-      setLocalExperiments(allExps.filter((e) => e.templateId === 'bret' && !e.batchId))
+      return { onChainExps, subjectCounts: counts, variationConfigs: configs }
+    },
+    enabled: !!activeAddress,
+  })
 
-      const allBatches = await getBatchesByExperimenter(activeUser.id)
+  const { data: localData, isLoading: localLoading } = useQuery<LocalData>({
+    queryKey: queryKeys.localExperiments(activeUser?.id ?? ''),
+    queryFn: async () => {
+      const allExps = await getExperimentsByExperimenter(activeUser!.id)
+      const localExperiments = allExps.filter((e) => e.templateId === 'bret' && !e.batchId)
+
+      const allBatches = await getBatchesByExperimenter(activeUser!.id)
       const bretBatches = allBatches.filter((b) => b.templateId === 'bret')
-      const withExps = await Promise.all(
+      const localBatches = await Promise.all(
         bretBatches.map(async (batch) => ({
           ...batch,
           experiments: await getExperimentsByBatchId(batch.id),
         })),
       )
-      setLocalBatches(withExps)
-    } catch (err) {
-      console.error('Failed to load local experiments:', err)
-    }
-  }
+
+      return { localExperiments, localBatches }
+    },
+    enabled: !!activeUser,
+  })
+
+  const loading = onChainLoading || localLoading
 
   return (
     <div>
@@ -142,11 +133,11 @@ export default function ExperimenterDashboard() {
       {activeTab === 'experiments' && (
         <ExperimentListTab
           loading={loading}
-          onChainExps={onChainExps}
-          localBatches={localBatches}
-          localExperiments={localExperiments}
-          subjectCounts={subjectCounts}
-          variationConfigs={variationConfigs}
+          onChainExps={onChainData?.onChainExps ?? []}
+          localBatches={localData?.localBatches ?? []}
+          localExperiments={localData?.localExperiments ?? []}
+          subjectCounts={onChainData?.subjectCounts ?? {}}
+          variationConfigs={onChainData?.variationConfigs ?? {}}
           onCreateClick={() => setActiveTab('create')}
         />
       )}
@@ -158,7 +149,7 @@ export default function ExperimenterDashboard() {
           createExperimentWithVariation={createExperimentWithVariation}
           createVariation={createVariation}
           onCreated={() => {
-            void loadAll()
+            void queryClient.invalidateQueries({ queryKey: ['experiments'] })
             setActiveTab('experiments')
           }}
         />
