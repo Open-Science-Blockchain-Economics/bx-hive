@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 const DOCS_BASE_URL = 'https://open-science-blockchain-economics.github.io/bx-hive'
 
 const DOCS_LINKS = {
-  participants: `${DOCS_BASE_URL}/subjects/joining-experiments/`,
+  participants: `${DOCS_BASE_URL}/subjects/joining-experiments/#auto-assignment-to-variations`,
   maxPayout: `${DOCS_BASE_URL}/concepts/payout-calculations/`,
 } as const
 import { createExperiment as dbCreateExperiment, createExperimentBatch, getVariationLabel } from '../../db'
