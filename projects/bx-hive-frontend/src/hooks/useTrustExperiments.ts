@@ -3,7 +3,6 @@ import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
 import algosdk from 'algosdk'
 import { useCallback } from 'react'
 import type { ExperimentGroup, VariationInfo } from '../contracts/TrustExperiments'
-import { getTrustVariationPrograms } from '../utils/compilePrograms'
 import { useAlgorand } from './useAlgorand'
 
 export type { ExperimentGroup, VariationInfo }
@@ -31,7 +30,6 @@ export interface VariationParams {
  */
 export function useTrustExperiments() {
   const { algorand, trustExperimentsClient, activeAddress } = useAlgorand()
-  // algorand is used by createVariation for TEAL compilation
 
   /**
    * Creates a new experiment group on-chain.
@@ -55,7 +53,6 @@ export function useTrustExperiments() {
   const createExperimentWithVariation = useCallback(
     async (name: string, params: VariationParams): Promise<{ expId: number; appId: bigint }> => {
       if (!trustExperimentsClient || !algorand || !activeAddress) throw new Error('Wallet not connected')
-      const { approval, clear } = await getTrustVariationPrograms(algorand)
       const escrowPayment = await algorand.createTransaction.payment({
         sender: activeAddress,
         receiver: algosdk.getApplicationAddress(trustExperimentsClient.appId),
@@ -65,8 +62,6 @@ export function useTrustExperiments() {
         args: {
           name,
           label: params.label,
-          approvalProgram: approval,
-          clearProgram: clear,
           e1: params.e1,
           e2: params.e2,
           multiplier: params.multiplier,
@@ -86,13 +81,12 @@ export function useTrustExperiments() {
 
   /**
    * Spawns a new TrustVariation contract for the given experiment.
-   * Compiles the TrustVariation TEAL programs and passes them as bytecode.
+   * Bytecode is read from on-chain box storage by TrustExperiments.
    * Returns the app_id (bigint) of the newly created TrustVariation contract.
    */
   const createVariation = useCallback(
     async (expId: number, params: VariationParams): Promise<bigint> => {
       if (!trustExperimentsClient || !algorand || !activeAddress) throw new Error('Wallet not connected')
-      const { approval, clear } = await getTrustVariationPrograms(algorand)
       const escrowPayment = await algorand.createTransaction.payment({
         sender: activeAddress,
         receiver: algosdk.getApplicationAddress(trustExperimentsClient.appId),
@@ -102,8 +96,6 @@ export function useTrustExperiments() {
         args: {
           expId,
           label: params.label,
-          approvalProgram: approval,
-          clearProgram: clear,
           e1: params.e1,
           e2: params.e2,
           multiplier: params.multiplier,
