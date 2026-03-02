@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 
+const DOCS_BASE_URL = 'https://open-science-blockchain-economics.github.io/bx-hive'
+
 const DOCS_LINKS = {
-  participants: '/docs/participants',
-  maxPayout: '/docs/trust-game-parameters',
+  participants: `${DOCS_BASE_URL}/subjects/joining-experiments/`,
+  maxPayout: `${DOCS_BASE_URL}/concepts/payout-calculations/`,
 } as const
 import { createExperiment as dbCreateExperiment, createExperimentBatch, getVariationLabel } from '../../db'
 import { experimentTemplates, getTemplateById } from '../../experiment-logic/templates'
