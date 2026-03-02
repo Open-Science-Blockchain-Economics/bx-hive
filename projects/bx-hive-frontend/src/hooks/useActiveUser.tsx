@@ -1,7 +1,9 @@
 import { useWallet } from '@txnlab/use-wallet-react'
-import { useState, useCallback, createContext, useContext, useEffect, useRef, ReactNode } from 'react'
+import { useRef, useEffect, useCallback, createContext, useContext, type ReactNode } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { User, UserRole } from '../types'
 import { getAlgorandClient, getRegistryClient } from '../utils/algorand'
+import { queryKeys } from '../lib/queryKeys'
 
 const ROLE_REVERSE: Record<number, UserRole> = { 0: 'experimenter', 1: 'subject' }
 
@@ -16,67 +18,50 @@ interface ActiveUserContextType {
 const ActiveUserContext = createContext<ActiveUserContextType | undefined>(undefined)
 
 export function ActiveUserProvider({ children }: { children: ReactNode }) {
-  const [activeUser, setActiveUserState] = useState<User | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
   const { activeAddress, transactionSigner } = useWallet()
+  const queryClient = useQueryClient()
 
   const signerRef = useRef(transactionSigner)
   useEffect(() => {
     signerRef.current = transactionSigner
   }, [transactionSigner])
 
-  const fetchUser = useCallback(
-    async (address: string) => {
+  const { data: activeUser = null, isLoading } = useQuery({
+    queryKey: queryKeys.activeUser(activeAddress ?? ''),
+    queryFn: async (): Promise<User | null> => {
+      const algorand = getAlgorandClient()
+      algorand.setSigner(activeAddress!, signerRef.current)
+      const client = getRegistryClient(algorand, activeAddress!)
       try {
-        const algorand = getAlgorandClient()
-        algorand.setSigner(address, signerRef.current)
-        const client = getRegistryClient(algorand, address)
-        const result = await client.send.getUser({ args: { addr: address } })
+        const result = await client.send.getUser({ args: { addr: activeAddress! } })
         const contractUser = result.return
-        if (contractUser) {
-          setActiveUserState({
-            id: address,
-            name: contractUser.name,
-            role: ROLE_REVERSE[contractUser.role] ?? 'subject',
-            createdAt: Number(contractUser.createdAt),
-            userId: contractUser.userId,
-          })
-        } else {
-          setActiveUserState(null)
+        if (!contractUser) return null
+        return {
+          id: activeAddress!,
+          name: contractUser.name,
+          role: ROLE_REVERSE[contractUser.role] ?? 'subject',
+          createdAt: Number(contractUser.createdAt),
+          userId: contractUser.userId,
         }
       } catch {
         // Address not registered in Registry yet
-        setActiveUserState(null)
+        return null
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  )
-
-  // Auto-fetch user whenever the connected wallet address changes
-  useEffect(() => {
-    setIsLoading(true)
-    if (!activeAddress) {
-      setActiveUserState(null)
-      setIsLoading(false)
-      return
-    }
-    fetchUser(activeAddress).finally(() => setIsLoading(false))
-  }, [activeAddress, fetchUser])
+    enabled: !!activeAddress,
+  })
 
   /** Re-fetches and sets the active user from Registry. Call after successful registration. */
   const setActiveUser = useCallback(
-    async (address: string) => {
-      setIsLoading(true)
-      await fetchUser(address)
-      setIsLoading(false)
+    async (_address: string) => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.activeUser(activeAddress ?? '') })
     },
-    [fetchUser],
+    [queryClient, activeAddress],
   )
 
   const clearActiveUser = useCallback(() => {
-    setActiveUserState(null)
-  }, [])
+    queryClient.setQueryData(queryKeys.activeUser(activeAddress ?? ''), null)
+  }, [queryClient, activeAddress])
 
   return (
     <ActiveUserContext.Provider value={{ activeUser, isLoading, setActiveUser, clearActiveUser }}>
