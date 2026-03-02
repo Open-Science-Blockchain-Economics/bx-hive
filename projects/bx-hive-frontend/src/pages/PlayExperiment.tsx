@@ -1,13 +1,14 @@
-import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import BRETExperiment from '../components/experiment-types/bret/BRETExperiment'
 import TrustExperiment from '../components/experiment-types/trust/TrustExperiment'
 import { getExperimentById } from '../db'
 import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustVariation } from '../hooks/useTrustVariation'
-import type { Match, VariationConfig } from '../hooks/useTrustVariation'
-import type { Experiment, Match as LocalMatch } from '../types'
+import type { VariationConfig } from '../hooks/useTrustVariation'
+import { queryKeys } from '../lib/queryKeys'
+import type { Match as LocalMatch } from '../types'
 
 /** Returns true if the param looks like a numeric on-chain app ID */
 function isOnChainId(id: string): boolean {
@@ -18,37 +19,23 @@ function isOnChainId(id: string): boolean {
 
 function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddress: string }) {
   const { getPlayerMatch, getConfig } = useTrustVariation()
-  const [match, setMatch] = useState<Match | null>(null)
-  const [config, setConfig] = useState<VariationConfig | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
-    try {
-      const [m, c] = await Promise.all([getPlayerMatch(appId, activeAddress), getConfig(appId)])
-      if (!m) {
-        setError('You are not matched in this variation yet.')
-        return
-      }
-      setMatch(m)
-      setConfig(c)
-      setError(null)
-    } catch (err) {
-      console.error('Failed to load on-chain match:', err)
-      setError('Failed to load match data')
-    } finally {
-      setLoading(false)
-    }
-  }, [appId, activeAddress, getPlayerMatch, getConfig])
+  const {
+    data,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.playerMatch(appId, activeAddress),
+    queryFn: async () => {
+      const [match, config] = await Promise.all([getPlayerMatch(appId, activeAddress), getConfig(appId)])
+      if (!match) throw new Error('You are not matched in this variation yet.')
+      return { match, config } as { match: NonNullable<Awaited<ReturnType<typeof getPlayerMatch>>>; config: VariationConfig }
+    },
+    refetchInterval: 3000,
+  })
 
-  // Initial load + 3-second polling for phase changes
-  useEffect(() => {
-    void load()
-    const interval = setInterval(() => void load(), 3000)
-    return () => clearInterval(interval)
-  }, [load])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <span className="loading loading-spinner loading-lg"></span>
@@ -56,7 +43,9 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
     )
   }
 
-  if (error || !match || !config) {
+  const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load match data' : null
+
+  if (error || !data) {
     return (
       <div className="text-center py-12">
         <p className="text-error">{error || 'Something went wrong'}</p>
@@ -76,7 +65,7 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
         <h1 className="text-2xl font-bold">Trust Game</h1>
         <p className="text-base-content/70 mt-1">Variation #{String(appId)}</p>
       </div>
-      <TrustExperiment appId={appId} match={match} config={config} activeAddress={activeAddress} onRefresh={() => void load()} />
+      <TrustExperiment appId={appId} match={data.match} config={data.config} activeAddress={activeAddress} onRefresh={() => void refetch()} />
     </div>
   )
 }
@@ -84,31 +73,23 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
 // ── Local (BRET) view ────────────────────────────────────────────────────────
 
 function LocalExperiment({ experimentId, activeUser }: { experimentId: string; activeUser: { id: string } }) {
-  const [experiment, setExperiment] = useState<Experiment | null>(null)
-  const [match, setMatch] = useState<LocalMatch | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const {
+    data,
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useQuery({
+    queryKey: queryKeys.localExperiment(experimentId),
+    queryFn: async () => {
+      const experiment = await getExperimentById(experimentId)
+      if (!experiment) throw new Error('Experiment not found')
+      const match = experiment.matches.find((m) => m.player1Id === activeUser.id || m.player2Id === activeUser.id)
+      if (!match) throw new Error('You are not in a match for this experiment')
+      return { experiment, match } as { experiment: NonNullable<typeof experiment>; match: LocalMatch }
+    },
+  })
 
-  async function load() {
-    try {
-      setLoading(true)
-      setError(null)
-      const data = await getExperimentById(experimentId)
-      if (!data) { setError('Experiment not found'); return }
-      setExperiment(data)
-      const userMatch = data.matches.find((m) => m.player1Id === activeUser.id || m.player2Id === activeUser.id)
-      if (!userMatch) { setError('You are not in a match for this experiment'); return }
-      setMatch(userMatch)
-    } catch {
-      setError('Failed to load experiment')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => { void load() }, [experimentId])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center py-12">
         <span className="loading loading-spinner loading-lg"></span>
@@ -116,7 +97,9 @@ function LocalExperiment({ experimentId, activeUser }: { experimentId: string; a
     )
   }
 
-  if (error || !experiment || !match) {
+  const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load experiment' : null
+
+  if (error || !data) {
     return (
       <div className="text-center py-12">
         <p className="text-error">{error || 'Something went wrong'}</p>
@@ -133,9 +116,14 @@ function LocalExperiment({ experimentId, activeUser }: { experimentId: string; a
         <Link to="/dashboard/subject" className="btn btn-ghost btn-sm mb-4">
           ← Back to Dashboard
         </Link>
-        <h1 className="text-2xl font-bold">{experiment.name}</h1>
+        <h1 className="text-2xl font-bold">{data.experiment.name}</h1>
       </div>
-      <BRETExperiment experiment={experiment} match={match} activeUserId={activeUser.id} onExperimentUpdate={() => void load()} />
+      <BRETExperiment
+        experiment={data.experiment}
+        match={data.match}
+        activeUserId={activeUser.id}
+        onExperimentUpdate={() => void refetch()}
+      />
     </div>
   )
 }
@@ -155,7 +143,9 @@ export default function PlayExperiment() {
     return (
       <div className="text-center py-12">
         <p className="text-base-content/70">Connect your wallet to play.</p>
-        <Link to="/" className="btn btn-primary mt-4">Go Home</Link>
+        <Link to="/" className="btn btn-primary mt-4">
+          Go Home
+        </Link>
       </div>
     )
   }
