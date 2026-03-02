@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 
 import pytest
-from algopy import Application, Bytes, arc4
+from algopy import Application, arc4
 from algopy_testing import AlgopyTestContext, algopy_testing_context
 
 from smart_contracts.trust_experiments.contract import TrustExperiments
@@ -111,8 +111,6 @@ def test_create_variation_experiment_not_found_fails(context: AlgopyTestContext)
         contract.create_variation(
             arc4.UInt32(99),
             arc4.String("v1"),
-            Bytes(b"approval"),
-            Bytes(b"clear"),
             arc4.UInt64(100),
             arc4.UInt64(50),
             arc4.UInt64(3),
@@ -141,8 +139,6 @@ def test_create_variation_not_owner_fails(context: AlgopyTestContext) -> None:
             contract.create_variation(
                 exp_id,
                 arc4.String("v1"),
-                Bytes(b"approval"),
-                Bytes(b"clear"),
                 arc4.UInt64(100),
                 arc4.UInt64(50),
                 arc4.UInt64(3),

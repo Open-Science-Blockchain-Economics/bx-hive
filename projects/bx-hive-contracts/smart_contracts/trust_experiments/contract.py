@@ -1,5 +1,6 @@
 from algopy import (
     ARC4Contract,
+    Box,
     BoxMap,
     Bytes,
     Global,
@@ -26,10 +27,25 @@ class TrustExperiments(ARC4Contract):
         self.experiments = BoxMap(arc4.UInt32, ExperimentGroup, key_prefix=b"e_")
         # BoxMap: packed UInt64 key (high 32 bits = exp_id, low 32 bits = var_id) → VariationInfo
         self.variations = BoxMap(arc4.UInt64, VariationInfo, key_prefix=b"v_")
+        # On-chain TrustVariation bytecode (set once after deploy via set_trust_variation_program)
+        self.tv_approval = Box(Bytes, key=b"tv_approval")
+        self.tv_clear = Box(Bytes, key=b"tv_clear")
 
     @arc4.abimethod(create="require")
     def create(self, registry_app: arc4.UInt64) -> None:
         self.registry_app.value = registry_app.as_uint64()
+
+    @arc4.abimethod
+    def set_trust_variation_program(
+        self,
+        approval: Bytes,
+        clear: Bytes,
+        mbr_payment: gtxn.PaymentTransaction,
+    ) -> None:
+        assert Txn.sender == Global.creator_address, "Not creator"
+        assert mbr_payment.receiver == Global.current_application_address, "Wrong MBR receiver"
+        self.tv_approval.value = approval
+        self.tv_clear.value = clear
 
     @arc4.abimethod
     def create_experiment(self, name: arc4.String) -> arc4.UInt32:
@@ -49,8 +65,6 @@ class TrustExperiments(ARC4Contract):
         self,
         exp_id: arc4.UInt32,
         label: arc4.String,
-        approval_program: Bytes,
-        clear_program: Bytes,
         e1: arc4.UInt64,
         e2: arc4.UInt64,
         multiplier: arc4.UInt64,
@@ -64,14 +78,16 @@ class TrustExperiments(ARC4Contract):
         assert experiment.owner == arc4.Address(Txn.sender), "Not experiment owner"
         assert escrow_payment.receiver == Global.current_application_address, "Wrong escrow receiver"
         assert escrow_payment.amount > UInt64(0), "Escrow must be > 0"
+        assert self.tv_approval, "TrustVariation program not set"
+        assert self.tv_clear, "TrustVariation program not set"
 
         var_id = arc4.UInt32(experiment.variation_count.as_uint64())
 
         # Deploy TrustVariation and call create() in one transaction
         # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64,uint64,uint64)void
         deployed = itxn.ApplicationCall(
-            approval_program=approval_program,
-            clear_state_program=clear_program,
+            approval_program=self.tv_approval.value,
+            clear_state_program=self.tv_clear.value,
             global_num_uint=_TRUST_VAR_GLOBAL_UINT,
             global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
             app_args=(
@@ -137,8 +153,6 @@ class TrustExperiments(ARC4Contract):
         self,
         name: arc4.String,
         label: arc4.String,
-        approval_program: Bytes,
-        clear_program: Bytes,
         e1: arc4.UInt64,
         e2: arc4.UInt64,
         multiplier: arc4.UInt64,
@@ -149,6 +163,8 @@ class TrustExperiments(ARC4Contract):
     ) -> tuple[arc4.UInt32, arc4.UInt64]:
         assert escrow_payment.receiver == Global.current_application_address, "Wrong escrow receiver"
         assert escrow_payment.amount > UInt64(0), "Escrow must be > 0"
+        assert self.tv_approval, "TrustVariation program not set"
+        assert self.tv_clear, "TrustVariation program not set"
 
         # Create the experiment group
         exp_id = arc4.UInt32(self.experiment_count.value)
@@ -167,8 +183,8 @@ class TrustExperiments(ARC4Contract):
         # Deploy TrustVariation and call create() in one transaction
         # Selector: create(uint64,uint32,uint32,address,uint64,uint64,uint64,uint64,uint64,uint64,uint64)void
         deployed = itxn.ApplicationCall(
-            approval_program=approval_program,
-            clear_state_program=clear_program,
+            approval_program=self.tv_approval.value,
+            clear_state_program=self.tv_clear.value,
             global_num_uint=_TRUST_VAR_GLOBAL_UINT,
             global_num_bytes=_TRUST_VAR_GLOBAL_BYTES,
             app_args=(
