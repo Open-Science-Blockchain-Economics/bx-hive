@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react'
+
+const DOCS_LINKS = {
+  participants: '/docs/participants',
+  maxPayout: '/docs/trust-game-parameters',
+} as const
 import { createExperiment as dbCreateExperiment, createExperimentBatch, getVariationLabel } from '../../db'
 import { experimentTemplates, getTemplateById } from '../../experiment-logic/templates'
 import type { AssignmentStrategy, ParameterVariation } from '../../types'
 import { computeEscrowAlgo, generateVariationCombinations, toVariationParams } from '../../utils/trustGameCalc'
+import InfoAlert from '../ui/InfoAlert'
 import FundingSummary from './FundingSummary'
 import TemplateSelector from './TemplateSelector'
+import TrustGameParameters from './TrustGameParameters'
 import { VariationBuilder } from './VariationBuilder'
 
 interface CreateExperimentFormProps {
@@ -60,8 +67,8 @@ export default function CreateExperimentForm({
       setError('Experiment name is required')
       return
     }
-    if (selectedTemplateId === 'trust-game' && (!maxPerVariation || Number(maxPerVariation) < 2)) {
-      setError('Max participants per variation must be at least 2 for trust game experiments')
+    if (selectedTemplateId === 'trust-game' && (!maxPerVariation || Number(maxPerVariation) < 1)) {
+      setError('Max matches per variation must be at least 1 for trust game experiments')
       return
     }
     if (!selectedTemplate) return
@@ -86,7 +93,7 @@ export default function CreateExperimentForm({
   }
 
   async function createTrustGameOnChain() {
-    const maxSub = Number(maxPerVariation)
+    const maxSub = Number(maxPerVariation) * 2
     if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
       const combos = generateVariationCombinations(parameters, variations)
       const { expId } = await createExperimentWithVariation(
@@ -127,8 +134,8 @@ export default function CreateExperimentForm({
     selectedTemplateId === 'trust-game' ? (Number(parameters.E1) || 0) * (Number(parameters.m) || 1) + (Number(parameters.E2) || 0) : null
 
   const totalEscrowAlgo = (() => {
-    if (selectedTemplateId !== 'trust-game' || !maxPerVariation || Number(maxPerVariation) < 2) return 0
-    const maxSub = Number(maxPerVariation)
+    if (selectedTemplateId !== 'trust-game' || !maxPerVariation || Number(maxPerVariation) < 1) return 0
+    const maxSub = Number(maxPerVariation) * 2
     const combos =
       batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
         ? generateVariationCombinations(parameters, variations)
@@ -155,16 +162,16 @@ export default function CreateExperimentForm({
           <div className="divider"></div>
           <div>
             <h3 className="font-semibold text-lg mb-4">2. Experiment Details</h3>
-            <div className="form-control">
-              <span className="label-text font-medium mb-2">Experiment Name</span>
+            <fieldset className="fieldset">
+              <legend className="fieldset-legend">Experiment Name</legend>
               <input
                 type="text"
-                className="input input-bordered"
+                className="input input-bordered w-full"
                 value={experimentName}
                 onChange={(e) => setExperimentName(e.target.value)}
                 placeholder="e.g., Trust Experiment – Spring 2025"
               />
-            </div>
+            </fieldset>
           </div>
 
           {/* Step 3: Parameters */}
@@ -173,38 +180,33 @@ export default function CreateExperimentForm({
               <div className="divider"></div>
               <div>
                 <h3 className="font-semibold text-lg mb-2">3. Configure Base Parameters</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {selectedTemplate.parameterSchema.map((param) => (
-                    <div key={param.name} className="form-control">
-                      <label className="label">
-                        <span className="label-text font-medium">{param.label}</span>
-                      </label>
-                      <input
-                        type={param.type === 'number' ? 'number' : 'text'}
-                        className="input input-bordered"
-                        value={parameters[param.name] ?? ''}
-                        onChange={(e) => handleParameterChange(param.name, e.target.value, param.type)}
-                        min={param.min}
-                        max={param.max}
-                      />
-                      {param.description && (
-                        <label className="label">
-                          <span className="label-text-alt text-base-content/60">{param.description}</span>
-                        </label>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                {selectedTemplateId === 'trust-game' ? (
+                  <TrustGameParameters parameters={parameters} onChange={handleParameterChange} />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedTemplate.parameterSchema.map((param) => (
+                      <fieldset key={param.name} className="fieldset">
+                        <legend className="fieldset-legend">{param.label}</legend>
+                        <input
+                          type={param.type === 'number' ? 'number' : 'text'}
+                          className="input input-bordered w-full"
+                          value={parameters[param.name] ?? ''}
+                          onChange={(e) => handleParameterChange(param.name, e.target.value, param.type)}
+                          min={param.min}
+                          max={param.max}
+                        />
+                        {param.description && (
+                          <p className="fieldset-label text-base-content/60">{param.description}</p>
+                        )}
+                      </fieldset>
+                    ))}
+                  </div>
+                )}
 
                 {maxPayout !== null && !batchModeEnabled && (
-                  <div className="alert alert-info mt-4">
-                    <div>
-                      <div className="font-semibold">Max Payout Per Pair: {maxPayout} ALGO</div>
-                      <div className="text-xs text-base-content/70 mt-1">
-                        (E1 &times; m) + E2 = ({parameters.E1} &times; {parameters.m}) + {parameters.E2}
-                      </div>
-                    </div>
-                  </div>
+                  <InfoAlert learnMoreHref={DOCS_LINKS.maxPayout} className="mt-4">
+                    Max Payout Per Pair: <strong>{maxPayout} ALGO</strong>
+                  </InfoAlert>
                 )}
               </div>
 
@@ -279,27 +281,25 @@ export default function CreateExperimentForm({
 
                     {/* Trust Game info */}
                     {selectedTemplateId === 'trust-game' && (
-                      <div className="alert alert-info mb-4">
-                        <span>Subjects self-enroll and are automatically distributed across variations using round robin.</span>
-                      </div>
+                      <InfoAlert learnMoreHref={DOCS_LINKS.participants} className="mb-4">
+                        Subjects self-enroll and are distributed across variations using round robin
+                      </InfoAlert>
                     )}
 
-                    <div className="form-control">
-                      <label className="label">
-                        <span className="label-text font-medium">
-                          Max participants per variation
-                          {selectedTemplateId === 'trust-game' ? ' (required)' : ' (optional)'}
-                        </span>
-                      </label>
+                    <fieldset className="fieldset">
+                      <legend className="fieldset-legend">
+                        Max matches per variation
+                        {selectedTemplateId === 'trust-game' ? ' (required)' : ' (optional)'}
+                      </legend>
                       <input
                         type="number"
                         className="input input-bordered w-48"
-                        placeholder={selectedTemplateId === 'trust-game' ? 'e.g. 20' : 'No limit'}
-                        min={selectedTemplateId === 'trust-game' ? 2 : 1}
+                        placeholder={selectedTemplateId === 'trust-game' ? 'e.g. 10' : 'No limit'}
+                        min={selectedTemplateId === 'trust-game' ? 1 : 1}
                         value={maxPerVariation}
                         onChange={(e) => setMaxPerVariation(e.target.value)}
                       />
-                    </div>
+                    </fieldset>
 
                     {/* Funding Summary — trust-game only */}
                     {selectedTemplateId === 'trust-game' && (

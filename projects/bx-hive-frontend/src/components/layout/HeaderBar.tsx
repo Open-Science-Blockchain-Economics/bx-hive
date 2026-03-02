@@ -13,7 +13,7 @@ export default function HeaderBar() {
   return (
     <header className="navbar bg-base-100 border-b border-base-300 sticky top-0 z-10 shadow-sm">
       <div className="navbar-start">
-        <NavLink to="/" className="btn btn-ghost text-xl font-bold">
+        <NavLink to="/" className="text-xl font-bold px-2">
           bx-hive
         </NavLink>
         <nav className="hidden lg:flex">
