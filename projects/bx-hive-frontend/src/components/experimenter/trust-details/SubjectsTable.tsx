@@ -8,19 +8,14 @@ interface SubjectEntry {
 
 interface SubjectsTableProps {
   subjects: SubjectEntry[]
-  isLoading: boolean
 }
 
-export default function SubjectsTable({ subjects, isLoading }: SubjectsTableProps) {
+export default function SubjectsTable({ subjects }: SubjectsTableProps) {
   return (
     <div>
       <h3 className="font-semibold mb-3">Subjects ({subjects.length})</h3>
 
-      {isLoading && subjects.length === 0 ? (
-        <div className="flex justify-center py-4">
-          <span className="loading loading-spinner loading-sm" />
-        </div>
-      ) : subjects.length === 0 ? (
+      {subjects.length === 0 ? (
         <p className="text-sm text-base-content/50">No subjects enrolled yet.</p>
       ) : (
         <table className="table table-sm w-full">

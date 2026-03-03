@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import BRETExperiment from '../components/experiment-types/bret/BRETExperiment'
 import TrustExperiment from '../components/experiment-types/trust/TrustExperiment'
+import { PageHeader } from '../components/ui'
 import { getExperimentById } from '../db'
 import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
@@ -58,13 +59,11 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
 
   return (
     <div>
-      <div className="mb-6">
-        <Link to="/dashboard/subject" className="btn btn-ghost btn-sm mb-4">
-          ← Back to Dashboard
-        </Link>
-        <h1 className="text-2xl font-bold">Trust Game</h1>
-        <p className="text-base-content/70 mt-1">Variation #{String(appId)}</p>
-      </div>
+      <PageHeader
+        title="Trust Game"
+        backTo="/dashboard/subject"
+        backTooltip="Back to Subject Dashboard"
+      />
       <TrustExperiment appId={appId} match={data.match} config={data.config} activeAddress={activeAddress} onRefresh={() => void refetch()} />
     </div>
   )
@@ -86,12 +85,11 @@ function LocalExperiment({ experimentId, activeUser }: { experimentId: string; a
 
   return (
     <div>
-      <div className="mb-6">
-        <Link to="/dashboard/subject" className="btn btn-ghost btn-sm mb-4">
-          ← Back to Dashboard
-        </Link>
-        <h1 className="text-2xl font-bold">{data.experiment.name}</h1>
-      </div>
+      <PageHeader
+        title={data.experiment.name}
+        backTo="/dashboard/subject"
+        backTooltip="Back to Subject Dashboard"
+      />
       <BRETExperiment
         experiment={data.experiment}
         match={data.match}

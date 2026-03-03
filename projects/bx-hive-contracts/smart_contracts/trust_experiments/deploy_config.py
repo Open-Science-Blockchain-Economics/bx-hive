@@ -75,7 +75,7 @@ def deploy() -> None:
         algokit_utils.PaymentParams(
             sender=deployer.address,
             receiver=app_client.app_address,
-            amount=algokit_utils.AlgoAmount.from_micro_algos(mbr_amount),
+            amount=algokit_utils.AlgoAmount.from_micro_algo(mbr_amount),
         )
     )
 

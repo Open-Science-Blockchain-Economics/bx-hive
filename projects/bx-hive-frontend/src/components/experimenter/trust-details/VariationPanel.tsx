@@ -17,7 +17,6 @@ interface VariationPanelProps {
   subjects: SubjectEntry[]
   matches: Match[]
   config: VariationConfig | undefined
-  isLoading: boolean
   autoMatch: boolean
   onToggleAutoMatch: (val: boolean) => void
   onCreateMatch: (appId: bigint, investor: string, trustee: string) => Promise<void>
@@ -28,7 +27,6 @@ export default function VariationPanel({
   subjects,
   matches,
   config,
-  isLoading,
   autoMatch,
   onToggleAutoMatch,
   onCreateMatch,
@@ -39,7 +37,7 @@ export default function VariationPanel({
     <div className="rounded-b-box rounded-tr-box p-5 space-y-6">
       <VariationConfigCard config={config} appId={variation.appId} />
 
-      <SubjectsTable subjects={subjects} isLoading={isLoading} />
+      <SubjectsTable subjects={subjects} />
 
       {config && config.status === STATUS_ACTIVE && (
         <CreateMatchForm

@@ -194,7 +194,9 @@ export function useTrustVariation() {
       const client = getTrustVariationClient(appId)
       if (!client) return []
       const map = await client.state.box.subjects.getMap()
-      return Array.from(map.entries()).map(([address, info]) => ({ address, ...info }))
+      return Array.from(map.entries())
+        .map(([address, info]) => ({ address, ...info }))
+        .sort((a, b) => a.enrolled - b.enrolled)
     },
     [getTrustVariationClient],
   )
@@ -207,7 +209,7 @@ export function useTrustVariation() {
       const client = getTrustVariationClient(appId)
       if (!client) return []
       const map = await client.state.box.matches.getMap()
-      return Array.from(map.values())
+      return Array.from(map.values()).sort((a, b) => a.matchId - b.matchId)
     },
     [getTrustVariationClient],
   )

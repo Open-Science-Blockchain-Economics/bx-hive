@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
 import VariationPanel from '../components/experimenter/trust-details/VariationPanel'
-import { PageHeader, StatusDot } from '../components/ui'
+import { LoadingSpinner, PageHeader, StatusDot } from '../components/ui'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import { useTrustVariation } from '../hooks/useTrustVariation'
@@ -42,9 +42,8 @@ export default function TrustExperimentDetails() {
 
   const {
     data,
-    isFetching,
     refetch,
-  } = useSuspenseQuery<ExperimentDetailsData>({
+  } = useQuery<ExperimentDetailsData>({
     queryKey: queryKeys.trustExperimentDetails(expId),
     queryFn: async () => {
       const g = await getExperiment(expId)
@@ -80,6 +79,10 @@ export default function TrustExperimentDetails() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) })
     },
   })
+
+  if (!data) {
+    return <LoadingSpinner />
+  }
 
   const { group, variations, subjects, matches, configs } = data
   const selectedVar = variations[selectedVarIdx]
@@ -137,7 +140,6 @@ export default function TrustExperimentDetails() {
               subjects={subjects[varKey] ?? []}
               matches={matches[varKey] ?? []}
               config={configs[varKey]}
-              isLoading={isFetching}
               autoMatch={getVarConfig(selectedVar.appId).autoMatch}
               onToggleAutoMatch={(val) => setVarConfig(selectedVar.appId, { autoMatch: val })}
               onCreateMatch={async (appId, investor, trustee) => {

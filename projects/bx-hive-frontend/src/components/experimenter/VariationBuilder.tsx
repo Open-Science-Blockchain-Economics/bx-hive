@@ -167,7 +167,7 @@ export function VariationBuilder({ parameterSchema, baseParameters, variations, 
 
       {/* Summary */}
       {variations.length > 0 && variations.every((v) => v.values.length > 0) && (
-        <div className="alert alert-info">
+        <div className="bg-base-200 rounded-lg p-4">
           <div>
             <div className="font-semibold">
               {variations.length > 1 ? `Factorial Design: ${variations.map((v) => v.values.length).join(' × ')} = ` : ''}

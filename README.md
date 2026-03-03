@@ -26,10 +26,14 @@ Follow these steps every time you reset LocalNet or deploy updated contracts.
 
 ---
 
-### Step 1 — Reset LocalNet
+### Step 1 — Setup
 
 ```bash
+# Run this if you want a localnet with no data
 algokit localnet reset
+
+# Install dependencies (necessary if you just cloned the repo)
+algokit project bootstrap all
 ```
 
 This wipes all chain state and starts fresh. Any previously deployed contracts are gone.
@@ -54,6 +58,7 @@ Note both IDs — you'll need them in step 3.
 
 > If `.env.localnet` doesn't exist yet, run this first:
 > ```bash
+> # From the `/bx-hive/projects/bx-hive-contracts` dir
 > algokit generate env-file -a target_network localnet
 > ```
 
@@ -85,7 +90,7 @@ This creates test experimenter and subject accounts on LocalNet with funded wall
 
 ```bash
 cd projects/bx-hive-frontend
-npm run dev
+pnpm dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173).

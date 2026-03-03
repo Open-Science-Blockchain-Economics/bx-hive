@@ -1,4 +1,5 @@
-import { useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSuspenseQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { LoadingSpinner } from '../components/ui'
 import ExperimentCard from '../components/subject/ExperimentCard'
 import ActiveMatchCard from '../components/subject/ActiveMatchCard'
 import CompletedMatchCard from '../components/subject/CompletedMatchCard'
@@ -9,7 +10,7 @@ import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
-import { useTrustVariation, PHASE_COMPLETED } from '../hooks/useTrustVariation'
+import { useTrustVariation, PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '../hooks/useTrustVariation'
 import type { Match as OnChainMatch } from '../hooks/useTrustVariation'
 import { queryKeys } from '../lib/queryKeys'
 import { pickVariationRoundRobin, type VariationSlot } from '../utils/distributeSubjects'
@@ -48,7 +49,7 @@ export default function SubjectDashboard() {
   const { getPlayerMatch, selfEnroll, getSubjectCount, isSubjectEnrolled } = useTrustVariation()
   const queryClient = useQueryClient()
 
-  const { data: onChainData } = useSuspenseQuery<OnChainData>({
+  const { data: onChainData } = useQuery<OnChainData>({
     queryKey: queryKeys.subjectOnChain(activeAddress!),
     queryFn: async () => {
       const groups = await listExperiments()
@@ -86,6 +87,18 @@ export default function SubjectDashboard() {
       }
 
       return { matchViews, expViews }
+    },
+    refetchInterval: (query) => {
+      const d = query.state.data
+      if (!d) return false
+      const hasEnrolledWaiting = d.expViews.some((e) => e.enrolled && !e.hasMatch)
+      const hasWaitingMatch = d.matchViews.some(({ match }) => {
+        if (match.phase === PHASE_COMPLETED) return false
+        const isInvestor = match.investor === activeAddress
+        const isTrustee = match.trustee === activeAddress
+        return (isInvestor && match.phase === PHASE_TRUSTEE_DECISION) || (isTrustee && match.phase === PHASE_INVESTOR_DECISION)
+      })
+      return hasEnrolledWaiting || hasWaitingMatch ? 5000 : false
     },
   })
 
@@ -164,6 +177,10 @@ export default function SubjectDashboard() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.subjectLocal(activeUser?.id ?? '') })
     },
   })
+
+  if (!onChainData) {
+    return <LoadingSpinner />
+  }
 
   function getJoinError(expId: number): string | null {
     if (!joinMutation.isError || joinMutation.variables?.expId !== expId) return null
