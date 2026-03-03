@@ -8,6 +8,7 @@ import App from './App'
 import './styles/App.css'
 import { NetworkConfigProvider } from './hooks/useNetworkConfig'
 import { getAlgodConfigFromViteEnvironment, getKmdConfigFromViteEnvironment } from './utils/network/getAlgoClientConfigs'
+import { TEST_WALLET_NAME } from './lib/constants'
 
 const algodConfig = getAlgodConfigFromViteEnvironment()
 const kmdConfig = getKmdConfigFromViteEnvironment()
@@ -50,7 +51,7 @@ const walletManager = new WalletManager({
         token: kmdConfig.token as string,
         baseServer: kmdConfig.server,
         port: kmdConfig.port,
-        wallet: kmdConfig.wallet,
+        wallet: TEST_WALLET_NAME,
       },
     },
     WalletId.PERA,

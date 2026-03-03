@@ -9,7 +9,7 @@
 
 import algosdk from 'algosdk'
 import { AlgorandClient, algos } from '@algorandfoundation/algokit-utils'
-import { writeFileSync, mkdirSync, readFileSync } from 'fs'
+import { readFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -18,6 +18,7 @@ const __dirname = dirname(__filename)
 
 const ACCOUNT_COUNT = 10
 const FUND_AMOUNT_ALGO = 10
+const TEST_WALLET_NAME = 'bx-hive-test-accounts'
 
 // ---------------------------------------------------------------------------
 // Minimal .env loader (avoids needing dotenv as a dependency)
@@ -61,7 +62,6 @@ async function main() {
   const kmdToken = env('VITE_KMD_TOKEN')
   const kmdServer = env('VITE_KMD_SERVER', 'http://localhost')
   const kmdPort = Number(env('VITE_KMD_PORT', '4002'))
-  const kmdWalletName = env('VITE_KMD_WALLET', 'unencrypted-default-wallet')
   const kmdPassword = env('VITE_KMD_PASSWORD', '')
 
   const registryAppId = BigInt(env('VITE_REGISTRY_APP_ID', '0'))
@@ -93,28 +93,26 @@ async function main() {
   }
   if (appIdsToFund.length > 0) console.log()
 
-  // Raw KMD client to generate new keys in the wallet
+  // Raw KMD client to generate new keys in a dedicated test wallet
   const kmd = new algosdk.Kmd(kmdToken, kmdServer, kmdPort)
 
-  // Find the wallet
+  // Create or find the dedicated test wallet
   const { wallets } = await kmd.listWallets()
-  const wallet = (wallets as Array<{ id: string; name: string }>).find(
-    (w) => w.name === kmdWalletName,
-  )
+  let wallet = (wallets as Array<{ id: string; name: string }>).find((w) => w.name === TEST_WALLET_NAME)
   if (!wallet) {
-    throw new Error(
-      `KMD wallet "${kmdWalletName}" not found.\n` +
-        `Is localnet running? Try: algokit localnet start`,
-    )
+    console.log(`  Creating KMD wallet "${TEST_WALLET_NAME}"...`)
+    const created = (await kmd.createWallet(TEST_WALLET_NAME, '')) as { wallet: { id: string; name: string } }
+    wallet = created.wallet
+  } else {
+    console.log(`  Using existing KMD wallet "${TEST_WALLET_NAME}"`)
   }
 
   const { wallet_handle_token: handle } = await kmd.initWalletHandle(wallet.id, kmdPassword)
 
-  const seededAccounts: Array<{ name: string; address: string }> = []
-
+  let count = 0
   try {
     for (let i = 1; i <= ACCOUNT_COUNT; i++) {
-      // Create a new account inside the KMD wallet (persisted across restarts)
+      // Create a new account inside the dedicated test wallet
       const { address } = (await kmd.generateKey(handle)) as { address: string }
       const newAddress = address.toString()
 
@@ -125,20 +123,15 @@ async function main() {
         amount: algos(FUND_AMOUNT_ALGO),
       })
 
-      seededAccounts.push({ name: `Account ${i}`, address: newAddress })
+      count++
       console.log(`  ✓ Account ${i}: ${newAddress}`)
     }
   } finally {
     await kmd.releaseWalletHandle(handle)
   }
 
-  // Write output to public/ so Vite serves it at /localnet-seed.json at runtime
-  const publicDir = resolve(__dirname, '../public')
-  mkdirSync(publicDir, { recursive: true })
-  writeFileSync(resolve(publicDir, 'localnet-seed.json'), JSON.stringify(seededAccounts, null, 2))
-
-  console.log(`\n✅ Done! ${seededAccounts.length} accounts written to public/localnet-seed.json`)
-  console.log('   Open the home page and hard-refresh to register them.\n')
+  console.log(`\n✅ Done! ${count} accounts created in KMD wallet "${TEST_WALLET_NAME}".`)
+  console.log('   Open the home page and refresh to see them.\n')
 }
 
 main().catch((err: unknown) => {
