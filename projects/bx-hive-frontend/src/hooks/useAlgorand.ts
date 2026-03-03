@@ -1,6 +1,7 @@
 import { useWallet } from '@txnlab/use-wallet-react'
 import { useCallback, useMemo } from 'react'
 import { getAlgorandClient, getRegistryClient, getTrustExperimentsClient, getTrustVariationClient } from '../utils/algorand'
+import { useNetworkConfig } from './useNetworkConfig'
 
 /**
  * Foundation hook — wires the active wallet signer into the AlgorandClient
@@ -10,13 +11,14 @@ import { getAlgorandClient, getRegistryClient, getTrustExperimentsClient, getTru
  */
 export function useAlgorand() {
   const { activeAddress, transactionSigner, isReady } = useWallet()
+  const { configVersion } = useNetworkConfig()
 
   const algorand = useMemo(() => {
     if (!activeAddress) return null
     const client = getAlgorandClient()
     client.setSigner(activeAddress, transactionSigner)
     return client
-  }, [activeAddress, transactionSigner])
+  }, [activeAddress, transactionSigner, configVersion])
 
   const registryClient = useMemo(
     () => (algorand && activeAddress ? getRegistryClient(algorand, activeAddress) : null),

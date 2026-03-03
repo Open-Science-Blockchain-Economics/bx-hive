@@ -2,9 +2,9 @@ import algosdk from 'algosdk'
 import { AlgorandClient, algo } from '@algorandfoundation/algokit-utils'
 import { useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getRegistryClient } from '../utils/algorand'
-import { getAlgodConfigFromViteEnvironment, getKmdConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs'
 import { queryKeys } from '../lib/queryKeys'
 import { TEST_WALLET_NAME } from '../lib/constants'
+import { useNetworkConfig, type NetworkConfig } from './useNetworkConfig'
 
 const ROLE_MAP = { experimenter: 0, subject: 1 } as const
 
@@ -23,11 +23,8 @@ interface LocalnetAccountsData {
   seeded: boolean
 }
 
-async function fetchLocalnetAccounts(): Promise<LocalnetAccountsData> {
-  const kmdConf = getKmdConfigFromViteEnvironment()
-  const algodConfig = getAlgodConfigFromViteEnvironment()
-
-  const kmd = new algosdk.Kmd(kmdConf.token as string, kmdConf.server, Number(kmdConf.port) || 4002)
+async function fetchLocalnetAccounts(config: NetworkConfig): Promise<LocalnetAccountsData> {
+  const kmd = new algosdk.Kmd(config.kmd.token as string, config.kmd.server, Number(config.kmd.port) || 4002)
 
   // Find the dedicated test wallet
   let wallets: Array<{ id: string; name: string }>
@@ -51,9 +48,9 @@ async function fetchLocalnetAccounts(): Promise<LocalnetAccountsData> {
   // Query registry for registration status
   const algorand = AlgorandClient.fromConfig({
     algodConfig: {
-      server: algodConfig.server,
-      port: algodConfig.port ? Number(algodConfig.port) : undefined,
-      token: algodConfig.token as string,
+      server: config.algod.server,
+      port: config.algod.port ? Number(config.algod.port) : undefined,
+      token: config.algod.token as string,
     },
   })
   const registryClient = getRegistryClient(algorand, addresses[0])
@@ -91,27 +88,25 @@ async function fetchLocalnetAccounts(): Promise<LocalnetAccountsData> {
 
 export function useLocalnetAccounts() {
   const queryClient = useQueryClient()
+  const { networkConfig, configVersion } = useNetworkConfig()
 
   const { data, refetch } = useSuspenseQuery({
-    queryKey: queryKeys.localnetAccounts(),
-    queryFn: fetchLocalnetAccounts,
+    queryKey: [...queryKeys.localnetAccounts(), configVersion],
+    queryFn: () => fetchLocalnetAccounts(networkConfig),
   })
 
   const registerMutation = useMutation({
     mutationFn: async ({ address, name, role }: { address: string; name: string; role: LocalnetAccountRole }) => {
-      const kmdConf = getKmdConfigFromViteEnvironment()
-      const algodConfig = getAlgodConfigFromViteEnvironment()
-
       const algorand = AlgorandClient.fromConfig({
         algodConfig: {
-          server: algodConfig.server,
-          port: algodConfig.port ? Number(algodConfig.port) : undefined,
-          token: algodConfig.token as string,
+          server: networkConfig.algod.server,
+          port: networkConfig.algod.port ? Number(networkConfig.algod.port) : undefined,
+          token: networkConfig.algod.token as string,
         },
         kmdConfig: {
-          server: kmdConf.server,
-          port: kmdConf.port ? Number(kmdConf.port) : 4002,
-          token: kmdConf.token as string,
+          server: networkConfig.kmd.server,
+          port: networkConfig.kmd.port ? Number(networkConfig.kmd.port) : 4002,
+          token: networkConfig.kmd.token as string,
         },
       })
 

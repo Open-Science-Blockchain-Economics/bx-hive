@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { User, UserRole } from '../types'
 import { getAlgorandClient, getRegistryClient } from '../utils/algorand'
 import { queryKeys } from '../lib/queryKeys'
+import { useNetworkConfig } from './useNetworkConfig'
 
 const ROLE_REVERSE: Record<number, UserRole> = { 0: 'experimenter', 1: 'subject' }
 
@@ -20,6 +21,7 @@ const ActiveUserContext = createContext<ActiveUserContextType | undefined>(undef
 export function ActiveUserProvider({ children }: { children: ReactNode }) {
   const { activeAddress, transactionSigner } = useWallet()
   const queryClient = useQueryClient()
+  const { configVersion } = useNetworkConfig()
 
   const signerRef = useRef(transactionSigner)
   useEffect(() => {
@@ -27,7 +29,7 @@ export function ActiveUserProvider({ children }: { children: ReactNode }) {
   }, [transactionSigner])
 
   const { data: activeUser = null, isLoading } = useQuery({
-    queryKey: queryKeys.activeUser(activeAddress ?? ''),
+    queryKey: [...queryKeys.activeUser(activeAddress ?? ''), configVersion],
     queryFn: async (): Promise<User | null> => {
       const algorand = getAlgorandClient()
       algorand.setSigner(activeAddress!, signerRef.current)

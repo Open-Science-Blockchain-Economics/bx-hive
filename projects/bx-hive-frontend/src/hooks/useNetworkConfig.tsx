@@ -50,6 +50,7 @@ function loadConfig(): NetworkConfig {
 
 interface NetworkConfigContextValue {
   networkConfig: NetworkConfig
+  configVersion: number
   updateNetworkConfig: (config: NetworkConfig) => void
   resetToDefaults: () => void
   getDefaults: () => NetworkConfig
@@ -59,11 +60,13 @@ const NetworkConfigContext = createContext<NetworkConfigContextValue | null>(nul
 
 export function NetworkConfigProvider({ children }: { children: ReactNode }) {
   const [networkConfig, setNetworkConfig] = useState<NetworkConfig>(loadConfig)
+  const [configVersion, setConfigVersion] = useState(0)
 
   const updateNetworkConfig = useCallback((config: NetworkConfig) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
     setNetworkConfig(config)
     resetAlgorandClient()
+    setConfigVersion((v) => v + 1)
   }, [])
 
   const resetToDefaults = useCallback(() => {
@@ -71,12 +74,13 @@ export function NetworkConfigProvider({ children }: { children: ReactNode }) {
     const defaults = getDefaultConfig()
     setNetworkConfig(defaults)
     resetAlgorandClient()
+    setConfigVersion((v) => v + 1)
   }, [])
 
   const getDefaults = useCallback(() => getDefaultConfig(), [])
 
   return (
-    <NetworkConfigContext.Provider value={{ networkConfig, updateNetworkConfig, resetToDefaults, getDefaults }}>
+    <NetworkConfigContext.Provider value={{ networkConfig, configVersion, updateNetworkConfig, resetToDefaults, getDefaults }}>
       {children}
     </NetworkConfigContext.Provider>
   )

@@ -1,10 +1,14 @@
+import { useState } from 'react'
 import { NavLink } from 'react-router-dom'
+import { FaCog } from 'react-icons/fa'
 import HeaderStatus from '../HeaderStatus'
 import ThemeToggle from '../ThemeToggle'
+import NetworkSettingsModal from '../NetworkSettingsModal'
 import { useActiveUser } from '../../hooks/useActiveUser'
 
 export default function HeaderBar() {
   const { activeUser } = useActiveUser()
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const dashboardPath = activeUser
     ? `/dashboard/${activeUser.role}`
@@ -53,7 +57,11 @@ export default function HeaderBar() {
 
       <div className="navbar-end">
         <ThemeToggle />
+        <button type="button" className="btn btn-ghost btn-circle btn-sm mr-1" onClick={() => setSettingsOpen(true)} title="Settings">
+          <FaCog className="h-5 w-5" />
+        </button>
         <HeaderStatus />
+        <NetworkSettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
       </div>
     </header>
   )
