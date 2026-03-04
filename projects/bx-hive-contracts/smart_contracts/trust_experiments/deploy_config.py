@@ -47,16 +47,15 @@ def deploy() -> None:
     logger.info(f"TrustExperiments deployed: app_id={app_client.app_id}, address={app_client.app_address}")
 
     # Seed the app account on fresh deploys so it can pay box MBR for experiments/variations
-    # 15 ALGO covers: ~3.35 ALGO for tv_approval/tv_clear boxes + headroom for experiments/variations
     if deploy_result.operation_performed == algokit_utils.OperationPerformed.Create:
         algorand.send.payment(
             algokit_utils.PaymentParams(
                 sender=deployer.address,
                 receiver=app_client.app_address,
-                amount=algokit_utils.AlgoAmount(algo=15),
+                amount=algokit_utils.AlgoAmount(algo=1000),
             )
         )
-        logger.info(f"Seeded TrustExperiments app account with 15 ALGO")
+        logger.info(f"Seeded TrustExperiments app account with 1000 ALGO")
 
     # Upload TrustVariation bytecode to on-chain box storage.
     # This is idempotent — safe to re-run after contract upgrades.

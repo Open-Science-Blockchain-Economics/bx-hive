@@ -35,7 +35,7 @@ def deploy() -> None:
             algokit_utils.PaymentParams(
                 sender=deployer.address,
                 receiver=app_client.app_address,
-                amount=algokit_utils.AlgoAmount(algo=10),
+                amount=algokit_utils.AlgoAmount(algo=1000),
             )
         )
-        logger.info(f"Seeded BxHiveRegistry app account with 10 ALGO")
+        logger.info(f"Seeded BxHiveRegistry app account with 1000 ALGO")

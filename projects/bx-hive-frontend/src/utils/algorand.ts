@@ -27,7 +27,7 @@ export function getAlgorandClient(): AlgorandClient {
     _algorand = AlgorandClient.fromConfig({
       algodConfig: {
         server: config.server,
-        port: config.port ? Number(config.port) : undefined,
+        port: config.port ? Number(config.port) : '',
         token: config.token as string,
       },
     })

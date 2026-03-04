@@ -1,16 +1,19 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { NetworkConfigBuilder, WalletId, WalletManager } from '@txnlab/use-wallet'
+import { WalletProvider } from '@txnlab/use-wallet-react'
 import {
   getAlgodConfigFromViteEnvironment,
   getIndexerConfigFromViteEnvironment,
   getKmdConfigFromViteEnvironment,
 } from '../utils/network/getAlgoClientConfigs'
 import { resetAlgorandClient } from '../utils/algorand'
+import { TEST_WALLET_NAME } from '../lib/constants'
 
 const STORAGE_KEY = 'bx-hive-network-config'
 
 export interface ServiceConfig {
   server: string
-  port: string | number
+  port?: string | number
   token: string
 }
 
@@ -48,6 +51,34 @@ function loadConfig(): NetworkConfig {
   return getDefaultConfig()
 }
 
+function createWalletManager(config: NetworkConfig): WalletManager {
+  return new WalletManager({
+    wallets: [
+      {
+        id: WalletId.KMD,
+        options: {
+          token: config.kmd.token as string,
+          baseServer: config.kmd.server,
+          port: config.kmd.port,
+          wallet: TEST_WALLET_NAME,
+        },
+      },
+      WalletId.PERA,
+      WalletId.DEFLY,
+    ],
+    networks: new NetworkConfigBuilder()
+      .localnet({
+        algod: {
+          token: config.algod.token as string,
+          baseServer: config.algod.server,
+          port: config.algod.port,
+        },
+      })
+      .build(),
+    defaultNetwork: 'localnet',
+  })
+}
+
 interface NetworkConfigContextValue {
   networkConfig: NetworkConfig
   configVersion: number
@@ -58,9 +89,11 @@ interface NetworkConfigContextValue {
 
 const NetworkConfigContext = createContext<NetworkConfigContextValue | null>(null)
 
-export function NetworkConfigProvider({ children }: { children: ReactNode }) {
+export function NetworkProvider({ children }: { children: ReactNode }) {
   const [networkConfig, setNetworkConfig] = useState<NetworkConfig>(loadConfig)
   const [configVersion, setConfigVersion] = useState(0)
+
+  const walletManager = useMemo(() => createWalletManager(networkConfig), [configVersion])
 
   const updateNetworkConfig = useCallback((config: NetworkConfig) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
@@ -81,7 +114,9 @@ export function NetworkConfigProvider({ children }: { children: ReactNode }) {
 
   return (
     <NetworkConfigContext.Provider value={{ networkConfig, configVersion, updateNetworkConfig, resetToDefaults, getDefaults }}>
-      {children}
+      <WalletProvider key={configVersion} manager={walletManager}>
+        {children}
+      </WalletProvider>
     </NetworkConfigContext.Provider>
   )
 }
@@ -89,7 +124,7 @@ export function NetworkConfigProvider({ children }: { children: ReactNode }) {
 export function useNetworkConfig() {
   const ctx = useContext(NetworkConfigContext)
   if (!ctx) {
-    throw new Error('useNetworkConfig must be used within a NetworkConfigProvider')
+    throw new Error('useNetworkConfig must be used within a NetworkProvider')
   }
   return ctx
 }

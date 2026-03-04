@@ -1,7 +1,7 @@
 import { useWallet } from '@txnlab/use-wallet-react'
 import { useCallback, useMemo } from 'react'
 import { getAlgorandClient, getRegistryClient, getTrustExperimentsClient, getTrustVariationClient } from '../utils/algorand'
-import { useNetworkConfig } from './useNetworkConfig'
+import { useNetworkConfig } from '../providers/NetworkProvider'
 
 /**
  * Foundation hook — wires the active wallet signer into the AlgorandClient

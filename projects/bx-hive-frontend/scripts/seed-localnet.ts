@@ -64,9 +64,6 @@ async function main() {
   const kmdPort = Number(env('VITE_KMD_PORT', '4002'))
   const kmdPassword = env('VITE_KMD_PASSWORD', '')
 
-  const registryAppId = BigInt(env('VITE_REGISTRY_APP_ID', '0'))
-  const trustExperimentsAppId = BigInt(env('VITE_TRUST_EXPERIMENTS_APP_ID', '0'))
-
   console.log(`🌱 Seeding LocalNet — creating ${ACCOUNT_COUNT} funded accounts...\n`)
 
   // AlgorandClient with KMD config for dispenser lookup
@@ -79,19 +76,6 @@ async function main() {
   const dispenser = await algorand.account.kmd.getLocalNetDispenserAccount()
   algorand.setSignerFromAccount(dispenser)
   console.log(`  Dispenser: ${dispenser.addr.toString()}\n`)
-
-  // Fund contract app accounts so they can cover box MBR for user registrations.
-  // After a localnet reset contracts start at 0 balance.
-  const appIdsToFund: Array<{ name: string; appId: bigint }> = []
-  if (registryAppId > 0n) appIdsToFund.push({ name: 'BxHiveRegistry', appId: registryAppId })
-  if (trustExperimentsAppId > 0n) appIdsToFund.push({ name: 'TrustExperiments', appId: trustExperimentsAppId })
-
-  for (const { name, appId } of appIdsToFund) {
-    const appAddress = algosdk.getApplicationAddress(appId)
-    await algorand.account.ensureFunded(appAddress, dispenser.addr, algos(10))
-    console.log(`  ✓ ${name} app account funded: ${appAddress.toString()}`)
-  }
-  if (appIdsToFund.length > 0) console.log()
 
   // Raw KMD client to generate new keys in a dedicated test wallet
   const kmd = new algosdk.Kmd(kmdToken, kmdServer, kmdPort)

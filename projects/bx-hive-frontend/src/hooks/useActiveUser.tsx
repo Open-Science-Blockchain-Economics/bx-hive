@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { User, UserRole } from '../types'
 import { getAlgorandClient, getRegistryClient } from '../utils/algorand'
 import { queryKeys } from '../lib/queryKeys'
-import { useNetworkConfig } from './useNetworkConfig'
+import { useNetworkConfig } from '../providers/NetworkProvider'
 
 const ROLE_REVERSE: Record<number, UserRole> = { 0: 'experimenter', 1: 'subject' }
 

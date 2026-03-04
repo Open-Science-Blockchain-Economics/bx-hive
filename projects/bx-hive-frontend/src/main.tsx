@@ -1,17 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { NetworkConfigBuilder, WalletId, WalletManager } from '@txnlab/use-wallet'
-import { WalletProvider } from '@txnlab/use-wallet-react'
 import { ErrorBoundary } from 'react-error-boundary'
 import App from './App'
 import './styles/App.css'
-import { NetworkConfigProvider } from './hooks/useNetworkConfig'
-import { getAlgodConfigFromViteEnvironment, getKmdConfigFromViteEnvironment } from './utils/network/getAlgoClientConfigs'
-import { TEST_WALLET_NAME } from './lib/constants'
-
-const algodConfig = getAlgodConfigFromViteEnvironment()
-const kmdConfig = getKmdConfigFromViteEnvironment()
+import { NetworkProvider } from './providers/NetworkProvider'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,42 +36,14 @@ function AppFatalFallback({ error }: { error: unknown }) {
   )
 }
 
-const walletManager = new WalletManager({
-  wallets: [
-    {
-      id: WalletId.KMD,
-      options: {
-        token: kmdConfig.token as string,
-        baseServer: kmdConfig.server,
-        port: kmdConfig.port,
-        wallet: TEST_WALLET_NAME,
-      },
-    },
-    WalletId.PERA,
-    WalletId.DEFLY,
-  ],
-  networks: new NetworkConfigBuilder()
-    .localnet({
-      algod: {
-        token: algodConfig.token as string,
-        baseServer: algodConfig.server,
-        port: algodConfig.port,
-      },
-    })
-    .build(),
-  defaultNetwork: 'localnet',
-})
-
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <ErrorBoundary fallbackRender={AppFatalFallback}>
-      <WalletProvider manager={walletManager}>
+      <NetworkProvider>
         <QueryClientProvider client={queryClient}>
-          <NetworkConfigProvider>
-            <App />
-          </NetworkConfigProvider>
+          <App />
         </QueryClientProvider>
-      </WalletProvider>
+      </NetworkProvider>
     </ErrorBoundary>
   </React.StrictMode>,
 )

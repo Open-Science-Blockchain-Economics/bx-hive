@@ -4,7 +4,7 @@ import { useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { getRegistryClient } from '../utils/algorand'
 import { queryKeys } from '../lib/queryKeys'
 import { TEST_WALLET_NAME } from '../lib/constants'
-import { useNetworkConfig, type NetworkConfig } from './useNetworkConfig'
+import { useNetworkConfig, type NetworkConfig } from '../providers/NetworkProvider'
 
 const ROLE_MAP = { experimenter: 0, subject: 1 } as const
 
@@ -24,7 +24,7 @@ interface LocalnetAccountsData {
 }
 
 async function fetchLocalnetAccounts(config: NetworkConfig): Promise<LocalnetAccountsData> {
-  const kmd = new algosdk.Kmd(config.kmd.token as string, config.kmd.server, Number(config.kmd.port) || 4002)
+  const kmd = new algosdk.Kmd(config.kmd.token as string, config.kmd.server, config.kmd.port ? Number(config.kmd.port) : '')
 
   // Find the dedicated test wallet
   let wallets: Array<{ id: string; name: string }>
@@ -49,7 +49,7 @@ async function fetchLocalnetAccounts(config: NetworkConfig): Promise<LocalnetAcc
   const algorand = AlgorandClient.fromConfig({
     algodConfig: {
       server: config.algod.server,
-      port: config.algod.port ? Number(config.algod.port) : undefined,
+      port: config.algod.port ? Number(config.algod.port) : '',
       token: config.algod.token as string,
     },
   })
@@ -100,12 +100,12 @@ export function useLocalnetAccounts() {
       const algorand = AlgorandClient.fromConfig({
         algodConfig: {
           server: networkConfig.algod.server,
-          port: networkConfig.algod.port ? Number(networkConfig.algod.port) : undefined,
+          port: networkConfig.algod.port ? Number(networkConfig.algod.port) : '',
           token: networkConfig.algod.token as string,
         },
         kmdConfig: {
           server: networkConfig.kmd.server,
-          port: networkConfig.kmd.port ? Number(networkConfig.kmd.port) : 4002,
+          port: networkConfig.kmd.port ? Number(networkConfig.kmd.port) : '',
           token: networkConfig.kmd.token as string,
         },
       })

@@ -128,9 +128,10 @@ export default function LocalnetAccountsTable() {
   const handleConnect = async (address: string) => {
     const kmdWallet = wallets?.find((w) => w.id === 'kmd')
     if (!kmdWallet) return
-    if (!kmdWallet.isConnected) {
-      await kmdWallet.connect()
+    if (kmdWallet.isConnected) {
+      await kmdWallet.disconnect()
     }
+    await kmdWallet.connect()
     kmdWallet.setActiveAccount(address)
   }
 

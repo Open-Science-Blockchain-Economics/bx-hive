@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNetworkConfig, type NetworkConfig } from '../hooks/useNetworkConfig'
+import { useNetworkConfig, type NetworkConfig } from '../providers/NetworkProvider'
 
 interface Props {
   isOpen: boolean
@@ -65,11 +65,10 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
               <input
                 type="number"
                 className="input input-bordered w-full input-sm"
-                value={form.algod.port}
+                value={form.algod.port ?? ''}
                 onChange={(e) => updateField('algod', 'port', e.target.value)}
                 min={0}
                 max={65535}
-                required
               />
             </label>
             <label className="form-control w-full">
@@ -101,11 +100,10 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
               <input
                 type="number"
                 className="input input-bordered w-full input-sm"
-                value={form.indexer.port}
+                value={form.indexer.port ?? ''}
                 onChange={(e) => updateField('indexer', 'port', e.target.value)}
                 min={0}
                 max={65535}
-                required
               />
             </label>
             <label className="form-control w-full">
@@ -137,11 +135,10 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
               <input
                 type="number"
                 className="input input-bordered w-full input-sm"
-                value={form.kmd.port}
+                value={form.kmd.port ?? ''}
                 onChange={(e) => updateField('kmd', 'port', e.target.value)}
                 min={0}
                 max={65535}
-                required
               />
             </label>
             <label className="form-control w-full">
