@@ -48,9 +48,10 @@ def deploy() -> None:
 
     # Seed the app account on fresh deploys so it can pay box MBR for experiments/variations
     if deploy_result.operation_performed == algokit_utils.OperationPerformed.Create:
+        dispenser = algorand.account.localnet_dispenser()
         algorand.send.payment(
             algokit_utils.PaymentParams(
-                sender=deployer.address,
+                sender=dispenser.address,
                 receiver=app_client.app_address,
                 amount=algokit_utils.AlgoAmount(algo=1000),
             )
