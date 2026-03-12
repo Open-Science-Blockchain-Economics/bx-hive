@@ -1,0 +1,14 @@
+export const queryKeys = {
+  walletBalance: (address: string) => ['wallet-balance', address] as const,
+  onChainExperiments: (address: string) => ['experiments', 'on-chain', address] as const,
+  localExperiments: (userId: string) => ['experiments', 'local', userId] as const,
+  subjectOnChain: (address: string) => ['subject', 'on-chain', address] as const,
+  subjectLocal: (userId: string) => ['subject', 'local', userId] as const,
+  trustExperimentDetails: (expId: number) => ['trust-experiment', expId] as const,
+  playerMatch: (appId: bigint, address: string) => ['player-match', String(appId), address] as const,
+  localExperiment: (id: string) => ['local-experiment', id] as const,
+  experimentDetails: (id: string) => ['experiment-details', id] as const,
+  batchDetails: (id: string) => ['batch-details', id] as const,
+  localnetAccounts: () => ['localnet-accounts'] as const,
+  activeUser: (address: string) => ['active-user', address] as const,
+}
