@@ -11,7 +11,9 @@ def deploy() -> None:
         BxHiveRegistryMethodCallCreateParams,
     )
 
-    algorand = algokit_utils.AlgorandClient.from_environment()
+    from smart_contracts.shared.config import get_algorand_client, set_registry_app_id
+
+    algorand = get_algorand_client()
     deployer = algorand.account.from_environment("DEPLOYER")
 
     factory = algorand.client.get_typed_app_factory(
@@ -40,3 +42,5 @@ def deploy() -> None:
             )
         )
         logger.info(f"Seeded BxHiveRegistry app account with 1000 ALGO")
+
+    set_registry_app_id(app_client.app_id)

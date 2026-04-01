@@ -1,8 +1,96 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useWallet } from '@txnlab/use-wallet-react'
 import { type LocalnetAccount, type LocalnetAccountRole, useLocalnetAccounts } from '../hooks/useLocalnetAccounts'
 import { truncateAddress } from '../utils/address'
 import { CopyButton } from './ui'
+
+function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onDismiss, 3000)
+    return () => clearTimeout(timer)
+  }, [onDismiss])
+
+  return (
+    <div className="toast toast-end toast-bottom z-50">
+      <div className="alert alert-success text-sm">
+        <span>{message}</span>
+      </div>
+    </div>
+  )
+}
+
+function FundDropdown({ onFund, isPending }: { onFund: (address: string, amount: number) => Promise<void>; isPending: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [address, setAddress] = useState('')
+  const [amount, setAmount] = useState('10')
+  const [error, setError] = useState<string | null>(null)
+  const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const detailsRef = useRef<HTMLDetailsElement>(null)
+
+  async function handleFund() {
+    setError(null)
+    const trimmed = address.trim()
+    if (!trimmed) {
+      setError('Address is required')
+      return
+    }
+    const numAmount = Number(amount)
+    if (!numAmount || numAmount <= 0) {
+      setError('Enter a valid amount')
+      return
+    }
+    try {
+      await onFund(trimmed, numAmount)
+      setSuccessMsg(`Funded ${truncateAddress(trimmed)} with ${numAmount} ALGO`)
+      setAddress('')
+      setAmount('10')
+      setOpen(false)
+      if (detailsRef.current) detailsRef.current.open = false
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Funding failed')
+    }
+  }
+
+  return (
+    <>
+      {successMsg && <Toast message={successMsg} onDismiss={() => setSuccessMsg(null)} />}
+      <details ref={detailsRef} className="dropdown dropdown-end" onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
+        <summary className="btn btn-xs btn-ghost">Fund account</summary>
+        {open && (
+          <div className="dropdown-content z-10 bg-base-200 rounded-box shadow-lg p-4 w-80 mt-1">
+            <div className="flex flex-col gap-2">
+              <input
+                type="text"
+                className="input input-sm input-bordered w-full font-mono text-xs"
+                placeholder="Paste wallet address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                disabled={isPending}
+              />
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  className="input input-sm input-bordered w-24"
+                  placeholder="ALGO"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  min="1"
+                  disabled={isPending}
+                />
+                <span className="text-xs text-base-content/50">ALGO</span>
+                <button type="button" className="btn btn-sm btn-primary ml-auto" onClick={() => void handleFund()} disabled={isPending}>
+                  {isPending && <span className="loading loading-spinner loading-xs" />}
+                  Fund
+                </button>
+              </div>
+              {error && <p className="text-error text-xs">{error}</p>}
+            </div>
+          </div>
+        )}
+      </details>
+    </>
+  )
+}
 
 function AccountRow({
   account,
@@ -121,7 +209,7 @@ function AccountRow({
 }
 
 export default function LocalnetAccountsTable() {
-  const { accounts, seeded, registerAccount, refresh } = useLocalnetAccounts()
+  const { accounts, seeded, registerAccount, fundAccount, fundingInProgress, refresh } = useLocalnetAccounts()
   const { wallets, activeAddress } = useWallet()
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null)
 
@@ -152,12 +240,7 @@ export default function LocalnetAccountsTable() {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <a href="https://lora.algokit.io/localnet/fund" target="_blank" rel="noopener noreferrer" className="btn btn-xs btn-ghost">
-              Fund accounts
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
-                <path fillRule="evenodd" d="M4.25 5.5a.75.75 0 0 0-.75.75v8.5c0 .414.336.75.75.75h8.5a.75.75 0 0 0 .75-.75v-4a.75.75 0 0 1 1.5 0v4A2.25 2.25 0 0 1 12.75 17h-8.5A2.25 2.25 0 0 1 2 14.75v-8.5A2.25 2.25 0 0 1 4.25 4h5a.75.75 0 0 1 0 1.5h-5Zm7.25-.75a.75.75 0 0 1 .75-.75h4a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0V6.56l-5.22 5.22a.75.75 0 1 1-1.06-1.06l5.22-5.22H12.25a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
-              </svg>
-            </a>
+            <FundDropdown onFund={fundAccount} isPending={fundingInProgress} />
             <button type="button" className="btn btn-xs btn-ghost" onClick={() => void refresh()}>
               Refresh
             </button>

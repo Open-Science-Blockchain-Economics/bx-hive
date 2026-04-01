@@ -2,6 +2,7 @@ import { PHASE_COMPLETED } from '../../../hooks/useTrustVariation'
 import type { Match } from '../../../hooks/useTrustVariation'
 import { truncateAddress } from '../../../utils/address'
 import { microAlgoToAlgo } from '../../../utils/amount'
+import { loraAccountUrl } from '../../../utils/lora'
 
 interface MatchesTableProps {
   matches: Match[]
@@ -31,7 +32,7 @@ export default function MatchesTable({ matches }: MatchesTableProps) {
                 <td>{m.matchId}</td>
                 <td className="font-mono text-xs">
                   <a
-                    href={`https://lora.algokit.io/localnet/account/${m.investor}`}
+                    href={loraAccountUrl('localnet', m.investor)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="link link-hover inline-flex items-center gap-1"
@@ -44,7 +45,7 @@ export default function MatchesTable({ matches }: MatchesTableProps) {
                 </td>
                 <td className="font-mono text-xs">
                   <a
-                    href={`https://lora.algokit.io/localnet/account/${m.trustee}`}
+                    href={loraAccountUrl('localnet', m.trustee)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="link link-hover inline-flex items-center gap-1"

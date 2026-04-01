@@ -1,5 +1,6 @@
 import type { VariationConfig } from '../../../hooks/useTrustVariation'
 import { microAlgoToAlgo } from '../../../utils/amount'
+import { loraApplicationUrl } from '../../../utils/lora'
 
 interface VariationConfigCardProps {
   config: VariationConfig | undefined
@@ -9,7 +10,7 @@ interface VariationConfigCardProps {
 function LoraLink({ appId }: { appId: bigint }) {
   return (
     <a
-      href={`https://lora.algokit.io/localnet/application/${String(appId)}`}
+      href={loraApplicationUrl('localnet', appId)}
       target="_blank"
       rel="noopener noreferrer"
       className="tooltip tooltip-right"

@@ -106,7 +106,7 @@ export default function InvestorInterface({ appId, matchId, E1, m, UNIT, onDecis
                   step={UNIT}
                   value={investment}
                   onChange={(e) => setInvestment(Number(e.target.value))}
-                  className="range range-primary"
+                  className="range range-primary w-full"
                   disabled={submitting}
                 />
                 <div className="flex justify-between text-xs text-base-content/60">

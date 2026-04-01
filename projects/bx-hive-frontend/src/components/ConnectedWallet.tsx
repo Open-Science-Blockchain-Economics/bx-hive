@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { FaFlask, FaUser, FaRegCopy, FaCheck, FaSignOutAlt } from 'react-icons/fa'
 import { truncateAddress } from '../utils/address'
 import type { User } from '../types'
+import { loraAccountUrl } from '../utils/lora'
 
 interface ConnectedWalletProps {
   activeAddress: string
@@ -23,7 +24,7 @@ export default function ConnectedWallet({ activeAddress, activeNetwork, activeUs
     ;(document.activeElement as HTMLElement)?.blur()
   }, [])
 
-  const loraUrl = `https://lora.algokit.io/${activeNetwork}/account/${activeAddress}`
+  const loraUrl = loraAccountUrl(activeNetwork, activeAddress)
 
   const roleIcon =
     activeUser?.role === 'experimenter' ? (

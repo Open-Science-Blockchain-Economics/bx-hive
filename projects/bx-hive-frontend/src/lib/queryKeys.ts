@@ -10,5 +10,6 @@ export const queryKeys = {
   experimentDetails: (id: string) => ['experiment-details', id] as const,
   batchDetails: (id: string) => ['batch-details', id] as const,
   localnetAccounts: () => ['localnet-accounts'] as const,
+  localnetAccountRegistration: (address: string) => ['localnet-account-registration', address] as const,
   activeUser: (address: string) => ['active-user', address] as const,
 }

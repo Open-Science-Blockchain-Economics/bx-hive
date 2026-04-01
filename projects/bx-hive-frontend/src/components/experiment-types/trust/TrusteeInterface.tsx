@@ -126,7 +126,7 @@ export default function TrusteeInterface({ appId, matchId, E1, E2, m, UNIT, inve
                   step={UNIT}
                   value={returnAmount}
                   onChange={(e) => setReturnAmount(Number(e.target.value))}
-                  className="range range-primary"
+                  className="range range-primary w-full"
                   disabled={submitting}
                 />
                 <div className="flex justify-between text-xs text-base-content/60">
