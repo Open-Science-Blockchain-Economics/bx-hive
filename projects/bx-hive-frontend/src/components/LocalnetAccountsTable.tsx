@@ -134,7 +134,7 @@ function AccountRow({
         onClick={!account.registered ? onSelect : undefined}
         title={!account.registered ? 'Click to register' : undefined}
       >
-        <td className="text-base-content/50 text-sm w-10">{account.name.replace('Account ', '')}</td>
+        <td className="text-base-content/50 text-sm w-10 hidden sm:table-cell">{account.name.replace('Account ', '')}</td>
         <td>
           <span className="inline-flex items-center">
             <code className="text-xs" title={account.address}>
@@ -179,7 +179,7 @@ function AccountRow({
             <div className="flex items-center gap-3 flex-wrap">
               <input
                 type="text"
-                className="input input-sm input-bordered w-40"
+                className="input input-sm input-bordered w-full sm:w-40"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Display name"
@@ -230,7 +230,7 @@ export default function LocalnetAccountsTable() {
   return (
     <div className="card bg-base-100 shadow-xl border border-base-300">
       <div className="card-body">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
           <div>
             <h2 className="card-title">Test Accounts</h2>
             {seeded && (
@@ -260,7 +260,7 @@ export default function LocalnetAccountsTable() {
             <table className="table table-sm">
               <thead>
                 <tr>
-                  <th>#</th>
+                  <th className="hidden sm:table-cell">#</th>
                   <th>Address</th>
                   <th>Role</th>
                   <th className="text-right">Status</th>

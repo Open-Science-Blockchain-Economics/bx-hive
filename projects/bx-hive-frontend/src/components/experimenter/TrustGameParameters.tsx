@@ -19,7 +19,7 @@ export default function TrustGameParameters({ parameters, onChange }: TrustGameP
   return (
     <div className="flex flex-col gap-6">
       {/* Row 1: Inputs */}
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex items-end justify-between gap-4 flex-wrap">
         {/* E1 */}
         <fieldset className="fieldset flex-1">
           <legend className="fieldset-legend">Investor Endowment (E1)</legend>
@@ -35,7 +35,7 @@ export default function TrustGameParameters({ parameters, onChange }: TrustGameP
         </fieldset>
 
         {/* m */}
-        <fieldset className="fieldset w-32 shrink-0">
+        <fieldset className="fieldset w-full sm:w-32 shrink-0">
           <legend className="fieldset-legend text-center">Multiplier (m)</legend>
           <input
             type="number"
@@ -67,8 +67,8 @@ export default function TrustGameParameters({ parameters, onChange }: TrustGameP
       {/* Row 2: Icons + Arrow */}
       <div className="flex items-center gap-2">
         {/* Investor */}
-        <div className="flex flex-col items-center gap-1 w-32 shrink-0">
-          <FaUser className={`text-7xl transition-colors duration-200 ${investorColor}`} />
+        <div className="flex flex-col items-center gap-1 w-20 sm:w-32 shrink-0">
+          <FaUser className={`text-5xl sm:text-7xl transition-colors duration-200 ${investorColor}`} />
           <span className="text-xs text-base-content/50 font-medium tracking-wide uppercase">Investor</span>
         </div>
 
@@ -80,15 +80,15 @@ export default function TrustGameParameters({ parameters, onChange }: TrustGameP
         </div>
 
         {/* Trustee */}
-        <div className="flex flex-col items-center gap-1 w-32 shrink-0">
-          <FaUser className={`text-7xl transition-colors duration-200 ${trusteeColor}`} />
+        <div className="flex flex-col items-center gap-1 w-20 sm:w-32 shrink-0">
+          <FaUser className={`text-5xl sm:text-7xl transition-colors duration-200 ${trusteeColor}`} />
           <span className="text-xs text-base-content/50 font-medium tracking-wide uppercase">Trustee</span>
         </div>
       </div>
 
       {/* Row 3: Step Size */}
       <div className="flex justify-center">
-        <fieldset className="fieldset w-40">
+        <fieldset className="fieldset w-full sm:w-40">
           <legend className="fieldset-legend text-center">Step Size (UNIT)</legend>
           <input
             type="number"

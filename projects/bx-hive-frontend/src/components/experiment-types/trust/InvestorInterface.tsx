@@ -84,7 +84,7 @@ export default function InvestorInterface({ appId, matchId, E1, m, UNIT, onDecis
 
             {options.length <= 10 ? (
               // Show as buttons if few options
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {options.map((amount) => (
                   <button
                     key={amount}

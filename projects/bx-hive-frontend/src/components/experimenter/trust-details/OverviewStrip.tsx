@@ -83,7 +83,7 @@ export default function OverviewStrip({
         </div>
         <span className="text-xs uppercase tracking-wide text-base-content/30">Trust Experiment</span>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard
           title="Variations"
           value={variations.length}

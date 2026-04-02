@@ -43,7 +43,7 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
 
   return (
     <div className="modal modal-open">
-      <div className="modal-box max-w-2xl">
+      <div className="modal-box w-11/12 sm:w-auto max-w-2xl">
         <h3 className="font-bold text-lg mb-4">Network Settings</h3>
 
         <form onSubmit={handleSave} className="space-y-4">

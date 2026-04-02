@@ -62,7 +62,7 @@ export default function CreateMatchForm({ appId, unassigned, autoMatch, onToggle
       ) : (
         <div className="space-y-3">
           <div className="flex flex-wrap gap-3 items-end">
-            <div className="flex-1 min-w-40">
+            <div className="flex-1 min-w-0 sm:min-w-40">
               <label className="label label-text text-xs pb-1">Investor</label>
               <select className="select select-sm select-bordered w-full" value={investor} onChange={(e) => setInvestor(e.target.value)}>
                 <option value="">Select investor…</option>
@@ -73,7 +73,7 @@ export default function CreateMatchForm({ appId, unassigned, autoMatch, onToggle
                 ))}
               </select>
             </div>
-            <div className="flex-1 min-w-40">
+            <div className="flex-1 min-w-0 sm:min-w-40">
               <label className="label label-text text-xs pb-1">Trustee</label>
               <select className="select select-sm select-bordered w-full" value={trustee} onChange={(e) => setTrustee(e.target.value)}>
                 <option value="">Select trustee…</option>

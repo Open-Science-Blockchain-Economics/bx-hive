@@ -37,7 +37,7 @@ export default function ConnectedWallet({ activeAddress, activeNetwork, activeUs
 
   return (
     <div className="dropdown dropdown-end">
-      <button tabIndex={0} type="button" className="btn btn-outline btn-sm w-40 gap-1.5 font-normal">
+      <button tabIndex={0} type="button" className="btn btn-outline btn-sm w-28 sm:w-40 gap-1.5 font-normal">
         {roleIcon}
         <span className="max-w-[120px] truncate">{triggerLabel}</span>
       </button>

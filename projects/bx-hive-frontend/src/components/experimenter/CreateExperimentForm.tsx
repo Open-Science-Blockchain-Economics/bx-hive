@@ -308,7 +308,7 @@ export default function CreateExperimentForm({
                       </legend>
                       <input
                         type="number"
-                        className="input input-bordered w-48"
+                        className="input input-bordered w-full sm:w-48"
                         placeholder={selectedTemplateId === 'trust-game' ? 'e.g. 10' : 'No limit'}
                         min={selectedTemplateId === 'trust-game' ? 1 : 1}
                         value={maxPerVariation}
