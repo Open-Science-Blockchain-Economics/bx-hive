@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
 import BRETExperiment from '../components/experiment-types/bret/BRETExperiment'
 import TrustExperiment from '../components/experiment-types/trust/TrustExperiment'
+import InstructionsModal from '../components/InstructionsModal'
 import { PageHeader } from '../components/ui'
 import { getExperimentById } from '../db'
 import { useActiveUser } from '../hooks/useActiveUser'
@@ -10,6 +12,8 @@ import { useTrustVariation } from '../hooks/useTrustVariation'
 import type { VariationConfig } from '../hooks/useTrustVariation'
 import { queryKeys } from '../lib/queryKeys'
 import type { Match as LocalMatch } from '../types'
+import investorInstructions from 'virtual:instructions/trust-variation/investor'
+import trusteeInstructions from 'virtual:instructions/trust-variation/trustee'
 
 /** Returns true if the param looks like a numeric on-chain app ID */
 function isOnChainId(id: string): boolean {
@@ -19,6 +23,7 @@ function isOnChainId(id: string): boolean {
 // ── On-chain Trust Game view ─────────────────────────────────────────────────
 
 function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddress: string }) {
+  const [showInstructions, setShowInstructions] = useState(true)
   const { getPlayerMatch, getConfig } = useTrustVariation()
 
   const {
@@ -57,8 +62,16 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
     )
   }
 
+  const isInvestor = data.match.investor === activeAddress
+
   return (
     <div>
+      <InstructionsModal
+        isOpen={showInstructions}
+        onAcknowledge={() => setShowInstructions(false)}
+        title={isInvestor ? 'Investor Instructions' : 'Trustee Instructions'}
+        markdownContent={isInvestor ? investorInstructions : trusteeInstructions}
+      />
       <PageHeader
         title="Trust Game"
         backTo="/dashboard/subject"

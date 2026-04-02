@@ -1,5 +1,14 @@
 /// <reference types="vite/client" />
 
+declare module 'virtual:instructions/trust-variation/investor' {
+  const content: string
+  export default content
+}
+declare module 'virtual:instructions/trust-variation/trustee' {
+  const content: string
+  export default content
+}
+
 interface ImportMetaEnv {
   readonly VITE_ENVIRONMENT: string
 
