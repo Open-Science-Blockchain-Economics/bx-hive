@@ -16,8 +16,7 @@ export default function JoinableExperimentCard({ group, variations, joining, joi
           <div>
             <h3 className="card-title">{group.name}</h3>
             <p className="text-sm text-base-content/70">
-              Trust Game &middot; {Number(group.variationCount)} variation
-              {Number(group.variationCount) !== 1 ? 's' : ''}
+              Trust Game &middot; Experiment ID: {group.expId}
             </p>
           </div>
           <span className="badge badge-info">Open</span>
