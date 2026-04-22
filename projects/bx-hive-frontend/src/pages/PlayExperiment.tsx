@@ -14,6 +14,7 @@ import { queryKeys } from '../lib/queryKeys'
 import type { Match as LocalMatch } from '../types'
 import investorInstructions from 'virtual:instructions/trust-variation/investor'
 import trusteeInstructions from 'virtual:instructions/trust-variation/trustee'
+import { renderInstructions, trustVariationTokens } from '../lib/renderInstructions'
 
 /** Returns true if the param looks like a numeric on-chain app ID */
 function isOnChainId(id: string): boolean {
@@ -63,6 +64,11 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
   }
 
   const isInvestor = data.match.investor === activeAddress
+  const tokens = trustVariationTokens(data.config)
+  const instructionsMarkdown = renderInstructions(
+    isInvestor ? investorInstructions : trusteeInstructions,
+    tokens,
+  )
 
   return (
     <div>
@@ -70,7 +76,7 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
         isOpen={showInstructions}
         onAcknowledge={() => setShowInstructions(false)}
         title={isInvestor ? 'Investor Instructions' : 'Trustee Instructions'}
-        markdownContent={isInvestor ? investorInstructions : trusteeInstructions}
+        markdownContent={instructionsMarkdown}
       />
       <PageHeader
         title="Trust Game"
