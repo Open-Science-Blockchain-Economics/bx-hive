@@ -16,7 +16,7 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 
-const ACCOUNT_COUNT = 10
+const ACCOUNT_COUNT = 25
 const FUND_AMOUNT_ALGO = 10
 const TEST_WALLET_NAME = 'bx-hive-test-accounts'
 
