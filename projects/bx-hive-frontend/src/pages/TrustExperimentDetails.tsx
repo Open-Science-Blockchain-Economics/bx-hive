@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
@@ -6,7 +6,7 @@ import VariationPanel from '../components/experimenter/trust-details/VariationPa
 import { LoadingSpinner, PageHeader, StatusDot } from '../components/ui'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
-import { useTrustVariation } from '../hooks/useTrustVariation'
+import { STATUS_ACTIVE, useTrustVariation } from '../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../hooks/useTrustVariation'
 import { useExperimentManager } from '../hooks/useExperimentManager'
 import { queryKeys } from '../lib/queryKeys'
@@ -32,13 +32,16 @@ export default function TrustExperimentDetails() {
 
   const { getExperiment, listVariations } = useTrustExperiments()
   const { getEnrolledSubjects, getMatches, getConfig, createMatch } = useTrustVariation()
-  const { getExpConfig, setExpConfig, getVarConfig, setVarConfig } = useExperimentManager()
+  const { getExpConfig, setExpConfig, registerExperimentVariations } = useExperimentManager()
   const queryClient = useQueryClient()
 
   const [selectedVarIdx, setSelectedVarIdx] = useState(0)
 
-  const autoRefresh = getExpConfig(expId).autoRefresh
+  const expConfig = getExpConfig(expId)
+  const autoRefresh = expConfig.autoRefresh
+  const autoMatch = expConfig.autoMatch
   const setAutoRefresh = (val: boolean) => setExpConfig(expId, { autoRefresh: val })
+  const setAutoMatch = (val: boolean) => setExpConfig(expId, { autoMatch: val })
 
   const {
     data,
@@ -72,6 +75,38 @@ export default function TrustExperimentDetails() {
     refetchInterval: autoRefresh ? 5000 : false,
   })
 
+  const variations = data?.variations
+  const configs = data?.configs
+
+  useEffect(() => {
+    if (!variations || !configs) return
+    const registered = variations
+      .map((v) => {
+        const cfg = configs[String(v.appId)]
+        if (!cfg) return null
+        return { appId: v.appId, status: Number(cfg.status) }
+      })
+      .filter((x): x is { appId: bigint; status: number } => x !== null)
+    registerExperimentVariations(expId, registered)
+  }, [expId, variations, configs, registerExperimentVariations])
+
+  const { autoMatchEligible, autoMatchDisabledReason } = useMemo(() => {
+    if (!variations || !configs) {
+      return { autoMatchEligible: false, autoMatchDisabledReason: 'Loading variations…' }
+    }
+    const hasActive = variations.some((v) => {
+      const cfg = configs[String(v.appId)]
+      return cfg && Number(cfg.status) === STATUS_ACTIVE
+    })
+    if (hasActive) {
+      return { autoMatchEligible: true, autoMatchDisabledReason: undefined }
+    }
+    return {
+      autoMatchEligible: false,
+      autoMatchDisabledReason: 'Auto Match unavailable — no active variations.',
+    }
+  }, [variations, configs])
+
   const createMatchMutation = useMutation({
     mutationFn: ({ appId, investor, trustee }: { appId: bigint; investor: string; trustee: string }) =>
       createMatch(appId, investor, trustee),
@@ -84,8 +119,8 @@ export default function TrustExperimentDetails() {
     return <LoadingSpinner />
   }
 
-  const { group, variations, subjects, matches, configs } = data
-  const selectedVar = variations[selectedVarIdx]
+  const { group, variations: vars, subjects: subs, matches, configs: cfgs } = data
+  const selectedVar = vars[selectedVarIdx]
   const varKey = selectedVar ? String(selectedVar.appId) : ''
 
   return (
@@ -97,26 +132,30 @@ export default function TrustExperimentDetails() {
       />
 
       <OverviewStrip
-        variations={variations}
-        subjects={subjects}
+        variations={vars}
+        subjects={subs}
         matches={matches}
-        configs={configs}
+        configs={cfgs}
         autoRefresh={autoRefresh}
         onToggleAutoRefresh={setAutoRefresh}
         onRefresh={() => void refetch()}
+        autoMatch={autoMatch}
+        onToggleAutoMatch={setAutoMatch}
+        autoMatchEligible={autoMatchEligible}
+        autoMatchDisabledReason={autoMatchDisabledReason}
       />
 
       <h2 className="text-xs uppercase tracking-wide text-base-content/50 mb-3">Variation Details</h2>
 
-      {variations.length === 0 ? (
+      {vars.length === 0 ? (
         <div className="text-center py-12 text-base-content/50">No variations found.</div>
       ) : (
         <>
           <div role="tablist" className="tabs tabs-border mb-0">
-            {variations.map((v, idx) => {
+            {vars.map((v, idx) => {
               const k = String(v.appId)
-              const cfg = configs[k]
-              const hasWaiting = (subjects[k] ?? []).some((s) => s.assigned === 0)
+              const cfg = cfgs[k]
+              const hasWaiting = (subs[k] ?? []).some((s) => s.assigned === 0)
               return (
                 <button
                   key={v.varId}
@@ -137,11 +176,9 @@ export default function TrustExperimentDetails() {
           {selectedVar && (
             <VariationPanel
               variation={selectedVar}
-              subjects={subjects[varKey] ?? []}
+              subjects={subs[varKey] ?? []}
               matches={matches[varKey] ?? []}
-              config={configs[varKey]}
-              autoMatch={getVarConfig(selectedVar.appId).autoMatch}
-              onToggleAutoMatch={(val) => setVarConfig(selectedVar.appId, { autoMatch: val })}
+              config={cfgs[varKey]}
               onCreateMatch={async (appId, investor, trustee) => {
                 await createMatchMutation.mutateAsync({ appId, investor, trustee })
               }}

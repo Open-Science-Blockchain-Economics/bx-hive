@@ -17,20 +17,10 @@ interface VariationPanelProps {
   subjects: SubjectEntry[]
   matches: Match[]
   config: VariationConfig | undefined
-  autoMatch: boolean
-  onToggleAutoMatch: (val: boolean) => void
   onCreateMatch: (appId: bigint, investor: string, trustee: string) => Promise<void>
 }
 
-export default function VariationPanel({
-  variation,
-  subjects,
-  matches,
-  config,
-  autoMatch,
-  onToggleAutoMatch,
-  onCreateMatch,
-}: VariationPanelProps) {
+export default function VariationPanel({ variation, subjects, matches, config, onCreateMatch }: VariationPanelProps) {
   const unassigned = subjects.filter((s) => s.assigned === 0)
 
   return (
@@ -40,13 +30,7 @@ export default function VariationPanel({
       <SubjectsTable subjects={subjects} />
 
       {config && config.status === STATUS_ACTIVE && (
-        <CreateMatchForm
-          appId={variation.appId}
-          unassigned={unassigned}
-          autoMatch={autoMatch}
-          onToggleAutoMatch={onToggleAutoMatch}
-          onCreateMatch={onCreateMatch}
-        />
+        <CreateMatchForm appId={variation.appId} unassigned={unassigned} onCreateMatch={onCreateMatch} />
       )}
 
       <MatchesTable matches={matches} />

@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { FaPause, FaPlay } from 'react-icons/fa'
 import { truncateAddress } from '../../../utils/address'
 
 interface SubjectEntry {
@@ -11,12 +10,10 @@ interface SubjectEntry {
 interface CreateMatchFormProps {
   appId: bigint
   unassigned: SubjectEntry[]
-  autoMatch: boolean
-  onToggleAutoMatch: (val: boolean) => void
   onCreateMatch: (appId: bigint, investor: string, trustee: string) => Promise<void>
 }
 
-export default function CreateMatchForm({ appId, unassigned, autoMatch, onToggleAutoMatch, onCreateMatch }: CreateMatchFormProps) {
+export default function CreateMatchForm({ appId, unassigned, onCreateMatch }: CreateMatchFormProps) {
   const [investor, setInvestor] = useState('')
   const [trustee, setTrustee] = useState('')
   const [creating, setCreating] = useState(false)
@@ -39,23 +36,7 @@ export default function CreateMatchForm({ appId, unassigned, autoMatch, onToggle
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold">Create Match</h3>
-        <span className="tooltip tooltip-left" data-tip={autoMatch ? 'Pause auto-matching' : 'Auto-match unassigned subjects (FIFO)'}>
-          <button type="button" className="btn btn-ghost btn-xs gap-1" onClick={() => onToggleAutoMatch(!autoMatch)}>
-            {autoMatch ? (
-              <>
-                <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                <FaPause className="w-3 h-3" /> Auto Match
-              </>
-            ) : (
-              <>
-                <FaPlay className="w-3 h-3" /> Auto Match
-              </>
-            )}
-          </button>
-        </span>
-      </div>
+      <h3 className="font-semibold mb-3">Create Match</h3>
 
       {unassigned.length < 2 ? (
         <p className="text-sm text-base-content/50">Need at least 2 unassigned subjects to create a match.</p>

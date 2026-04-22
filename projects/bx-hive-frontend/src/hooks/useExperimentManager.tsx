@@ -1,28 +1,47 @@
 import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
 import algosdk from 'algosdk'
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { STATUS_ACTIVE } from './useTrustVariation'
 import { useAlgorand } from './useAlgorand'
 
 // --- Config types ---
 
 interface ExperimentConfig {
   autoRefresh: boolean
-}
-
-interface VariationConfig {
   autoMatch: boolean
 }
 
-const DEFAULT_EXP_CONFIG: ExperimentConfig = { autoRefresh: true }
-const DEFAULT_VAR_CONFIG: VariationConfig = { autoMatch: false }
+interface RegisteredVariation {
+  appId: bigint
+  status: number
+}
+
+const DEFAULT_EXP_CONFIG: ExperimentConfig = { autoRefresh: true, autoMatch: false }
+
+const autoMatchStorageKey = (expId: number) => `bxhive:experimentAutoMatch:${expId}`
+
+function readAutoMatchFromStorage(expId: number): boolean {
+  try {
+    return localStorage.getItem(autoMatchStorageKey(expId)) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function writeAutoMatchToStorage(expId: number, value: boolean): void {
+  try {
+    localStorage.setItem(autoMatchStorageKey(expId), String(value))
+  } catch {
+    // localStorage unavailable (private mode, quota) — ignore
+  }
+}
 
 // --- Context interface ---
 
 interface ExperimentManagerContextType {
   getExpConfig: (expId: number) => ExperimentConfig
   setExpConfig: (expId: number, patch: Partial<ExperimentConfig>) => void
-  getVarConfig: (appId: bigint) => VariationConfig
-  setVarConfig: (appId: bigint, patch: Partial<VariationConfig>) => void
+  registerExperimentVariations: (expId: number, variations: RegisteredVariation[]) => void
 }
 
 const ExperimentManagerContext = createContext<ExperimentManagerContextType | undefined>(undefined)
@@ -33,40 +52,46 @@ export function ExperimentManagerProvider({ children }: { children: ReactNode })
   const { algorand, activeAddress, getTrustVariationClient } = useAlgorand()
 
   const [expConfigs, setExpConfigs] = useState<Record<number, ExperimentConfig>>({})
-  const [varConfigs, setVarConfigs] = useState<Record<string, VariationConfig>>({})
+  const [expVariations, setExpVariations] = useState<Record<number, RegisteredVariation[]>>({})
 
-  // Prevent concurrent auto-match processing per variation
   const processingRef = useRef<Set<string>>(new Set())
 
   const getExpConfig = useCallback(
-    (expId: number): ExperimentConfig => expConfigs[expId] ?? DEFAULT_EXP_CONFIG,
+    (expId: number): ExperimentConfig => {
+      const stored = expConfigs[expId]
+      if (stored) return stored
+      return { ...DEFAULT_EXP_CONFIG, autoMatch: readAutoMatchFromStorage(expId) }
+    },
     [expConfigs],
   )
 
   const setExpConfig = useCallback(
-    (expId: number, patch: Partial<ExperimentConfig>) =>
-      setExpConfigs((prev) => ({ ...prev, [expId]: { ...(prev[expId] ?? DEFAULT_EXP_CONFIG), ...patch } })),
-    [],
-  )
-
-  const getVarConfig = useCallback(
-    (appId: bigint): VariationConfig => varConfigs[String(appId)] ?? DEFAULT_VAR_CONFIG,
-    [varConfigs],
-  )
-
-  const setVarConfig = useCallback(
-    (appId: bigint, patch: Partial<VariationConfig>) => {
-      const key = String(appId)
-      setVarConfigs((prev) => ({ ...prev, [key]: { ...(prev[key] ?? DEFAULT_VAR_CONFIG), ...patch } }))
+    (expId: number, patch: Partial<ExperimentConfig>) => {
+      setExpConfigs((prev) => {
+        const current = prev[expId] ?? { ...DEFAULT_EXP_CONFIG, autoMatch: readAutoMatchFromStorage(expId) }
+        const next = { ...current, ...patch }
+        if (patch.autoMatch !== undefined && patch.autoMatch !== current.autoMatch) {
+          writeAutoMatchToStorage(expId, patch.autoMatch)
+        }
+        return { ...prev, [expId]: next }
+      })
     },
     [],
   )
 
-  // Keep refs current for use inside setInterval callback
-  const varConfigsRef = useRef(varConfigs)
+  const registerExperimentVariations = useCallback((expId: number, variations: RegisteredVariation[]) => {
+    setExpVariations((prev) => ({ ...prev, [expId]: variations }))
+  }, [])
+
+  const expConfigsRef = useRef(expConfigs)
   useEffect(() => {
-    varConfigsRef.current = varConfigs
-  }, [varConfigs])
+    expConfigsRef.current = expConfigs
+  }, [expConfigs])
+
+  const expVariationsRef = useRef(expVariations)
+  useEffect(() => {
+    expVariationsRef.current = expVariations
+  }, [expVariations])
 
   const activeAddressRef = useRef(activeAddress)
   useEffect(() => {
@@ -88,46 +113,51 @@ export function ExperimentManagerProvider({ children }: { children: ReactNode })
     const id = setInterval(() => {
       if (!activeAddressRef.current) return
 
-      const configs = varConfigsRef.current
-      for (const [key, cfg] of Object.entries(configs)) {
+      for (const [expIdStr, cfg] of Object.entries(expConfigsRef.current)) {
         if (!cfg.autoMatch) continue
-        if (processingRef.current.has(key)) continue
+        const expId = Number(expIdStr)
+        const variations = expVariationsRef.current[expId] ?? []
 
-        processingRef.current.add(key)
-        const appId = BigInt(key)
+        for (const variation of variations) {
+          if (variation.status !== STATUS_ACTIVE) continue
 
-        void (async () => {
-          try {
-            const client = getClientRef.current(appId)
-            const algo = algorandRef.current
-            const sender = activeAddressRef.current
-            if (!client || !algo || !sender) return
+          const key = String(variation.appId)
+          if (processingRef.current.has(key)) continue
 
-            // Fetch unassigned subjects
-            const map = await client.state.box.subjects.getMap()
-            const unassigned = Array.from(map.entries())
-              .filter(([, info]) => info.assigned === 0)
-              .map(([address]) => address)
+          processingRef.current.add(key)
+          const appId = variation.appId
 
-            const appAddress = algosdk.getApplicationAddress(appId)
+          void (async () => {
+            try {
+              const client = getClientRef.current(appId)
+              const algo = algorandRef.current
+              const sender = activeAddressRef.current
+              if (!client || !algo || !sender) return
 
-            // FIFO: pair first two, then next two, etc.
-            while (unassigned.length >= 2) {
-              const investor = unassigned.shift()!
-              const trustee = unassigned.shift()!
-              const mbrPayment = algo.createTransaction.payment({
-                sender,
-                receiver: appAddress,
-                amount: AlgoAmount.MicroAlgos(88_300),
-              })
-              await client.send.createMatch({ args: { investor, trustee, mbrPayment } })
+              const map = await client.state.box.subjects.getMap()
+              const unassigned = Array.from(map.entries())
+                .filter(([, info]) => info.assigned === 0)
+                .map(([address]) => address)
+
+              const appAddress = algosdk.getApplicationAddress(appId)
+
+              while (unassigned.length >= 2) {
+                const investor = unassigned.shift()!
+                const trustee = unassigned.shift()!
+                const mbrPayment = algo.createTransaction.payment({
+                  sender,
+                  receiver: appAddress,
+                  amount: AlgoAmount.MicroAlgos(88_300),
+                })
+                await client.send.createMatch({ args: { investor, trustee, mbrPayment } })
+              }
+            } catch (err) {
+              console.warn(`[AutoMatch] Error processing variation ${key}:`, err)
+            } finally {
+              processingRef.current.delete(key)
             }
-          } catch (err) {
-            console.warn(`[AutoMatch] Error processing variation ${key}:`, err)
-          } finally {
-            processingRef.current.delete(key)
-          }
-        })()
+          })()
+        }
       }
     }, 5000)
 
@@ -135,7 +165,7 @@ export function ExperimentManagerProvider({ children }: { children: ReactNode })
   }, [])
 
   return (
-    <ExperimentManagerContext.Provider value={{ getExpConfig, setExpConfig, getVarConfig, setVarConfig }}>
+    <ExperimentManagerContext.Provider value={{ getExpConfig, setExpConfig, registerExperimentVariations }}>
       {children}
     </ExperimentManagerContext.Provider>
   )

@@ -18,6 +18,10 @@ interface OverviewStripProps {
   autoRefresh: boolean
   onToggleAutoRefresh: (val: boolean) => void
   onRefresh: () => void
+  autoMatch: boolean
+  onToggleAutoMatch: (val: boolean) => void
+  autoMatchEligible: boolean
+  autoMatchDisabledReason?: string
 }
 
 export default function OverviewStrip({
@@ -28,6 +32,10 @@ export default function OverviewStrip({
   autoRefresh,
   onToggleAutoRefresh,
   onRefresh,
+  autoMatch,
+  onToggleAutoMatch,
+  autoMatchEligible,
+  autoMatchDisabledReason,
 }: OverviewStripProps) {
   const allSubjects = Object.values(subjects).flat()
   const allMatches = Object.values(matches).flat()
@@ -80,6 +88,34 @@ export default function OverviewStrip({
               </button>
             </>
           )}
+          <span
+            className="tooltip tooltip-bottom ml-2"
+            data-tip={
+              !autoMatchEligible
+                ? autoMatchDisabledReason ?? 'Auto Match unavailable'
+                : autoMatch
+                  ? 'Pause auto-matching'
+                  : 'Auto-match unassigned subjects across all active variations (FIFO)'
+            }
+          >
+            <button
+              type="button"
+              className="btn btn-ghost btn-xs gap-1"
+              disabled={!autoMatchEligible}
+              onClick={() => onToggleAutoMatch(!autoMatch)}
+            >
+              {autoMatch ? (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                  <FaPause className="w-3 h-3" /> Auto Match
+                </>
+              ) : (
+                <>
+                  <FaPlay className="w-3 h-3" /> Auto Match
+                </>
+              )}
+            </button>
+          </span>
         </div>
         <span className="text-xs uppercase tracking-wide text-base-content/30">Trust Experiment</span>
       </div>
