@@ -43,8 +43,7 @@ export default function ExperimenterDashboard() {
 
   const { data: walletBalanceAlgo } = useSuspenseQuery({
     queryKey: queryKeys.walletBalance(activeAddress!),
-    queryFn: () =>
-      algorand!.account.getInformation(activeAddress!).then((info) => Number(info.balance.microAlgo) / 1_000_000),
+    queryFn: () => algorand!.account.getInformation(activeAddress!).then((info) => Number(info.balance.microAlgo) / 1_000_000),
   })
 
   const { data: onChainData } = useSuspenseQuery<OnChainData>({

@@ -43,10 +43,7 @@ export default function TrustExperimentDetails() {
   const setAutoRefresh = (val: boolean) => setExpConfig(expId, { autoRefresh: val })
   const setAutoMatch = (val: boolean) => setExpConfig(expId, { autoMatch: val })
 
-  const {
-    data,
-    refetch,
-  } = useQuery<ExperimentDetailsData>({
+  const { data, refetch } = useQuery<ExperimentDetailsData>({
     queryKey: queryKeys.trustExperimentDetails(expId),
     queryFn: async () => {
       const g = await getExperiment(expId)
@@ -125,11 +122,7 @@ export default function TrustExperimentDetails() {
 
   return (
     <div>
-      <PageHeader
-        title={group.name}
-        backTo="/dashboard/experimenter"
-        backTooltip="Back to Experimenter Dashboard"
-      />
+      <PageHeader title={group.name} backTo="/dashboard/experimenter" backTooltip="Back to Experimenter Dashboard" />
 
       <OverviewStrip
         variations={vars}

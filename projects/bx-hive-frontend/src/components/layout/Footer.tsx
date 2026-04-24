@@ -5,5 +5,5 @@ export default function Footer() {
         <small>&copy; {new Date().getFullYear()} bx-hive</small>
       </div>
     </footer>
-  );
+  )
 }

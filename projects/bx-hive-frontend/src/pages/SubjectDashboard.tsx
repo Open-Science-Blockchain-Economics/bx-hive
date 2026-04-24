@@ -224,125 +224,125 @@ export default function SubjectDashboard() {
       </div>
 
       <div className="space-y-8">
-          {/* Trust Game: Available to Join */}
-          {joinableExperiments.length > 0 && (
+        {/* Trust Game: Available to Join */}
+        {joinableExperiments.length > 0 && (
+          <section>
+            <h2 className="text-lg font-semibold mb-4">Trust Game — Available</h2>
+            <div className="grid gap-4">
+              {joinableExperiments.map(({ group, variations }) => (
+                <JoinableExperimentCard
+                  key={group.expId}
+                  group={group}
+                  variations={variations}
+                  joining={joinMutation.isPending ? (joinMutation.variables?.expId ?? null) : null}
+                  joinError={getJoinError(group.expId)}
+                  onJoin={(expId, vars) => joinMutation.mutate({ expId, variations: vars })}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Trust Game: Enrolled, waiting */}
+        {enrolledWaiting.length > 0 && (
+          <section>
+            <h2 className="text-lg font-semibold mb-4">Trust Game — Enrolled</h2>
+            <div className="grid gap-4">
+              {enrolledWaiting.map(({ group }) => (
+                <EnrolledWaitingCard key={group.expId} group={group} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Active Trust Game matches */}
+        {activeOnChain.length > 0 && (
+          <section>
+            <h2 className="text-lg font-semibold mb-4">Trust Game — Active</h2>
+            <div className="grid gap-4">
+              {activeOnChain.map(({ appId, match }) => (
+                <ActiveMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Completed Trust Game matches */}
+        {completedOnChain.length > 0 && (
+          <section>
+            <h2 className="text-lg font-semibold mb-4">Trust Game — Completed</h2>
+            <div className="grid gap-4">
+              {completedOnChain.map(({ appId, match }) => (
+                <CompletedMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* No trust activity */}
+        {joinableExperiments.length === 0 &&
+          enrolledWaiting.length === 0 &&
+          activeOnChain.length === 0 &&
+          completedOnChain.length === 0 && (
             <section>
-              <h2 className="text-lg font-semibold mb-4">Trust Game — Available</h2>
-              <div className="grid gap-4">
-                {joinableExperiments.map(({ group, variations }) => (
-                  <JoinableExperimentCard
-                    key={group.expId}
-                    group={group}
-                    variations={variations}
-                    joining={joinMutation.isPending ? joinMutation.variables?.expId ?? null : null}
-                    joinError={getJoinError(group.expId)}
-                    onJoin={(expId, vars) => joinMutation.mutate({ expId, variations: vars })}
-                  />
-                ))}
+              <h2 className="text-lg font-semibold mb-4">Trust Game</h2>
+              <div className="text-center py-8 text-base-content/70 bg-base-200 rounded-lg">
+                <p>No Trust Game experiments available yet.</p>
               </div>
             </section>
           )}
 
-          {/* Trust Game: Enrolled, waiting */}
-          {enrolledWaiting.length > 0 && (
-            <section>
-              <h2 className="text-lg font-semibold mb-4">Trust Game — Enrolled</h2>
-              <div className="grid gap-4">
-                {enrolledWaiting.map(({ group }) => (
-                  <EnrolledWaitingCard key={group.expId} group={group} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Active Trust Game matches */}
-          {activeOnChain.length > 0 && (
-            <section>
-              <h2 className="text-lg font-semibold mb-4">Trust Game — Active</h2>
-              <div className="grid gap-4">
-                {activeOnChain.map(({ appId, match }) => (
-                  <ActiveMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Completed Trust Game matches */}
-          {completedOnChain.length > 0 && (
-            <section>
-              <h2 className="text-lg font-semibold mb-4">Trust Game — Completed</h2>
-              <div className="grid gap-4">
-                {completedOnChain.map(({ appId, match }) => (
-                  <CompletedMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* No trust activity */}
-          {joinableExperiments.length === 0 &&
-            enrolledWaiting.length === 0 &&
-            activeOnChain.length === 0 &&
-            completedOnChain.length === 0 && (
+        {/* BRET experiments */}
+        {(availableViews.length > 0 || completedViews.length > 0) && (
+          <>
+            {availableViews.length > 0 && (
               <section>
-                <h2 className="text-lg font-semibold mb-4">Trust Game</h2>
-                <div className="text-center py-8 text-base-content/70 bg-base-200 rounded-lg">
-                  <p>No Trust Game experiments available yet.</p>
+                <h2 className="text-lg font-semibold mb-4">BRET Experiments — Available</h2>
+                <div className="grid gap-4">
+                  {availableViews.map((view) => (
+                    <ExperimentCard
+                      key={view.id}
+                      experiment={view.experiment}
+                      isCompleted={false}
+                      isRegistered={isRegistered(view)}
+                      hasActiveMatch={hasActiveMatch(view)}
+                      isRegistering={registerMutation.isPending && registerMutation.variables?.view.id === view.id}
+                      onRegister={(playerCount) => registerMutation.mutate({ view, playerCount })}
+                      isBatch={view.isBatch}
+                      totalPlayers={view.totalPlayers}
+                      playExperimentId={view.userExperimentId ?? view.experiment.id}
+                      displayParameters={view.displayParameters}
+                    />
+                  ))}
                 </div>
               </section>
             )}
 
-          {/* BRET experiments */}
-          {(availableViews.length > 0 || completedViews.length > 0) && (
-            <>
-              {availableViews.length > 0 && (
-                <section>
-                  <h2 className="text-lg font-semibold mb-4">BRET Experiments — Available</h2>
-                  <div className="grid gap-4">
-                    {availableViews.map((view) => (
-                      <ExperimentCard
-                        key={view.id}
-                        experiment={view.experiment}
-                        isCompleted={false}
-                        isRegistered={isRegistered(view)}
-                        hasActiveMatch={hasActiveMatch(view)}
-                        isRegistering={registerMutation.isPending && registerMutation.variables?.view.id === view.id}
-                        onRegister={(playerCount) => registerMutation.mutate({ view, playerCount })}
-                        isBatch={view.isBatch}
-                        totalPlayers={view.totalPlayers}
-                        playExperimentId={view.userExperimentId ?? view.experiment.id}
-                        displayParameters={view.displayParameters}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {completedViews.length > 0 && (
-                <section>
-                  <h2 className="text-lg font-semibold mb-4">BRET Experiments — Completed</h2>
-                  <div className="grid gap-4">
-                    {completedViews.map((view) => (
-                      <ExperimentCard
-                        key={view.id}
-                        experiment={view.experiment}
-                        isCompleted={true}
-                        isRegistered={true}
-                        hasActiveMatch={false}
-                        isRegistering={false}
-                        onRegister={() => {}}
-                        isBatch={view.isBatch}
-                        totalPlayers={view.totalPlayers}
-                        playExperimentId={view.userExperimentId ?? view.experiment.id}
-                        displayParameters={view.displayParameters}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-            </>
-          )}
-        </div>
+            {completedViews.length > 0 && (
+              <section>
+                <h2 className="text-lg font-semibold mb-4">BRET Experiments — Completed</h2>
+                <div className="grid gap-4">
+                  {completedViews.map((view) => (
+                    <ExperimentCard
+                      key={view.id}
+                      experiment={view.experiment}
+                      isCompleted={true}
+                      isRegistered={true}
+                      hasActiveMatch={false}
+                      isRegistering={false}
+                      onRegister={() => {}}
+                      isBatch={view.isBatch}
+                      totalPlayers={view.totalPlayers}
+                      playExperimentId={view.userExperimentId ?? view.experiment.id}
+                      displayParameters={view.displayParameters}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
+          </>
+        )}
+      </div>
     </div>
   )
 }

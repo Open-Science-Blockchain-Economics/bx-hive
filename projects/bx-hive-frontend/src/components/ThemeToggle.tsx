@@ -18,11 +18,7 @@ export default function ThemeToggle() {
 
   return (
     <label className="swap swap-rotate btn btn-ghost btn-circle btn-sm mr-1">
-      <input
-        type="checkbox"
-        checked={isDark}
-        onChange={(e) => setIsDark(e.target.checked)}
-      />
+      <input type="checkbox" checked={isDark} onChange={(e) => setIsDark(e.target.checked)} />
       <FaMoon className="swap-off h-5 w-5" />
       <FaSun className="swap-on h-5 w-5" />
     </label>

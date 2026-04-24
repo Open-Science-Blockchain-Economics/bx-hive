@@ -1,10 +1,20 @@
 import { useWallet } from '@txnlab/use-wallet-react'
 import { useRef, useEffect, useCallback, createContext, useContext, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { encodeTransaction } from '@algorandfoundation/algokit-utils/transact'
 import type { User, UserRole } from '../types'
 import { getAlgorandClient, getRegistryClient } from '../utils/algorand'
 import { queryKeys } from '../lib/queryKeys'
 import { useNetworkConfig } from '../providers/NetworkProvider'
+
+type AnySigner = (txnGroup: unknown[], indexesToSign: number[]) => Promise<Uint8Array[]>
+
+function adaptWalletSigner(walletSigner: unknown): AnySigner {
+  return async (txnGroup, indexesToSign) => {
+    const encoded = (txnGroup as Array<Parameters<typeof encodeTransaction>[0]>).map((t) => encodeTransaction(t))
+    return (walletSigner as AnySigner)(encoded, indexesToSign)
+  }
+}
 
 const ROLE_REVERSE: Record<number, UserRole> = { 0: 'experimenter', 1: 'subject' }
 
@@ -32,7 +42,8 @@ export function ActiveUserProvider({ children }: { children: ReactNode }) {
     queryKey: [...queryKeys.activeUser(activeAddress ?? ''), configVersion],
     queryFn: async (): Promise<User | null> => {
       const algorand = getAlgorandClient()
-      algorand.setSigner(activeAddress!, signerRef.current)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      algorand.setSigner(activeAddress!, adaptWalletSigner(signerRef.current) as any)
       const client = getRegistryClient(algorand, activeAddress!)
       try {
         const result = await client.send.getUser({ args: { addr: activeAddress! } })
@@ -66,9 +77,7 @@ export function ActiveUserProvider({ children }: { children: ReactNode }) {
   }, [queryClient, activeAddress])
 
   return (
-    <ActiveUserContext.Provider value={{ activeUser, isLoading, setActiveUser, clearActiveUser }}>
-      {children}
-    </ActiveUserContext.Provider>
+    <ActiveUserContext.Provider value={{ activeUser, isLoading, setActiveUser, clearActiveUser }}>{children}</ActiveUserContext.Provider>
   )
 }
 

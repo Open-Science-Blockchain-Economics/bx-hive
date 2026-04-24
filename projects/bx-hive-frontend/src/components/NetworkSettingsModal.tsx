@@ -30,11 +30,7 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
     setForm(getDefaults())
   }
 
-  const updateField = <S extends 'algod' | 'indexer' | 'kmd'>(
-    section: S,
-    field: string,
-    value: string | number,
-  ) => {
+  const updateField = <S extends 'algod' | 'indexer' | 'kmd'>(section: S, field: string, value: string | number) => {
     setForm((prev) => ({
       ...prev,
       [section]: { ...prev[section], [field]: value },
@@ -51,7 +47,9 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
           <fieldset className="mt-2 grid gap-3">
             <legend className="text-primary mb-2 font-bold">Algod</legend>
             <label className="form-control w-full">
-              <div className="label"><span className="label-text">Server</span></div>
+              <div className="label">
+                <span className="label-text">Server</span>
+              </div>
               <input
                 type="text"
                 className="input input-bordered w-full input-sm"
@@ -61,7 +59,9 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
               />
             </label>
             <label className="form-control w-full">
-              <div className="label"><span className="label-text">Port</span></div>
+              <div className="label">
+                <span className="label-text">Port</span>
+              </div>
               <input
                 type="number"
                 className="input input-bordered w-full input-sm"
@@ -72,7 +72,9 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
               />
             </label>
             <label className="form-control w-full">
-              <div className="label"><span className="label-text">Token</span></div>
+              <div className="label">
+                <span className="label-text">Token</span>
+              </div>
               <input
                 type="password"
                 className="input input-bordered w-full input-sm"
@@ -86,7 +88,9 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
           <fieldset className="mt-2 grid gap-3">
             <legend className="text-primary mb-2 font-bold">Indexer</legend>
             <label className="form-control w-full">
-              <div className="label"><span className="label-text">Server</span></div>
+              <div className="label">
+                <span className="label-text">Server</span>
+              </div>
               <input
                 type="text"
                 className="input input-bordered w-full input-sm"
@@ -96,7 +100,9 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
               />
             </label>
             <label className="form-control w-full">
-              <div className="label"><span className="label-text">Port</span></div>
+              <div className="label">
+                <span className="label-text">Port</span>
+              </div>
               <input
                 type="number"
                 className="input input-bordered w-full input-sm"
@@ -107,7 +113,9 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
               />
             </label>
             <label className="form-control w-full">
-              <div className="label"><span className="label-text">Token</span></div>
+              <div className="label">
+                <span className="label-text">Token</span>
+              </div>
               <input
                 type="password"
                 className="input input-bordered w-full input-sm"
@@ -121,7 +129,9 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
           <fieldset className="mt-2 grid gap-3">
             <legend className="text-primary mb-2 font-bold">KMD</legend>
             <label className="form-control w-full">
-              <div className="label"><span className="label-text">Server</span></div>
+              <div className="label">
+                <span className="label-text">Server</span>
+              </div>
               <input
                 type="text"
                 className="input input-bordered w-full input-sm"
@@ -131,7 +141,9 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
               />
             </label>
             <label className="form-control w-full">
-              <div className="label"><span className="label-text">Port</span></div>
+              <div className="label">
+                <span className="label-text">Port</span>
+              </div>
               <input
                 type="number"
                 className="input input-bordered w-full input-sm"
@@ -142,7 +154,9 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
               />
             </label>
             <label className="form-control w-full">
-              <div className="label"><span className="label-text">Token</span></div>
+              <div className="label">
+                <span className="label-text">Token</span>
+              </div>
               <input
                 type="password"
                 className="input input-bordered w-full input-sm"
@@ -151,7 +165,9 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
               />
             </label>
             <label className="form-control w-full">
-              <div className="label"><span className="label-text">Wallet</span></div>
+              <div className="label">
+                <span className="label-text">Wallet</span>
+              </div>
               <input
                 type="text"
                 className="input input-bordered w-full input-sm"
@@ -160,7 +176,9 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
               />
             </label>
             <label className="form-control w-full">
-              <div className="label"><span className="label-text">Password</span></div>
+              <div className="label">
+                <span className="label-text">Password</span>
+              </div>
               <input
                 type="password"
                 className="input input-bordered w-full input-sm"

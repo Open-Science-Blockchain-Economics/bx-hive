@@ -29,8 +29,7 @@ export default function ExperimentDetails() {
   })
 
   const actionInProgress = closeRegistrationMutation.isPending || reopenRegistrationMutation.isPending
-  const actionError =
-    (closeRegistrationMutation.error ?? reopenRegistrationMutation.error)?.message ?? null
+  const actionError = (closeRegistrationMutation.error ?? reopenRegistrationMutation.error)?.message ?? null
 
   const { experiment, users } = data
   const template = getTemplateById(experiment.templateId)

@@ -7,26 +7,18 @@ import { useActiveUser } from '../../hooks/useActiveUser'
 export default function HeaderBar() {
   const { activeUser } = useActiveUser()
 
-  const dashboardPath = activeUser
-    ? `/dashboard/${activeUser.role}`
-    : '/dashboard/subject'
+  const dashboardPath = activeUser ? `/dashboard/${activeUser.role}` : '/dashboard/subject'
 
   const navLinks = (
     <>
       <li>
-        <NavLink
-          to="/"
-          className={({ isActive }) => (isActive ? 'active font-bold' : '')}
-        >
+        <NavLink to="/" className={({ isActive }) => (isActive ? 'active font-bold' : '')}>
           Home
         </NavLink>
       </li>
       {activeUser && (
         <li>
-          <NavLink
-            to={dashboardPath}
-            className={({ isActive }) => (isActive ? 'active font-bold' : '')}
-          >
+          <NavLink to={dashboardPath} className={({ isActive }) => (isActive ? 'active font-bold' : '')}>
             Dashboard
           </NavLink>
         </li>
@@ -68,9 +60,7 @@ export default function HeaderBar() {
 
         {/* Desktop horizontal menu */}
         <nav className="hidden lg:flex">
-          <ul className="menu menu-horizontal px-1">
-            {navLinks}
-          </ul>
+          <ul className="menu menu-horizontal px-1">{navLinks}</ul>
         </nav>
       </div>
 

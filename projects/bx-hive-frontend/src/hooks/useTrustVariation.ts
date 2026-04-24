@@ -1,5 +1,4 @@
-import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
-import algosdk from 'algosdk'
+import { AlgoAmount, getApplicationAddress } from '@algorandfoundation/algokit-utils'
 import { useCallback } from 'react'
 import type { Match, VariationConfig } from '../contracts/TrustVariation'
 import { useAlgorand } from './useAlgorand'
@@ -33,7 +32,7 @@ export function useTrustVariation() {
       const client = getTrustVariationClient(appId)
       if (!client) throw new Error('Wallet not connected')
 
-      const appAddress = algosdk.getApplicationAddress(appId)
+      const appAddress = getApplicationAddress(appId)
       const paymentTxn = algorand.createTransaction.payment({
         sender: activeAddress,
         receiver: appAddress,
@@ -57,7 +56,7 @@ export function useTrustVariation() {
       const client = getTrustVariationClient(appId)
       if (!client) throw new Error('Wallet not connected')
 
-      const appAddress = algosdk.getApplicationAddress(appId)
+      const appAddress = getApplicationAddress(appId)
       const mbrPayment = algorand.createTransaction.payment({
         sender: activeAddress,
         receiver: appAddress,
@@ -80,7 +79,7 @@ export function useTrustVariation() {
       const client = getTrustVariationClient(appId)
       if (!client) throw new Error('Wallet not connected')
 
-      const appAddress = algosdk.getApplicationAddress(appId)
+      const appAddress = getApplicationAddress(appId)
       const mbrPayment = algorand.createTransaction.payment({
         sender: activeAddress,
         receiver: appAddress,
@@ -170,7 +169,7 @@ export function useTrustVariation() {
       const client = getTrustVariationClient(appId)
       if (!client) throw new Error('Wallet not connected')
 
-      const appAddress = algosdk.getApplicationAddress(appId)
+      const appAddress = getApplicationAddress(appId)
       const mbrPayment = algorand.createTransaction.payment({
         sender: activeAddress,
         receiver: appAddress,

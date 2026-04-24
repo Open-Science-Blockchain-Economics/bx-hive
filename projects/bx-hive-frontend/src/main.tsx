@@ -23,13 +23,9 @@ function AppFatalFallback({ error }: { error: unknown }) {
         <div className="max-w-md">
           <h1 className="text-4xl">Fatal Error</h1>
           <p className="py-4 text-base-content/80">
-            {isEnvError
-              ? 'Please set up your .env file based on .env.template.'
-              : 'The application encountered a critical error.'}
+            {isEnvError ? 'Please set up your .env file based on .env.template.' : 'The application encountered a critical error.'}
           </p>
-          <p className="text-xs font-mono text-base-content/50 break-all bg-base-200 p-2 rounded">
-            {message}
-          </p>
+          <p className="text-xs font-mono text-base-content/50 break-all bg-base-200 p-2 rounded">{message}</p>
         </div>
       </div>
     </div>

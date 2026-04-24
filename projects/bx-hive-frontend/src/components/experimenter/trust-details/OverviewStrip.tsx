@@ -92,7 +92,7 @@ export default function OverviewStrip({
             className="tooltip tooltip-bottom ml-2"
             data-tip={
               !autoMatchEligible
-                ? autoMatchDisabledReason ?? 'Auto Match unavailable'
+                ? (autoMatchDisabledReason ?? 'Auto Match unavailable')
                 : autoMatch
                   ? 'Pause auto-matching'
                   : 'Auto-match unassigned subjects across all active variations (FIFO)'

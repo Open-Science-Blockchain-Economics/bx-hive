@@ -12,8 +12,7 @@ function getDescriptiveMessage(error: Error): string {
   const msg = error.message.toLowerCase()
   if (msg.includes('failed to fetch') || msg.includes('networkerror') || msg.includes('econnrefused'))
     return 'Could not reach the network. LocalNet may not be running.'
-  if (msg.includes('attempt to get default algod'))
-    return 'Algod configuration is missing. Check your .env file.'
+  if (msg.includes('attempt to get default algod')) return 'Algod configuration is missing. Check your .env file.'
   return 'Something went wrong while loading this page.'
 }
 
@@ -62,9 +61,7 @@ export default function QueryBoundary({ children }: { children: ReactNode }) {
     <QueryErrorResetBoundary>
       {({ reset }) => (
         <ErrorBoundary onReset={reset} fallbackRender={RouteErrorFallback}>
-          <Suspense fallback={<LoadingSpinner />}>
-            {children}
-          </Suspense>
+          <Suspense fallback={<LoadingSpinner />}>{children}</Suspense>
         </ErrorBoundary>
       )}
     </QueryErrorResetBoundary>

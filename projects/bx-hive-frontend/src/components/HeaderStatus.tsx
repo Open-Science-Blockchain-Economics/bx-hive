@@ -29,11 +29,7 @@ export default function HeaderStatus() {
         <ul tabIndex={0} className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-50">
           {wallets?.map((wallet) => (
             <li key={wallet.id}>
-              <button
-                type="button"
-                onClick={() => void wallet.connect()}
-                className="flex items-center gap-2"
-              >
+              <button type="button" onClick={() => void wallet.connect()} className="flex items-center gap-2">
                 {wallet.metadata.name}
               </button>
             </li>

@@ -65,10 +65,7 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
 
   const isInvestor = data.match.investor === activeAddress
   const tokens = trustVariationTokens(data.config)
-  const instructionsMarkdown = renderInstructions(
-    isInvestor ? investorInstructions : trusteeInstructions,
-    tokens,
-  )
+  const instructionsMarkdown = renderInstructions(isInvestor ? investorInstructions : trusteeInstructions, tokens)
 
   return (
     <div>
@@ -78,12 +75,14 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
         title={isInvestor ? 'Investor Instructions' : 'Trustee Instructions'}
         markdownContent={instructionsMarkdown}
       />
-      <PageHeader
-        title="Trust Game"
-        backTo="/dashboard/subject"
-        backTooltip="Back to Subject Dashboard"
+      <PageHeader title="Trust Game" backTo="/dashboard/subject" backTooltip="Back to Subject Dashboard" />
+      <TrustExperiment
+        appId={appId}
+        match={data.match}
+        config={data.config}
+        activeAddress={activeAddress}
+        onRefresh={() => void refetch()}
       />
-      <TrustExperiment appId={appId} match={data.match} config={data.config} activeAddress={activeAddress} onRefresh={() => void refetch()} />
     </div>
   )
 }
@@ -104,11 +103,7 @@ function LocalExperiment({ experimentId, activeUser }: { experimentId: string; a
 
   return (
     <div>
-      <PageHeader
-        title={data.experiment.name}
-        backTo="/dashboard/subject"
-        backTooltip="Back to Subject Dashboard"
-      />
+      <PageHeader title={data.experiment.name} backTo="/dashboard/subject" backTooltip="Back to Subject Dashboard" />
       <BRETExperiment
         experiment={data.experiment}
         match={data.match}

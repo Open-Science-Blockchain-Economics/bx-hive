@@ -21,7 +21,14 @@ export const router = createBrowserRouter([
     element: <Layout />,
     errorElement: <RootErrorElement />,
     children: [
-      { index: true, element: <QueryBoundary><Home /></QueryBoundary> },
+      {
+        index: true,
+        element: (
+          <QueryBoundary>
+            <Home />
+          </QueryBoundary>
+        ),
+      },
       {
         path: 'dashboard/experimenter',
         element: (

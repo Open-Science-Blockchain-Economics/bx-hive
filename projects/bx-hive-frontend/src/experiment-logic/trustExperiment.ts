@@ -34,7 +34,7 @@ export function calculatePayouts(
   E2: number,
   m: number,
   s: number,
-  r: number
+  r: number,
 ): { investorPayout: number; trusteePayout: number } {
   const received = s * m
   const investorPayout = E1 - s + r

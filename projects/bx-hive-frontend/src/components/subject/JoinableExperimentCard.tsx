@@ -15,9 +15,7 @@ export default function JoinableExperimentCard({ group, variations, joining, joi
         <div className="flex justify-between items-start">
           <div>
             <h3 className="card-title">{group.name}</h3>
-            <p className="text-sm text-base-content/70">
-              Trust Game &middot; Experiment ID: {group.expId}
-            </p>
+            <p className="text-sm text-base-content/70">Trust Game &middot; Experiment ID: {group.expId}</p>
           </div>
           <span className="badge badge-info">Open</span>
         </div>

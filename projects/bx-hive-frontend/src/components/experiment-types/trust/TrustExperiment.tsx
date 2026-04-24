@@ -78,8 +78,8 @@ export default function TrustExperiment({ appId, match, config, activeAddress, o
             You invested <span className="font-bold">{microAlgoToAlgo(match.investment).toLocaleString()} ALGO</span>.
           </p>
           <p className="text-base-content/70">
-            The Trustee received{' '}
-            <span className="font-bold">{(microAlgoToAlgo(match.investment) * m).toLocaleString()} ALGO</span> and is deciding how much to return.
+            The Trustee received <span className="font-bold">{(microAlgoToAlgo(match.investment) * m).toLocaleString()} ALGO</span> and is
+            deciding how much to return.
           </p>
           <p className="text-sm text-base-content/50 mt-4">Page auto-refreshes every 3 seconds.</p>
           <button className="btn btn-outline mt-4" onClick={onRefresh}>

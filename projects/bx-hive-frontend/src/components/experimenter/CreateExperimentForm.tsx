@@ -210,9 +210,7 @@ export default function CreateExperimentForm({
                           min={param.min}
                           max={param.max}
                         />
-                        {param.description && (
-                          <p className="fieldset-label text-base-content/60">{param.description}</p>
-                        )}
+                        {param.description && <p className="fieldset-label text-base-content/60">{param.description}</p>}
                       </fieldset>
                     ))}
                   </div>
