@@ -63,7 +63,8 @@
     "preview": "vite preview",
     "seed:localnet": "tsx --tsconfig tsconfig.scripts.json scripts/seed-localnet.ts",
     "test": "vitest",
-    "test:run": "vitest --run"
+    "test:run": "vitest --run",
+    "test:integration": "vitest --config vitest.integration.config.ts --run"
   },
   "eslintConfig": {
     "extends": [
