@@ -13,6 +13,7 @@
   },
   "devDependencies": {
     "@algorandfoundation/algokit-client-generator": "^7.0.0-beta.3",
+    "@playwright/test": "^1.59.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -64,7 +65,9 @@
     "seed:localnet": "tsx --tsconfig tsconfig.scripts.json scripts/seed-localnet.ts",
     "test": "vitest",
     "test:run": "vitest --run",
-    "test:integration": "vitest --config vitest.integration.config.ts --run"
+    "test:integration": "vitest --config vitest.integration.config.ts --run",
+    "dev:e2e": "npm run generate:app-clients && VITE_E2E_MODE=true vite --port 5174 --strictPort",
+    "test:e2e": "playwright test --pass-with-no-tests"
   },
   "eslintConfig": {
     "extends": [
