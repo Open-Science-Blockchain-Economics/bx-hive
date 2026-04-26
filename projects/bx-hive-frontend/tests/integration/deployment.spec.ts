@@ -1,9 +1,12 @@
+import { AlgoAmount } from '@algorandfoundation/algokit-utils'
 import { algorandFixture } from '@algorandfoundation/algokit-utils/testing'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { deployContracts, type DeployedContracts } from './helpers/deployContracts'
 
 describe('deployContracts (integration)', () => {
-  const localnet = algorandFixture()
+  // 20 ALGO covers Registry+TrustExperiments deploy fees plus the 10 ALGO
+  // Registry app-account seed in deployContracts (default fixture is ~10 ALGO).
+  const localnet = algorandFixture({ testAccountFunding: AlgoAmount.Algos(20) })
   let deployed: DeployedContracts
 
   beforeAll(async () => {
