@@ -98,9 +98,9 @@ export async function enrollSubject(algorand: AlgorandClient, variationClient: T
 export async function ownerCreateMatch(
   algorand: AlgorandClient,
   variationClient: TrustVariationClient,
-  owner: Address,
-  investor: Address,
-  trustee: Address,
+  owner: Address | string,
+  investor: Address | string,
+  trustee: Address | string,
 ): Promise<number> {
   const mbrPayment = await algorand.createTransaction.payment({
     sender: owner,
