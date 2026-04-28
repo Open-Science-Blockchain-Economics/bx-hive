@@ -1,4 +1,6 @@
-// Core database utilities and configuration
+/* eslint-disable no-console */
+// Core database utilities and configuration — console diagnostics are intentional
+// for IndexedDB lifecycle/migration tracing.
 
 const DB_NAME = 'bx_hive'
 const DB_VERSION = 2

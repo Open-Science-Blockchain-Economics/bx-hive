@@ -148,6 +148,7 @@ export function ExperimentManagerProvider({ children }: { children: ReactNode })
                 await client.send.createMatch({ args: { investor, trustee, mbrPayment } })
               }
             } catch (err) {
+              // eslint-disable-next-line no-console
               console.warn(`[AutoMatch] Error processing variation ${key}:`, err)
             } finally {
               processingRef.current.delete(key)

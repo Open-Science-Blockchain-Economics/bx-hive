@@ -59,6 +59,7 @@ export default function ExperimenterDashboard() {
       )
       const onChainExps = withVariations.filter(({ group }) => {
         if (Number(group.variationCount) === 0) {
+          // eslint-disable-next-line no-console
           console.warn(`[bx-hive] Orphaned experiment exp_id=${group.expId} name="${group.name}" has 0 variations — hiding from UI`)
           return false
         }

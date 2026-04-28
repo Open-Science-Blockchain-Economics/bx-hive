@@ -12,7 +12,6 @@ export default function BRETResults({ experiment, users }: BRETResultsProps) {
 
   const rows = experiment.parameters.rows as number
   const cols = experiment.parameters.cols as number
-  const paymentPerBox = experiment.parameters.paymentPerBox as number
   const totalBoxes = rows * cols
 
   function getUserName(userId: string): string {

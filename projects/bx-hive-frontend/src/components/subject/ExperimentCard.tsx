@@ -23,7 +23,6 @@ export default function ExperimentCard({
   hasActiveMatch,
   isRegistering,
   onRegister,
-  isBatch = false,
   totalPlayers,
   playExperimentId,
   displayParameters,
