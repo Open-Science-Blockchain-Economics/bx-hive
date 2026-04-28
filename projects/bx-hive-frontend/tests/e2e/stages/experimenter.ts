@@ -40,25 +40,43 @@ export async function createExperimentAndVariation(
   // Without this wait, ProtectedRoute would redirect /dashboard/experimenter
   // back to / before the auto-connect completes.
   await page.goto(`/?e2e-account=${experimenterAddress}`)
-  await page.getByRole('link', { name: /^Dashboard$/i }).first().click()
+  await page
+    .getByRole('link', { name: /^Dashboard$/i })
+    .first()
+    .click()
 
   // Switch to "Create New" tab and wait for the form heading.
   await page.getByRole('tab', { name: /Create New/i }).click()
   await page.getByRole('heading', { name: /Create New Experiment/i }).waitFor()
 
-  await page.getByRole('group', { name: /Experiment Name/i }).getByRole('textbox').fill(params.name)
+  await page
+    .getByRole('group', { name: /Experiment Name/i })
+    .getByRole('textbox')
+    .fill(params.name)
 
   if (params.e1Algo !== undefined) {
-    await page.getByRole('group', { name: /Investor Endowment/i }).getByRole('spinbutton').fill(String(params.e1Algo))
+    await page
+      .getByRole('group', { name: /Investor Endowment/i })
+      .getByRole('spinbutton')
+      .fill(String(params.e1Algo))
   }
   if (params.e2Algo !== undefined) {
-    await page.getByRole('group', { name: /Trustee Endowment/i }).getByRole('spinbutton').fill(String(params.e2Algo))
+    await page
+      .getByRole('group', { name: /Trustee Endowment/i })
+      .getByRole('spinbutton')
+      .fill(String(params.e2Algo))
   }
   if (params.multiplier !== undefined) {
-    await page.getByRole('group', { name: /^Multiplier/i }).getByRole('spinbutton').fill(String(params.multiplier))
+    await page
+      .getByRole('group', { name: /^Multiplier/i })
+      .getByRole('spinbutton')
+      .fill(String(params.multiplier))
   }
   if (params.unitAlgo !== undefined) {
-    await page.getByRole('group', { name: /Step Size/i }).getByRole('spinbutton').fill(String(params.unitAlgo))
+    await page
+      .getByRole('group', { name: /Step Size/i })
+      .getByRole('spinbutton')
+      .fill(String(params.unitAlgo))
   }
 
   await page

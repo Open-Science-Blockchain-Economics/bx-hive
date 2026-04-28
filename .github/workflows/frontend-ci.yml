@@ -1,0 +1,67 @@
+name: frontend-ci
+
+on:
+  pull_request:
+    paths:
+      - 'projects/bx-hive-frontend/**'
+      - 'projects/bx-hive-contracts/smart_contracts/artifacts/**'
+  push:
+    branches: [main, dev]
+    paths:
+      - 'projects/bx-hive-frontend/**'
+      - 'projects/bx-hive-contracts/smart_contracts/artifacts/**'
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    # Fast PR validation — runs on every relevant PR.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-frontend
+      - name: Lint, format, build, unit tests
+        working-directory: projects/bx-hive-frontend
+        run: |
+          pnpm run lint
+          pnpm run format:check
+          pnpm run build
+          pnpm run test:run
+
+  e2e:
+    # Full integration + e2e suite — only on PRs to main/dev or push to main/dev.
+    needs: checks
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push'
+      || (github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'dev'))
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-frontend
+      - uses: ./.github/actions/setup-localnet
+
+      - name: Install Playwright browsers
+        working-directory: projects/bx-hive-frontend
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Integration tests
+        working-directory: projects/bx-hive-frontend
+        run: pnpm run test:integration
+
+      - name: E2E tests
+        working-directory: projects/bx-hive-frontend
+        run: pnpm run test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: projects/bx-hive-frontend/playwright-report/
+          retention-days: 7
+
+      - name: Stop LocalNet
+        if: always()
+        run: algokit localnet stop

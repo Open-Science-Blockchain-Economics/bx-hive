@@ -1,0 +1,21 @@
+name: Setup frontend (Node + pnpm + install)
+description: |
+  Assumes the repository has been checked out. Sets up pnpm 9 and Node 24
+  (with cache keyed on the frontend lockfile), then runs a frozen-lockfile
+  install in projects/bx-hive-frontend.
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 9
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 24
+        cache: pnpm
+        cache-dependency-path: projects/bx-hive-frontend/pnpm-lock.yaml
+    - name: pnpm install
+      shell: bash
+      working-directory: projects/bx-hive-frontend
+      run: pnpm install --frozen-lockfile
