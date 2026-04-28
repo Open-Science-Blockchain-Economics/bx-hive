@@ -18,6 +18,8 @@ export default defineConfig({
     trace: 'retain-on-failure',
     video: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    // Optional: SLOW_MO=500 pnpm test:e2e:headed pauses each action for visibility.
+    launchOptions: { slowMo: process.env.SLOW_MO ? Number(process.env.SLOW_MO) : 0 },
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
