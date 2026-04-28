@@ -47,6 +47,12 @@ export async function createKmdAccount(algorand: AlgorandClient, fundAlgo: numbe
       amount: AlgoAmount.Algos(fundAlgo),
     })
 
+    // Register a KMD-backed signer so the AlgorandClient can sign txns for
+    // this address (otherwise sender-side calls fail with "No signer found").
+    const signed = await algorand.account.kmd.getWalletAccount(TEST_WALLET_NAME, (a) => a.address.toString() === newAddress)
+    if (!signed) throw new Error(`Could not retrieve signer for newly-created KMD account ${newAddress}`)
+    algorand.setSignerFromAccount(signed)
+
     return { address: newAddress }
   } finally {
     await kmd.releaseWalletHandleToken({ walletHandleToken })

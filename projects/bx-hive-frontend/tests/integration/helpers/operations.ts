@@ -119,7 +119,12 @@ export async function ownerCreateMatch(
  * they can selfEnroll in a TrustVariation (the variation's selfEnroll makes an
  * inner call to Registry.get_user that asserts the subject exists).
  */
-export async function registerUser(registryClient: BxHiveRegistryClient, account: Address, role: number, name: string): Promise<number> {
+export async function registerUser(
+  registryClient: BxHiveRegistryClient,
+  account: Address | string,
+  role: number,
+  name: string,
+): Promise<number> {
   const result = await registryClient.send.registerUser({
     sender: account,
     args: { role, name },

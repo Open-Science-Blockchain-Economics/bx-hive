@@ -5,6 +5,9 @@ const baseURL = `http://localhost:${PORT}`
 
 export default defineConfig({
   testDir: './tests/e2e',
+  globalSetup: './tests/e2e/globalSetup.ts',
+  // Each test deploys + funds + registers KMD accounts and drives the UI; allow generous slack.
+  timeout: 120_000,
   // Tests share the same localnet — keep them sequential to avoid contract-state collisions.
   fullyParallel: false,
   workers: 1,
@@ -19,9 +22,11 @@ export default defineConfig({
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
     // Runs on a separate port so it never collides with a manually-started `pnpm dev` on :5173.
+    // reuseExistingServer is false so each test run picks up the fresh app IDs
+    // globalSetup wrote into .env.e2e.local — a stale dev:e2e server would have stale env.
     command: 'pnpm run dev:e2e',
     url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 })
