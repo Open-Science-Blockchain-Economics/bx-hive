@@ -1,18 +1,23 @@
 import { useWallet } from '@txnlab/use-wallet-react'
 import { useRef, useEffect, useCallback, createContext, useContext, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { encodeTransaction } from '@algorandfoundation/algokit-utils/transact'
+import { encodeTransactionRaw } from '@algorandfoundation/algokit-utils/transact'
 import type { User, UserRole } from '../types'
 import { getAlgorandClient, getRegistryClient } from '../utils/algorand'
 import { queryKeys } from '../lib/queryKeys'
 import { useNetworkConfig } from '../providers/NetworkProvider'
 
-type AnySigner = (txnGroup: unknown[], indexesToSign: number[]) => Promise<Uint8Array[]>
+type WalletSigner = (txnGroup: unknown[], indexesToSign: number[]) => Promise<(Uint8Array | null)[]>
+type AlgokitSigner = (txnGroup: unknown[], indexesToSign: number[]) => Promise<Uint8Array[]>
 
-function adaptWalletSigner(walletSigner: unknown): AnySigner {
+// See useAlgorand.ts for the rationale — pre-encode txns with encodeTransactionRaw and
+// strip null entries from use-wallet's response so algokit-utils v10's msgpack decoder
+// doesn't choke on them.
+function adaptWalletSigner(walletSigner: unknown): AlgokitSigner {
   return async (txnGroup, indexesToSign) => {
-    const encoded = (txnGroup as Array<Parameters<typeof encodeTransaction>[0]>).map((t) => encodeTransaction(t))
-    return (walletSigner as AnySigner)(encoded, indexesToSign)
+    const encoded = (txnGroup as Array<Parameters<typeof encodeTransactionRaw>[0]>).map((t) => encodeTransactionRaw(t))
+    const signResults = await (walletSigner as WalletSigner)(encoded, indexesToSign)
+    return signResults.filter((r): r is Uint8Array => r !== null)
   }
 }
 

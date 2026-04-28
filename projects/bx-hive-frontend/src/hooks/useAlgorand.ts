@@ -1,18 +1,25 @@
 import { useWallet } from '@txnlab/use-wallet-react'
 import { useCallback, useMemo } from 'react'
-import { encodeTransaction } from '@algorandfoundation/algokit-utils/transact'
+import { encodeTransactionRaw } from '@algorandfoundation/algokit-utils/transact'
 import { getAlgorandClient, getRegistryClient, getTrustExperimentsClient, getTrustVariationClient } from '../utils/algorand'
 import { useNetworkConfig } from '../providers/NetworkProvider'
 
-type AnySigner = (txnGroup: unknown[], indexesToSign: number[]) => Promise<Uint8Array[]>
+type WalletSigner = (txnGroup: unknown[], indexesToSign: number[]) => Promise<(Uint8Array | null)[]>
+type AlgokitSigner = (txnGroup: unknown[], indexesToSign: number[]) => Promise<Uint8Array[]>
 
-// v10 Transactions have no .toByte() but use-wallet's default Transaction-path calls it.
-// Pre-encode with v10's encodeTransaction and hand bytes over, routing use-wallet into
-// its processEncodedTxns branch (which uses algosdk internally inside its own sandbox).
-function adaptWalletSigner(walletSigner: unknown): AnySigner {
+// Bridge use-wallet's signer to algokit-utils v10. Two things matter:
+//   1. v10 Transactions have no .toByte() that use-wallet's default path expects;
+//      pre-encode with encodeTransactionRaw and route use-wallet into its
+//      processEncodedTxns branch.
+//   2. use-wallet returns (Uint8Array | null)[] (null = "this wallet didn't sign that index").
+//      algokit-utils v10's composer feeds the result into a single-buffer msgpack decode and
+//      chokes on nulls with `Extra N of M byte(s) found at buffer[1]`. Filter them out — match
+//      the working pattern from algokit-lora's wallet-provider-inner.tsx.
+function adaptWalletSigner(walletSigner: unknown): AlgokitSigner {
   return async (txnGroup, indexesToSign) => {
-    const encoded = (txnGroup as Array<Parameters<typeof encodeTransaction>[0]>).map((t) => encodeTransaction(t))
-    return (walletSigner as AnySigner)(encoded, indexesToSign)
+    const encoded = (txnGroup as Array<Parameters<typeof encodeTransactionRaw>[0]>).map((t) => encodeTransactionRaw(t))
+    const signResults = await (walletSigner as WalletSigner)(encoded, indexesToSign)
+    return signResults.filter((r): r is Uint8Array => r !== null)
   }
 }
 
