@@ -45,6 +45,9 @@
   --bw-hair: 1px;
   --bw-1:    1px;
   --bw-2:    2px;
+
+  /* shadcn radius hook — components reference var(--radius) directly */
+  --radius: 4px;
 }
 
 /* ─── PAPER (light) ─── */
@@ -55,7 +58,7 @@
   --surface-2: #f1eee6;
   --ink:       #16191c;          /* near-black ink */
   --ink-2:     #3a3f46;
-  --muted:     #6b727a;
+  --muted-text: #6b727a;         /* secondary text (renamed from --muted to avoid shadcn collision) */
   --faint:     #9aa0a8;
   --rule:      #d9d4c7;          /* hairline */
   --rule-2:    #bfb9aa;
@@ -79,7 +82,7 @@
   --surface-2: #1a1f25;
   --ink:       #ecead8;          /* warm ivory */
   --ink-2:     #c4c2b1;
-  --muted:     #8a8a82;
+  --muted-text: #8a8a82;
   --faint:     #5b5d57;
   --rule:      #262b32;
   --rule-2:    #353c45;
@@ -95,30 +98,32 @@
   --info-bg:   #112733;
 }
 
-/* ─── ACCENTS — toggled by [data-accent] on root ─── */
+/* ─── BRAND ACCENT — toggled by [data-accent] on root.
+ * Renamed from --accent to --brand to avoid collision with shadcn's
+ * --accent (which means "hover/highlight surface" in shadcn semantics). */
 [data-accent="cyan"] {
-  --accent:    oklch(0.68 0.12 215);
-  --accent-2:  oklch(0.55 0.13 215);
-  --accent-soft: oklch(0.68 0.12 215 / 0.14);
-  --accent-ink: #ffffff;
+  --brand:      oklch(0.68 0.12 215);
+  --brand-2:    oklch(0.55 0.13 215);
+  --brand-soft: oklch(0.68 0.12 215 / 0.14);
+  --brand-ink:  #ffffff;
 }
 [data-accent="amber"] {
-  --accent:    oklch(0.74 0.13 70);
-  --accent-2:  oklch(0.6 0.14 60);
-  --accent-soft: oklch(0.74 0.13 70 / 0.16);
-  --accent-ink: #1a1408;
+  --brand:      oklch(0.74 0.13 70);
+  --brand-2:    oklch(0.6 0.14 60);
+  --brand-soft: oklch(0.74 0.13 70 / 0.16);
+  --brand-ink:  #1a1408;
 }
 [data-accent="hive"] {
-  --accent:    oklch(0.62 0.10 145);
-  --accent-2:  oklch(0.5 0.11 145);
-  --accent-soft: oklch(0.62 0.10 145 / 0.14);
-  --accent-ink: #ffffff;
+  --brand:      oklch(0.62 0.10 145);
+  --brand-2:    oklch(0.5 0.11 145);
+  --brand-soft: oklch(0.62 0.10 145 / 0.14);
+  --brand-ink:  #ffffff;
 }
 [data-accent="ink"] {
-  --accent:    var(--ink);
-  --accent-2:  var(--ink-2);
-  --accent-soft: color-mix(in oklch, var(--ink) 12%, transparent);
-  --accent-ink: var(--bg);
+  --brand:      var(--ink);
+  --brand-2:    var(--ink-2);
+  --brand-soft: color-mix(in oklch, var(--ink) 12%, transparent);
+  --brand-ink:  var(--bg);
 }
 
 /* utility classes */
@@ -129,7 +134,7 @@
 .t-h2   { font-family: var(--font-ui); font-weight: 600; font-size: var(--fs-h2);   line-height: var(--lh-h2);   letter-spacing: var(--tr-h2); }
 .t-body { font-family: var(--font-ui); font-weight: 400; font-size: var(--fs-body); line-height: var(--lh-body); }
 .t-small{ font-family: var(--font-ui); font-weight: 400; font-size: var(--fs-small);line-height: var(--lh-small); }
-.t-micro{ font-family: var(--font-ui); font-weight: 600; font-size: var(--fs-micro);line-height: var(--lh-micro); letter-spacing: var(--tr-micro); text-transform: uppercase; color: var(--muted); }
+.t-micro{ font-family: var(--font-ui); font-weight: 600; font-size: var(--fs-micro);line-height: var(--lh-micro); letter-spacing: var(--tr-micro); text-transform: uppercase; color: var(--muted-text); }
 .t-data-l { font-family: var(--font-mono); font-weight: 500; font-size: var(--fs-data-l); line-height: var(--lh-data-l); letter-spacing: var(--tr-data-l); }
 .t-data-m { font-family: var(--font-mono); font-weight: 500; font-size: var(--fs-data-m); line-height: var(--lh-data-m); }
 .t-data-s { font-family: var(--font-mono); font-weight: 500; font-size: var(--fs-data-s); line-height: var(--lh-data-s); }
