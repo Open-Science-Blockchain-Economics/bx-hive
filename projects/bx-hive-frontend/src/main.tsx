@@ -9,6 +9,7 @@ import '@fontsource-variable/inter-tight/index.css'
 import '@fontsource-variable/jetbrains-mono/index.css'
 import './styles/App.css'
 import { NetworkProvider } from './providers/NetworkProvider'
+import { ThemeProvider } from './providers/ThemeProvider'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,11 +40,13 @@ function AppFatalFallback({ error }: { error: unknown }) {
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <ErrorBoundary fallbackRender={AppFatalFallback}>
-      <NetworkProvider>
-        <QueryClientProvider client={queryClient}>
-          <App />
-        </QueryClientProvider>
-      </NetworkProvider>
+      <ThemeProvider>
+        <NetworkProvider>
+          <QueryClientProvider client={queryClient}>
+            <App />
+          </QueryClientProvider>
+        </NetworkProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   </React.StrictMode>,
 )

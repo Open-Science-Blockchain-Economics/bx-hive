@@ -4,6 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BX Hive</title>
+    <script>
+      // Pre-React: apply stored theme/accent to <html> before any CSS loads to prevent FOUC.
+      (function () {
+        try {
+          var t = localStorage.getItem('bx-hive-theme')
+          var a = localStorage.getItem('bx-hive-accent')
+          document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light')
+          document.documentElement.setAttribute(
+            'data-accent',
+            a === 'amber' || a === 'hive' || a === 'ink' ? a : 'cyan',
+          )
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light')
+          document.documentElement.setAttribute('data-accent', 'cyan')
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
