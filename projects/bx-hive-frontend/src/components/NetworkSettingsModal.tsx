@@ -1,23 +1,28 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNetworkConfig, type NetworkConfig } from '../providers/NetworkProvider'
+
+import { Btn } from '@/components/ds/button'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ds/dialog'
+import { Field } from '@/components/ds/field'
+import { Input } from '@/components/ds/input'
+import { Rule } from '@/components/ds/separator'
+import { type NetworkConfig, useNetworkConfig } from '../providers/NetworkProvider'
 
 interface Props {
   isOpen: boolean
   onClose: () => void
 }
 
+type Section = 'algod' | 'indexer' | 'kmd'
+
 export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
   const { networkConfig, updateNetworkConfig, resetToDefaults, getDefaults } = useNetworkConfig()
   const [form, setForm] = useState<NetworkConfig>(networkConfig)
 
-  // Sync form state when modal opens
   useEffect(() => {
     if (isOpen) {
       setForm(networkConfig)
     }
   }, [isOpen, networkConfig])
-
-  if (!isOpen) return null
 
   const handleSave = (e: FormEvent) => {
     e.preventDefault()
@@ -30,7 +35,7 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
     setForm(getDefaults())
   }
 
-  const updateField = <S extends 'algod' | 'indexer' | 'kmd'>(section: S, field: string, value: string | number) => {
+  const updateField = <S extends Section>(section: S, field: string, value: string) => {
     setForm((prev) => ({
       ...prev,
       [section]: { ...prev[section], [field]: value },
@@ -38,171 +43,138 @@ export default function NetworkSettingsModal({ isOpen, onClose }: Props) {
   }
 
   return (
-    <div className="modal modal-open">
-      <div className="modal-box w-11/12 sm:w-auto max-w-2xl">
-        <h3 className="font-bold text-lg mb-4">Network Settings</h3>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Network settings</DialogTitle>
+        </DialogHeader>
 
-        <form onSubmit={handleSave} className="space-y-4">
-          {/* Algod */}
-          <fieldset className="mt-2 grid gap-3">
-            <legend className="text-primary mb-2 font-bold">Algod</legend>
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Server</span>
-              </div>
-              <input
+        <form onSubmit={handleSave} className="flex flex-col gap-5">
+          <Rule label="Algod" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Field label="Server" htmlFor="algod-server" required>
+              <Input
+                id="algod-server"
                 type="text"
-                className="input input-bordered w-full input-sm"
                 value={form.algod.server}
                 onChange={(e) => updateField('algod', 'server', e.target.value)}
                 required
               />
-            </label>
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Port</span>
-              </div>
-              <input
+            </Field>
+            <Field label="Port" htmlFor="algod-port">
+              <Input
+                id="algod-port"
+                mono
                 type="number"
-                className="input input-bordered w-full input-sm"
                 value={form.algod.port ?? ''}
                 onChange={(e) => updateField('algod', 'port', e.target.value)}
                 min={0}
                 max={65535}
               />
-            </label>
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Token</span>
-              </div>
-              <input
+            </Field>
+            <Field label="Token" htmlFor="algod-token">
+              <Input
+                id="algod-token"
+                mono
                 type="password"
-                className="input input-bordered w-full input-sm"
                 value={form.algod.token}
                 onChange={(e) => updateField('algod', 'token', e.target.value)}
               />
-            </label>
-          </fieldset>
+            </Field>
+          </div>
 
-          {/* Indexer */}
-          <fieldset className="mt-2 grid gap-3">
-            <legend className="text-primary mb-2 font-bold">Indexer</legend>
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Server</span>
-              </div>
-              <input
+          <Rule label="Indexer" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Field label="Server" htmlFor="indexer-server" required>
+              <Input
+                id="indexer-server"
                 type="text"
-                className="input input-bordered w-full input-sm"
                 value={form.indexer.server}
                 onChange={(e) => updateField('indexer', 'server', e.target.value)}
                 required
               />
-            </label>
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Port</span>
-              </div>
-              <input
+            </Field>
+            <Field label="Port" htmlFor="indexer-port">
+              <Input
+                id="indexer-port"
+                mono
                 type="number"
-                className="input input-bordered w-full input-sm"
                 value={form.indexer.port ?? ''}
                 onChange={(e) => updateField('indexer', 'port', e.target.value)}
                 min={0}
                 max={65535}
               />
-            </label>
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Token</span>
-              </div>
-              <input
+            </Field>
+            <Field label="Token" htmlFor="indexer-token">
+              <Input
+                id="indexer-token"
+                mono
                 type="password"
-                className="input input-bordered w-full input-sm"
                 value={form.indexer.token}
                 onChange={(e) => updateField('indexer', 'token', e.target.value)}
               />
-            </label>
-          </fieldset>
+            </Field>
+          </div>
 
-          {/* KMD */}
-          <fieldset className="mt-2 grid gap-3">
-            <legend className="text-primary mb-2 font-bold">KMD</legend>
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Server</span>
-              </div>
-              <input
+          <Rule label="KMD" />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Field label="Server" htmlFor="kmd-server" required>
+              <Input
+                id="kmd-server"
                 type="text"
-                className="input input-bordered w-full input-sm"
                 value={form.kmd.server}
                 onChange={(e) => updateField('kmd', 'server', e.target.value)}
                 required
               />
-            </label>
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Port</span>
-              </div>
-              <input
+            </Field>
+            <Field label="Port" htmlFor="kmd-port">
+              <Input
+                id="kmd-port"
+                mono
                 type="number"
-                className="input input-bordered w-full input-sm"
                 value={form.kmd.port ?? ''}
                 onChange={(e) => updateField('kmd', 'port', e.target.value)}
                 min={0}
                 max={65535}
               />
-            </label>
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Token</span>
-              </div>
-              <input
+            </Field>
+            <Field label="Token" htmlFor="kmd-token">
+              <Input
+                id="kmd-token"
+                mono
                 type="password"
-                className="input input-bordered w-full input-sm"
                 value={form.kmd.token}
                 onChange={(e) => updateField('kmd', 'token', e.target.value)}
               />
-            </label>
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Wallet</span>
-              </div>
-              <input
-                type="text"
-                className="input input-bordered w-full input-sm"
-                value={form.kmd.wallet}
-                onChange={(e) => updateField('kmd', 'wallet', e.target.value)}
-              />
-            </label>
-            <label className="form-control w-full">
-              <div className="label">
-                <span className="label-text">Password</span>
-              </div>
-              <input
+            </Field>
+            <Field label="Wallet" htmlFor="kmd-wallet">
+              <Input id="kmd-wallet" type="text" value={form.kmd.wallet} onChange={(e) => updateField('kmd', 'wallet', e.target.value)} />
+            </Field>
+            <Field label="Password" htmlFor="kmd-password">
+              <Input
+                id="kmd-password"
                 type="password"
-                className="input input-bordered w-full input-sm"
                 value={form.kmd.password}
                 onChange={(e) => updateField('kmd', 'password', e.target.value)}
               />
-            </label>
-          </fieldset>
-
-          <div className="modal-action">
-            <button type="button" className="btn btn-ghost btn-sm" onClick={handleReset}>
-              Reset Defaults
-            </button>
-            <div className="flex-1" />
-            <button type="button" className="btn btn-sm" onClick={onClose}>
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary btn-sm">
-              Save
-            </button>
+            </Field>
           </div>
+
+          <DialogFooter className="sm:justify-between sm:flex-row-reverse mt-2">
+            <div className="flex items-center gap-2 sm:flex-row-reverse">
+              <Btn type="submit" variant="primary" size="sm">
+                Save
+              </Btn>
+              <Btn type="button" variant="secondary" size="sm" onClick={onClose}>
+                Cancel
+              </Btn>
+            </div>
+            <Btn type="button" variant="ghost" size="sm" onClick={handleReset}>
+              Reset defaults
+            </Btn>
+          </DialogFooter>
         </form>
-      </div>
-      <div className="modal-backdrop" onClick={onClose} />
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }
