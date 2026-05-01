@@ -1,25 +1,16 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
-import BRETExperiment from '../components/experiment-types/bret/BRETExperiment'
+import { useQuery } from '@tanstack/react-query'
 import TrustExperiment from '../components/experiment-types/trust/TrustExperiment'
 import InstructionsModal from '../components/InstructionsModal'
 import { PageHeader } from '../components/ui'
-import { getExperimentById } from '../db'
-import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustVariation } from '../hooks/useTrustVariation'
 import type { VariationConfig } from '../hooks/useTrustVariation'
 import { queryKeys } from '../lib/queryKeys'
-import type { Match as LocalMatch } from '../types'
 import investorInstructions from 'virtual:instructions/trust-variation/investor'
 import trusteeInstructions from 'virtual:instructions/trust-variation/trustee'
 import { renderInstructions, trustVariationTokens } from '../lib/renderInstructions'
-
-/** Returns true if the param looks like a numeric on-chain app ID */
-function isOnChainId(id: string): boolean {
-  return /^\d+$/.test(id)
-}
 
 // ── On-chain Trust Game view ─────────────────────────────────────────────────
 
@@ -87,45 +78,17 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
   )
 }
 
-// ── Local (BRET) view ────────────────────────────────────────────────────────
-
-function LocalExperiment({ experimentId, activeUser }: { experimentId: string; activeUser: { id: string } }) {
-  const { data, refetch } = useSuspenseQuery({
-    queryKey: queryKeys.localExperiment(experimentId),
-    queryFn: async () => {
-      const experiment = await getExperimentById(experimentId)
-      if (!experiment) throw new Error('Experiment not found')
-      const match = experiment.matches.find((m) => m.player1Id === activeUser.id || m.player2Id === activeUser.id)
-      if (!match) throw new Error('You are not in a match for this experiment')
-      return { experiment, match } as { experiment: NonNullable<typeof experiment>; match: LocalMatch }
-    },
-  })
-
-  return (
-    <div>
-      <PageHeader title={data.experiment.name} backTo="/dashboard/subject" backTooltip="Back to Subject Dashboard" />
-      <BRETExperiment
-        experiment={data.experiment}
-        match={data.match}
-        activeUserId={activeUser.id}
-        onExperimentUpdate={() => void refetch()}
-      />
-    </div>
-  )
-}
-
 // ── Route component ──────────────────────────────────────────────────────────
 
 export default function PlayExperiment() {
   const { experimentId } = useParams<{ experimentId: string }>()
-  const { activeUser } = useActiveUser()
   const { activeAddress } = useAlgorand()
 
   if (!experimentId) {
     return <div className="text-center py-12 text-error">Missing experiment ID</div>
   }
 
-  if (!activeUser || !activeAddress) {
+  if (!activeAddress) {
     return (
       <div className="text-center py-12">
         <p className="text-base-content/70">Connect your wallet to play.</p>
@@ -136,9 +99,5 @@ export default function PlayExperiment() {
     )
   }
 
-  if (isOnChainId(experimentId)) {
-    return <OnChainTrustGame appId={BigInt(experimentId)} activeAddress={activeAddress} />
-  }
-
-  return <LocalExperiment experimentId={experimentId} activeUser={activeUser} />
+  return <OnChainTrustGame appId={BigInt(experimentId)} activeAddress={activeAddress} />
 }

@@ -1,4 +1,3 @@
-import { initializeBRETState } from '../experiment-logic/bret'
 import type { AssignmentStrategy, Experiment, ExperimentBatch, ExperimentStatus, ParameterVariation, TrustExperimentState } from '../types'
 import { executeReadArrayTransaction, executeReadTransaction, executeWriteTransaction, STORES } from './index'
 
@@ -269,18 +268,11 @@ export async function registerForExperiment(experimentId: string, userId: string
 
   // For 1-player experiments, create a match immediately
   if (playerCount === 1) {
-    // Initialize experiment-specific state for single-player experiments
-    const initialState =
-      experiment.templateId === 'bret'
-        ? initializeBRETState(experiment.parameters.rows as number, experiment.parameters.cols as number)
-        : undefined
-
     experiment.matches.push({
       id: crypto.randomUUID(),
       player1Id: userId,
       status: 'playing',
       createdAt: Date.now(),
-      state: initialState,
     })
   }
 

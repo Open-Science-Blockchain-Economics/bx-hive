@@ -1,20 +1,13 @@
 import { useState } from 'react'
 import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
-import { getBatchesByExperimenter, getExperimentsByBatchId, getExperimentsByExperimenter } from '../db'
-import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments, type ExperimentGroup, type VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustVariation, type VariationConfig } from '../hooks/useTrustVariation'
 import { queryKeys } from '../lib/queryKeys'
-import type { Experiment, ExperimentBatch } from '../types'
 import CreateExperimentForm from '../components/experimenter/CreateExperimentForm'
 import ExperimentListTab from '../components/experimenter/ExperimentListTab'
 
 type TabType = 'experiments' | 'create'
-
-interface BatchWithExperiments extends ExperimentBatch {
-  experiments: Experiment[]
-}
 
 interface OnChainExperiment {
   group: ExperimentGroup
@@ -27,13 +20,7 @@ interface OnChainData {
   variationConfigs: Record<string, VariationConfig>
 }
 
-interface LocalData {
-  localExperiments: Experiment[]
-  localBatches: BatchWithExperiments[]
-}
-
 export default function ExperimenterDashboard() {
-  const { activeUser } = useActiveUser()
   const { algorand, activeAddress } = useAlgorand()
   const { createExperimentWithVariation, createVariation, listExperiments, listVariations } = useTrustExperiments()
   const { getSubjectCount, getConfig } = useTrustVariation()
@@ -90,25 +77,6 @@ export default function ExperimenterDashboard() {
     },
   })
 
-  const { data: localData } = useSuspenseQuery<LocalData>({
-    queryKey: queryKeys.localExperiments(activeUser!.id),
-    queryFn: async () => {
-      const allExps = await getExperimentsByExperimenter(activeUser!.id)
-      const localExperiments = allExps.filter((e) => e.templateId === 'bret' && !e.batchId)
-
-      const allBatches = await getBatchesByExperimenter(activeUser!.id)
-      const bretBatches = allBatches.filter((b) => b.templateId === 'bret')
-      const localBatches = await Promise.all(
-        bretBatches.map(async (batch) => ({
-          ...batch,
-          experiments: await getExperimentsByBatchId(batch.id),
-        })),
-      )
-
-      return { localExperiments, localBatches }
-    },
-  })
-
   return (
     <div>
       <div className="mb-6">
@@ -128,17 +96,14 @@ export default function ExperimenterDashboard() {
       {activeTab === 'experiments' && (
         <ExperimentListTab
           onChainExps={onChainData.onChainExps}
-          localBatches={localData.localBatches}
-          localExperiments={localData.localExperiments}
           subjectCounts={onChainData.subjectCounts}
           variationConfigs={onChainData.variationConfigs}
           onCreateClick={() => setActiveTab('create')}
         />
       )}
 
-      {activeTab === 'create' && activeUser && (
+      {activeTab === 'create' && (
         <CreateExperimentForm
-          activeUserId={activeUser.id}
           walletBalanceAlgo={walletBalanceAlgo}
           createExperimentWithVariation={createExperimentWithVariation}
           createVariation={createVariation}

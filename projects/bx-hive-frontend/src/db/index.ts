@@ -200,7 +200,6 @@ export async function executeWriteTransaction<T = void>(
 }
 
 // Re-export all domain-specific operations
-export * from './bret'
 export * from './experiments'
 export * from './trustExperiment'
 export * from './users'

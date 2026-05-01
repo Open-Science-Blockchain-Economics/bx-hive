@@ -1,12 +1,9 @@
-import { useSuspenseQuery, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { LoadingSpinner } from '../components/ui'
-import ExperimentCard from '../components/subject/ExperimentCard'
 import ActiveMatchCard from '../components/subject/ActiveMatchCard'
 import CompletedMatchCard from '../components/subject/CompletedMatchCard'
 import EnrolledWaitingCard from '../components/subject/EnrolledWaitingCard'
 import JoinableExperimentCard from '../components/subject/JoinableExperimentCard'
-import { getBatches, getExperiments, getExperimentsByBatchId, registerForBatch, registerForExperiment } from '../db'
-import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
@@ -14,16 +11,6 @@ import { useTrustVariation, PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUS
 import type { Match as OnChainMatch } from '../hooks/useTrustVariation'
 import { queryKeys } from '../lib/queryKeys'
 import { pickVariationRoundRobin, type VariationSlot } from '../utils/distributeSubjects'
-import type { Experiment, ExperimentBatch } from '../types'
-
-interface SubjectExperimentView {
-  id: string
-  isBatch: boolean
-  experiment: Experiment
-  totalPlayers: number
-  displayParameters: Record<string, number | string>
-  userExperimentId?: string
-}
 
 interface OnChainMatchView {
   appId: bigint
@@ -43,7 +30,6 @@ interface OnChainData {
 }
 
 export default function SubjectDashboard() {
-  const { activeUser } = useActiveUser()
   const { activeAddress } = useAlgorand()
   const { listExperiments, listVariations } = useTrustExperiments()
   const { getPlayerMatch, selfEnroll, getSubjectCount, isSubjectEnrolled } = useTrustVariation()
@@ -102,51 +88,6 @@ export default function SubjectDashboard() {
     },
   })
 
-  const { data: localData } = useSuspenseQuery<SubjectExperimentView[]>({
-    queryKey: queryKeys.subjectLocal(activeUser?.id ?? ''),
-    queryFn: async () => {
-      const allExperiments = await getExperiments()
-      const allBatches = await getBatches()
-      const views: SubjectExperimentView[] = []
-
-      const standaloneExperiments = allExperiments.filter((exp) => !exp.batchId && exp.status === 'active' && exp.templateId === 'bret')
-      for (const exp of standaloneExperiments) {
-        views.push({ id: exp.id, isBatch: false, experiment: exp, totalPlayers: exp.players.length, displayParameters: exp.parameters })
-      }
-
-      for (const batch of allBatches) {
-        if (batch.status !== 'active' || batch.templateId !== 'bret') continue
-        const batchExperiments = await getExperimentsByBatchId(batch.id)
-        if (batchExperiments.length === 0) continue
-        const totalPlayers = batchExperiments.reduce((sum, exp) => sum + exp.players.length, 0)
-        let userExperimentId: string | undefined
-        if (activeUser) {
-          for (const exp of batchExperiments) {
-            if (exp.players.some((p) => p.userId === activeUser.id)) {
-              userExperimentId = exp.id
-              break
-            }
-          }
-        }
-        const representative: Experiment = {
-          ...batchExperiments[0],
-          players: batchExperiments.flatMap((e) => e.players),
-          matches: batchExperiments.flatMap((e) => e.matches),
-        }
-        views.push({
-          id: batch.id,
-          isBatch: true,
-          experiment: representative,
-          totalPlayers,
-          displayParameters: (batch as ExperimentBatch).baseParameters,
-          userExperimentId,
-        })
-      }
-
-      return views
-    },
-  })
-
   const joinMutation = useMutation({
     mutationFn: async ({ variations }: { expId: number; variations: VariationInfo[] }) => {
       const slots: VariationSlot[] = await Promise.all(
@@ -164,20 +105,6 @@ export default function SubjectDashboard() {
     },
   })
 
-  const registerMutation = useMutation({
-    mutationFn: async ({ view, playerCount }: { view: SubjectExperimentView; playerCount: 1 | 2 }) => {
-      if (!activeUser) return
-      if (view.isBatch) {
-        await registerForBatch(view.id, activeUser.id, playerCount)
-      } else {
-        await registerForExperiment(view.id, activeUser.id, playerCount)
-      }
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.subjectLocal(activeUser?.id ?? '') })
-    },
-  })
-
   if (!onChainData) {
     return <LoadingSpinner />
   }
@@ -190,31 +117,13 @@ export default function SubjectDashboard() {
     return msg
   }
 
-  function isRegistered(view: SubjectExperimentView): boolean {
-    if (!activeUser) return false
-    return view.experiment.players.some((p) => p.userId === activeUser.id)
-  }
-
-  function hasActiveMatch(view: SubjectExperimentView): boolean {
-    if (!activeUser) return false
-    return view.experiment.matches.some((m) => (m.player1Id === activeUser.id || m.player2Id === activeUser.id) && m.status === 'playing')
-  }
-
-  function hasCompletedMatch(view: SubjectExperimentView): boolean {
-    if (!activeUser) return false
-    return view.experiment.matches.some((m) => (m.player1Id === activeUser.id || m.player2Id === activeUser.id) && m.status === 'completed')
-  }
-
   const onChainMatches = onChainData.matchViews
   const onChainExperiments = onChainData.expViews
-  const experimentViews = localData
 
   const activeOnChain = onChainMatches.filter((v) => v.match.phase !== PHASE_COMPLETED)
   const completedOnChain = onChainMatches.filter((v) => v.match.phase === PHASE_COMPLETED)
   const joinableExperiments = onChainExperiments.filter((e) => !e.enrolled && !e.hasMatch)
   const enrolledWaiting = onChainExperiments.filter((e) => e.enrolled && !e.hasMatch)
-  const availableViews = experimentViews.filter((view) => !hasCompletedMatch(view))
-  const completedViews = experimentViews.filter((view) => hasCompletedMatch(view))
 
   return (
     <div>
@@ -291,57 +200,6 @@ export default function SubjectDashboard() {
               </div>
             </section>
           )}
-
-        {/* BRET experiments */}
-        {(availableViews.length > 0 || completedViews.length > 0) && (
-          <>
-            {availableViews.length > 0 && (
-              <section>
-                <h2 className="text-lg font-semibold mb-4">BRET Experiments — Available</h2>
-                <div className="grid gap-4">
-                  {availableViews.map((view) => (
-                    <ExperimentCard
-                      key={view.id}
-                      experiment={view.experiment}
-                      isCompleted={false}
-                      isRegistered={isRegistered(view)}
-                      hasActiveMatch={hasActiveMatch(view)}
-                      isRegistering={registerMutation.isPending && registerMutation.variables?.view.id === view.id}
-                      onRegister={(playerCount) => registerMutation.mutate({ view, playerCount })}
-                      isBatch={view.isBatch}
-                      totalPlayers={view.totalPlayers}
-                      playExperimentId={view.userExperimentId ?? view.experiment.id}
-                      displayParameters={view.displayParameters}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {completedViews.length > 0 && (
-              <section>
-                <h2 className="text-lg font-semibold mb-4">BRET Experiments — Completed</h2>
-                <div className="grid gap-4">
-                  {completedViews.map((view) => (
-                    <ExperimentCard
-                      key={view.id}
-                      experiment={view.experiment}
-                      isCompleted={true}
-                      isRegistered={true}
-                      hasActiveMatch={false}
-                      isRegistering={false}
-                      onRegister={() => {}}
-                      isBatch={view.isBatch}
-                      totalPlayers={view.totalPlayers}
-                      playExperimentId={view.userExperimentId ?? view.experiment.id}
-                      displayParameters={view.displayParameters}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-          </>
-        )}
       </div>
     </div>
   )

@@ -1,8 +1,5 @@
 import type { ExperimentGroup, VariationInfo } from '../../hooks/useTrustExperiments'
 import type { VariationConfig } from '../../hooks/useTrustVariation'
-import type { Experiment, ExperimentBatch } from '../../types'
-import LocalBatchCard from './LocalBatchCard'
-import LocalExperimentCard from './LocalExperimentCard'
 import OnChainExperimentCard from './OnChainExperimentCard'
 
 interface OnChainExperiment {
@@ -10,31 +7,15 @@ interface OnChainExperiment {
   variations: VariationInfo[]
 }
 
-interface BatchWithExperiments extends ExperimentBatch {
-  experiments: Experiment[]
-}
-
 interface ExperimentListTabProps {
   onChainExps: OnChainExperiment[]
-  localBatches: BatchWithExperiments[]
-  localExperiments: Experiment[]
   subjectCounts: Record<string, number>
   variationConfigs: Record<string, VariationConfig>
   onCreateClick: () => void
 }
 
-export default function ExperimentListTab({
-  onChainExps,
-  localBatches,
-  localExperiments,
-  subjectCounts,
-  variationConfigs,
-  onCreateClick,
-}: ExperimentListTabProps) {
-  const hasOnChain = onChainExps.length > 0
-  const hasLocal = localExperiments.length > 0 || localBatches.length > 0
-
-  if (!hasOnChain && !hasLocal) {
+export default function ExperimentListTab({ onChainExps, subjectCounts, variationConfigs, onCreateClick }: ExperimentListTabProps) {
+  if (onChainExps.length === 0) {
     return (
       <div className="text-center py-12 text-base-content/70">
         <p>No experiments yet. Create your first experiment!</p>
@@ -55,14 +36,6 @@ export default function ExperimentListTab({
           subjectCounts={subjectCounts}
           variationConfigs={variationConfigs}
         />
-      ))}
-
-      {localBatches.map((batch) => (
-        <LocalBatchCard key={batch.id} batch={batch} />
-      ))}
-
-      {localExperiments.map((experiment) => (
-        <LocalExperimentCard key={experiment.id} experiment={experiment} />
       ))}
     </div>
   )

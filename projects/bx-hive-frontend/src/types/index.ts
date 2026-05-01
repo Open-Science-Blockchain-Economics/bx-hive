@@ -48,17 +48,6 @@ export interface TrustExperimentState {
   trusteePayout?: number
 }
 
-export type BRETPhase = 'decision' | 'completed'
-
-export interface BRETState {
-  phase: BRETPhase
-  boxesCollected?: number // Number of boxes player chose to collect
-  selectedBoxes?: number[] // Indices of boxes player selected
-  bombLocation?: number // Index of bomb in flattened grid (0 to rows*cols-1)
-  hitBomb?: boolean // Whether the bomb was in selected boxes
-  payout?: number // Final payout amount
-}
-
 export interface Player {
   userId: string
   registeredAt: number
@@ -70,7 +59,7 @@ export interface Match {
   player2Id?: string
   status: MatchStatus
   createdAt: number
-  state?: TrustExperimentState | BRETState // Experiment-specific state
+  state?: TrustExperimentState // Experiment-specific state
 }
 
 export interface Experiment {
