@@ -8,6 +8,11 @@ import { instructionsPlugin } from './vite-plugins/instructions'
 // https://vitejs.dev/config/
 export default defineConfig({
   assetsInclude: ['**/*.teal'],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   plugins: [
     instructionsPlugin({
       contractsDir: path.resolve(__dirname, '../bx-hive-contracts'),
