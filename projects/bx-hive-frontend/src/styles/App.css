@@ -1,3 +1,47 @@
 @import 'tailwindcss';
+@import './tokens.css';
+
 @plugin "@tailwindcss/typography";
 @plugin "daisyui";
+
+/* Bridge design tokens (tokens.css) into Tailwind v4 utilities.
+ * Colors, fonts, and radii here become bg-*/text-*/border-*/font-*/rounded-* utilities
+ * that resolve to the active [data-theme]/[data-accent] CSS variables at runtime.
+ */
+@theme {
+  --color-bg: var(--bg);
+  --color-bg-alt: var(--bg-alt);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+
+  --color-rule: var(--rule);
+  --color-rule-2: var(--rule-2);
+
+  --color-pos: var(--pos);
+  --color-pos-bg: var(--pos-bg);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --color-neg: var(--neg);
+  --color-neg-bg: var(--neg-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+
+  --font-display: var(--font-display);
+  --font-ui: var(--font-ui);
+  --font-mono: var(--font-mono);
+
+  --radius-hair: var(--r-1);
+  --radius-sm: var(--r-2);
+  --radius-md: var(--r-3);
+  --radius-pill: var(--r-pill);
+}
