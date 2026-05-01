@@ -32,9 +32,6 @@ importers:
       '@txnlab/use-wallet-react':
         specifier: ^4.6.0
         version: 4.6.0(@blockshake/defly-connect@1.2.1(algosdk@3.5.2))(@perawallet/connect@1.5.1(algosdk@3.5.2))(algosdk@3.5.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      daisyui:
-        specifier: ^5.5.19
-        version: 5.5.19
       notistack:
         specifier: ^3.0.1
         version: 3.0.2(csstype@3.2.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -1368,9 +1365,6 @@ packages:
 
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
-
-  daisyui@5.5.19:
-    resolution: {integrity: sha512-pbFAkl1VCEh/MPCeclKL61I/MqRIFFhNU7yiXoDDRapXN4/qNCoMxeCCswyxEEhqL5eiTTfwHvucFtOE71C9sA==}
 
   debug@4.4.3:
     resolution: {integrity: sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==}
@@ -4124,8 +4118,6 @@ snapshots:
   cssesc@3.0.0: {}
 
   csstype@3.2.3: {}
-
-  daisyui@5.5.19: {}
 
   debug@4.4.3:
     dependencies:

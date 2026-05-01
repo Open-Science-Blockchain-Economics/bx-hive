@@ -2,12 +2,10 @@
 @import './tokens.css';
 
 @plugin "@tailwindcss/typography";
-@plugin "daisyui";
 
-/* Bridge design tokens (tokens.css) into Tailwind v4 utilities.
- * Colors, fonts, and radii here become bg-*/text-*/border-*/font-*/rounded-* utilities
- * that resolve to the active [data-theme]/[data-accent] CSS variables at runtime.
- */
+/* Bridge design tokens (tokens.css) into Tailwind v4 utilities so bg-, text-,
+   border-, font-, and rounded- utilities resolve to the active
+   [data-theme] / [data-accent] CSS variables at runtime. */
 @theme {
   --color-bg: var(--bg);
   --color-bg-alt: var(--bg-alt);
