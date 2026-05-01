@@ -3,10 +3,10 @@
  */
 
 :root {
-  /* type stacks */
-  --font-display: "Source Serif 4", "Source Serif Pro", "Iowan Old Style", Georgia, serif;
-  --font-ui: "Inter Tight", "Inter", -apple-system, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "JetBrains Mono", "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+  /* type stacks — "* Variable" names match @fontsource-variable packages loaded in main.tsx */
+  --font-display: "Source Serif 4 Variable", "Source Serif 4", "Source Serif Pro", "Iowan Old Style", Georgia, serif;
+  --font-ui: "Inter Tight Variable", "Inter Tight", "Inter", -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "JetBrains Mono Variable", "JetBrains Mono", "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
 
   /* type scale (px-anchored, line-heights tuned for density) */
   --fs-display-xl: 56px; --lh-display-xl: 1.04; --tr-display-xl: -0.02em;
