@@ -14,6 +14,7 @@ import ExperimentDetails from './pages/ExperimentDetails'
 import ExperimenterDashboard from './pages/ExperimenterDashboard'
 import Home from './pages/Home'
 import MarketingJournal from './pages/MarketingJournal'
+import MarketingSans from './pages/MarketingSans'
 import PlayExperiment from './pages/PlayExperiment'
 import SubjectDashboard from './pages/SubjectDashboard'
 import TrustExperimentDetails from './pages/TrustExperimentDetails'
@@ -27,6 +28,10 @@ const devRoutes = import.meta.env.DEV
       {
         path: '/marketing/journal',
         element: <MarketingJournal />,
+      },
+      {
+        path: '/marketing/sans',
+        element: <MarketingSans />,
       },
     ]
   : []
