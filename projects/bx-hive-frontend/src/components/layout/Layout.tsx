@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 
 import { TooltipProvider } from '@/components/ds/tooltip'
 
@@ -8,6 +8,7 @@ import Footer from './Footer'
 import TopBar from './TopBar'
 
 export default function Layout() {
+  const fullBleed = useLocation().pathname === '/'
   return (
     <ActiveUserProvider>
       <ExperimentManagerProvider>
@@ -15,9 +16,13 @@ export default function Layout() {
           <div className="min-h-screen flex flex-col bg-background text-foreground">
             <TopBar />
             <main className="flex-1">
-              <div className="max-w-5xl mx-auto p-4">
+              {fullBleed ? (
                 <Outlet />
-              </div>
+              ) : (
+                <div className="max-w-5xl mx-auto p-4">
+                  <Outlet />
+                </div>
+              )}
             </main>
             <Footer />
           </div>
