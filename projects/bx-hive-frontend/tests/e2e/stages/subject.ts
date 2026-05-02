@@ -27,8 +27,8 @@ export async function enrollSubject(
 ): Promise<void> {
   await gotoSubjectDashboard(page, subject)
 
-  const card = page.locator('div.card', { has: page.getByText(`Experiment ID: ${expId}`) })
-  await card.getByRole('button', { name: /Join Experiment/i }).click()
+  const card = page.locator('[data-slot="panel"]', { hasText: `Experiment ID: ${expId}` })
+  await card.getByRole('button', { name: /Join experiment/i }).click()
 
   const variationClient = algorand.client.getTypedAppClientById(TrustVariationClient, {
     appId: variationAppId,
