@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Panel } from '@/components/ds/card'
+import { Rule } from '@/components/ds/separator'
 import { LoadingSpinner } from '../components/ui'
 import ActiveMatchCard from '../components/subject/ActiveMatchCard'
 import CompletedMatchCard from '../components/subject/CompletedMatchCard'
@@ -125,19 +127,21 @@ export default function SubjectDashboard() {
   const joinableExperiments = onChainExperiments.filter((e) => !e.enrolled && !e.hasMatch)
   const enrolledWaiting = onChainExperiments.filter((e) => e.enrolled && !e.hasMatch)
 
+  const hasAnything =
+    joinableExperiments.length > 0 || enrolledWaiting.length > 0 || activeOnChain.length > 0 || completedOnChain.length > 0
+
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Subject Dashboard</h1>
-        <p className="text-base-content/70 mt-2">View and participate in experiments</p>
+      <div className="mb-8">
+        <h1 className="t-h1">Subject Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">View and participate in experiments</p>
       </div>
 
-      <div className="space-y-8">
-        {/* Trust Game: Available to Join */}
+      <div className="flex flex-col gap-8">
         {joinableExperiments.length > 0 && (
           <section>
-            <h2 className="text-lg font-semibold mb-4">Trust Game — Available</h2>
-            <div className="grid gap-4">
+            <Rule label="Trust Game — Available" className="mb-4" />
+            <div className="grid gap-3">
               {joinableExperiments.map(({ group, variations }) => (
                 <JoinableExperimentCard
                   key={group.expId}
@@ -152,11 +156,10 @@ export default function SubjectDashboard() {
           </section>
         )}
 
-        {/* Trust Game: Enrolled, waiting */}
         {enrolledWaiting.length > 0 && (
           <section>
-            <h2 className="text-lg font-semibold mb-4">Trust Game — Enrolled</h2>
-            <div className="grid gap-4">
+            <Rule label="Trust Game — Enrolled" className="mb-4" />
+            <div className="grid gap-3">
               {enrolledWaiting.map(({ group }) => (
                 <EnrolledWaitingCard key={group.expId} group={group} />
               ))}
@@ -164,11 +167,10 @@ export default function SubjectDashboard() {
           </section>
         )}
 
-        {/* Active Trust Game matches */}
         {activeOnChain.length > 0 && (
           <section>
-            <h2 className="text-lg font-semibold mb-4">Trust Game — Active</h2>
-            <div className="grid gap-4">
+            <Rule label="Trust Game — Active" className="mb-4" />
+            <div className="grid gap-3">
               {activeOnChain.map(({ appId, match }) => (
                 <ActiveMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
               ))}
@@ -176,11 +178,10 @@ export default function SubjectDashboard() {
           </section>
         )}
 
-        {/* Completed Trust Game matches */}
         {completedOnChain.length > 0 && (
           <section>
-            <h2 className="text-lg font-semibold mb-4">Trust Game — Completed</h2>
-            <div className="grid gap-4">
+            <Rule label="Trust Game — Completed" className="mb-4" />
+            <div className="grid gap-3">
               {completedOnChain.map(({ appId, match }) => (
                 <CompletedMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
               ))}
@@ -188,18 +189,14 @@ export default function SubjectDashboard() {
           </section>
         )}
 
-        {/* No trust activity */}
-        {joinableExperiments.length === 0 &&
-          enrolledWaiting.length === 0 &&
-          activeOnChain.length === 0 &&
-          completedOnChain.length === 0 && (
-            <section>
-              <h2 className="text-lg font-semibold mb-4">Trust Game</h2>
-              <div className="text-center py-8 text-base-content/70 bg-base-200 rounded-lg">
-                <p>No Trust Game experiments available yet.</p>
-              </div>
-            </section>
-          )}
+        {!hasAnything && (
+          <section>
+            <Rule label="Trust Game" className="mb-4" />
+            <Panel className="text-center py-10 text-muted-foreground">
+              <p className="t-small">No Trust Game experiments available yet.</p>
+            </Panel>
+          </section>
+        )}
       </div>
     </div>
   )

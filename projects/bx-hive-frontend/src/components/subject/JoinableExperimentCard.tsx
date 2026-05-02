@@ -1,4 +1,9 @@
-import type { ExperimentGroup, VariationInfo } from '../../hooks/useTrustExperiments'
+import { Loader2 } from 'lucide-react'
+
+import { Chip } from '@/components/ds/badge'
+import { Btn } from '@/components/ds/button'
+import { Panel } from '@/components/ds/card'
+import type { ExperimentGroup, VariationInfo } from '@/hooks/useTrustExperiments'
 
 interface JoinableExperimentCardProps {
   group: ExperimentGroup
@@ -10,27 +15,22 @@ interface JoinableExperimentCardProps {
 
 export default function JoinableExperimentCard({ group, variations, joining, joinError, onJoin }: JoinableExperimentCardProps) {
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="card-title">{group.name}</h3>
-            <p className="text-sm text-base-content/70">Trust Game &middot; Experiment ID: {group.expId}</p>
-          </div>
-          <span className="badge badge-info">Open</span>
+    <Panel>
+      <div className="flex justify-between items-start gap-4">
+        <div>
+          <h3 className="t-h2 mb-1">{group.name}</h3>
+          <p className="text-sm text-muted-foreground">
+            Trust Game · Experiment ID: <span className="font-mono">{group.expId}</span>
+          </p>
         </div>
-        {joinError && joining === null && <div className="text-error text-sm mt-2">{joinError}</div>}
-        <div className="card-actions justify-end mt-2">
-          <button
-            type="button"
-            className="btn btn-primary btn-sm"
-            disabled={joining !== null}
-            onClick={() => onJoin(group.expId, variations)}
-          >
-            {joining === group.expId ? <span className="loading loading-spinner loading-xs"></span> : 'Join Experiment'}
-          </button>
-        </div>
+        <Chip tone="info">Open</Chip>
       </div>
-    </div>
+      {joinError && joining === null && <p className="text-sm text-neg mt-3">{joinError}</p>}
+      <div className="flex justify-end mt-4">
+        <Btn variant="primary" size="sm" disabled={joining !== null} onClick={() => onJoin(group.expId, variations)}>
+          {joining === group.expId ? <Loader2 className="size-3.5 animate-spin" /> : 'Join experiment'}
+        </Btn>
+      </div>
+    </Panel>
   )
 }

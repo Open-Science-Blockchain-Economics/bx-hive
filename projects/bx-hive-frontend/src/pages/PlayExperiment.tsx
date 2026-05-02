@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+
+import { Btn } from '@/components/ds/button'
+import { Panel } from '@/components/ds/card'
 import TrustExperiment from '../components/experiment-types/trust/TrustExperiment'
 import InstructionsModal from '../components/InstructionsModal'
-import { PageHeader } from '../components/ui'
+import { LoadingSpinner, PageHeader } from '../components/ui'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustVariation } from '../hooks/useTrustVariation'
 import type { VariationConfig } from '../hooks/useTrustVariation'
@@ -34,23 +37,19 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
   })
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <span className="loading loading-spinner loading-lg"></span>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load match data' : null
 
   if (error || !data) {
     return (
-      <div className="text-center py-12">
-        <p className="text-error">{error || 'Something went wrong'}</p>
-        <Link to="/dashboard/subject" className="btn btn-primary mt-4">
-          Back to Dashboard
-        </Link>
-      </div>
+      <Panel className="text-center py-10">
+        <p className="text-sm text-neg mb-4">{error || 'Something went wrong'}</p>
+        <Btn asChild variant="primary" size="sm">
+          <Link to="/dashboard/subject">Back to dashboard</Link>
+        </Btn>
+      </Panel>
     )
   }
 
@@ -85,17 +84,21 @@ export default function PlayExperiment() {
   const { activeAddress } = useAlgorand()
 
   if (!experimentId) {
-    return <div className="text-center py-12 text-error">Missing experiment ID</div>
+    return (
+      <Panel className="text-center py-10">
+        <p className="text-sm text-neg">Missing experiment ID</p>
+      </Panel>
+    )
   }
 
   if (!activeAddress) {
     return (
-      <div className="text-center py-12">
-        <p className="text-base-content/70">Connect your wallet to play.</p>
-        <Link to="/" className="btn btn-primary mt-4">
-          Go Home
-        </Link>
-      </div>
+      <Panel className="text-center py-10">
+        <p className="text-sm text-muted-foreground mb-4">Connect your wallet to play.</p>
+        <Btn asChild variant="primary" size="sm">
+          <Link to="/">Go home</Link>
+        </Btn>
+      </Panel>
     )
   }
 

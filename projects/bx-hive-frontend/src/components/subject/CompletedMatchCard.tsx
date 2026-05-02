@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom'
-import type { Match } from '../../hooks/useTrustVariation'
-import { microAlgoToAlgo } from '../../utils/amount'
+
+import { Chip } from '@/components/ds/badge'
+import { Btn } from '@/components/ds/button'
+import { Panel } from '@/components/ds/card'
+import type { Match } from '@/hooks/useTrustVariation'
+import { microAlgoToAlgo } from '@/utils/amount'
 
 interface CompletedMatchCardProps {
   appId: bigint
@@ -12,23 +16,21 @@ export default function CompletedMatchCard({ appId, match, activeAddress }: Comp
   const payout = match.investor === activeAddress ? match.investorPayout : match.trusteePayout
 
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="card-title">Trust Game</h3>
-            <p className="text-xs text-base-content/50 mt-1">
-              Payout: <span className="font-medium text-success">{microAlgoToAlgo(payout).toLocaleString()} ALGO</span>
-            </p>
-          </div>
-          <span className="badge badge-success">Completed</span>
+    <Panel>
+      <div className="flex justify-between items-start gap-4">
+        <div>
+          <h3 className="t-h2 mb-1">Trust Game</h3>
+          <p className="text-xs text-muted-foreground">
+            Payout: <span className="font-mono font-medium text-pos">{microAlgoToAlgo(payout).toLocaleString()} ALGO</span>
+          </p>
         </div>
-        <div className="card-actions justify-end mt-2">
-          <Link to={`/play/${String(appId)}`} className="btn btn-ghost btn-sm">
-            View Results
-          </Link>
-        </div>
+        <Chip tone="pos">Completed</Chip>
       </div>
-    </div>
+      <div className="flex justify-end mt-4">
+        <Btn asChild variant="ghost" size="sm">
+          <Link to={`/play/${String(appId)}`}>View results</Link>
+        </Btn>
+      </div>
+    </Panel>
   )
 }
