@@ -1,5 +1,9 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useSuspenseQuery } from '@tanstack/react-query'
+import { Plus } from 'lucide-react'
+
+import { Btn } from '@/components/ds/button'
+import { Rule } from '@/components/ds/separator'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments, type ExperimentGroup, type VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustVariation, type VariationConfig } from '../hooks/useTrustVariation'
@@ -69,10 +73,19 @@ export default function ExperimenterDashboard() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Experimenter Dashboard</h1>
-        <p className="text-base-content/70 mt-2">Create and manage experiments</p>
+      <div className="flex items-start justify-between gap-4 mb-8">
+        <div>
+          <h1 className="t-h1">Experimenter Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">Create and manage experiments</p>
+        </div>
+        <Btn asChild variant="primary" size="sm">
+          <Link to="/experimenter/create">
+            <Plus className="size-3.5" /> New experiment
+          </Link>
+        </Btn>
       </div>
+
+      <Rule label="My Experiments" className="mb-4" />
 
       <ExperimentListTab
         onChainExps={onChainData.onChainExps}

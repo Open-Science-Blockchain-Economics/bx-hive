@@ -1,3 +1,5 @@
+import { Btn } from '@/components/ds/button'
+import { Panel } from '@/components/ds/card'
 import type { ExperimentGroup, VariationInfo } from '../../hooks/useTrustExperiments'
 import type { VariationConfig } from '../../hooks/useTrustVariation'
 import OnChainExperimentCard from './OnChainExperimentCard'
@@ -17,17 +19,17 @@ interface ExperimentListTabProps {
 export default function ExperimentListTab({ onChainExps, subjectCounts, variationConfigs, onCreateClick }: ExperimentListTabProps) {
   if (onChainExps.length === 0) {
     return (
-      <div className="text-center py-12 text-base-content/70">
-        <p>No experiments yet. Create your first experiment!</p>
-        <button className="btn btn-primary mt-4" onClick={onCreateClick}>
-          Create Experiment
-        </button>
-      </div>
+      <Panel className="text-center py-12">
+        <p className="text-sm text-muted-foreground mb-4">No experiments yet. Create your first experiment.</p>
+        <Btn variant="primary" size="sm" onClick={onCreateClick}>
+          Create experiment
+        </Btn>
+      </Panel>
     )
   }
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-4">
       {onChainExps.map(({ group, variations }) => (
         <OnChainExperimentCard
           key={group.expId}
