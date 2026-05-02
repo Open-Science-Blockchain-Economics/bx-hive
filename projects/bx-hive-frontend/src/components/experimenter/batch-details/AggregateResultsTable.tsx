@@ -1,3 +1,4 @@
+import { Panel } from '@/components/ds/card'
 import { getVariationLabel } from '../../../db'
 import type { Experiment, ExperimentBatch } from '../../../types'
 
@@ -14,48 +15,45 @@ export default function AggregateResultsTable({ experiments, batch }: AggregateR
   if (!experiments.some((exp) => exp.matches.length > 0)) return null
 
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body">
-        <h2 className="card-title">Results by Variation</h2>
-
-        <div className="overflow-x-auto">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Variation</th>
-                <th>Players</th>
-                <th>Matches</th>
-                <th>Playing</th>
-                <th>Completed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {experiments.map((exp, idx) => {
-                const playing = exp.matches.filter((m) => m.status === 'playing').length
-                const completed = exp.matches.filter((m) => m.status === 'completed').length
-                return (
-                  <tr key={exp.id}>
-                    <td className="font-medium">
-                      V{idx + 1}: {getVariationLabel(exp.parameters, batch.variations)}
-                    </td>
-                    <td>{exp.players.length}</td>
-                    <td>{exp.matches.length}</td>
-                    <td className="text-warning">{playing}</td>
-                    <td className="text-success">{completed}</td>
-                  </tr>
-                )
-              })}
-              <tr className="font-semibold border-t-2 border-base-300">
-                <td>Total</td>
-                <td>{totalPlayers}</td>
-                <td>{experiments.reduce((sum, exp) => sum + exp.matches.length, 0)}</td>
-                <td className="text-warning">{totalPlaying}</td>
-                <td className="text-success">{totalCompleted}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    <Panel>
+      <h2 className="t-h2 mb-3">Results by Variation</h2>
+      <div className="overflow-x-auto rounded-sm border border-border">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted">
+              <th className="text-left t-micro px-3 py-2">Variation</th>
+              <th className="text-right t-micro px-3 py-2">Players</th>
+              <th className="text-right t-micro px-3 py-2">Matches</th>
+              <th className="text-right t-micro px-3 py-2">Playing</th>
+              <th className="text-right t-micro px-3 py-2">Completed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {experiments.map((exp, idx) => {
+              const playing = exp.matches.filter((m) => m.status === 'playing').length
+              const completed = exp.matches.filter((m) => m.status === 'completed').length
+              return (
+                <tr key={exp.id} className="border-b border-border last:border-b-0">
+                  <td className="px-3 py-2 font-medium">
+                    V{idx + 1}: {getVariationLabel(exp.parameters, batch.variations)}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono">{exp.players.length}</td>
+                  <td className="px-3 py-2 text-right font-mono">{exp.matches.length}</td>
+                  <td className="px-3 py-2 text-right font-mono text-warn">{playing}</td>
+                  <td className="px-3 py-2 text-right font-mono text-pos">{completed}</td>
+                </tr>
+              )
+            })}
+            <tr className="border-t-2 border-border bg-muted font-semibold">
+              <td className="px-3 py-2">Total</td>
+              <td className="px-3 py-2 text-right font-mono">{totalPlayers}</td>
+              <td className="px-3 py-2 text-right font-mono">{experiments.reduce((sum, exp) => sum + exp.matches.length, 0)}</td>
+              <td className="px-3 py-2 text-right font-mono text-warn">{totalPlaying}</td>
+              <td className="px-3 py-2 text-right font-mono text-pos">{totalCompleted}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </div>
+    </Panel>
   )
 }

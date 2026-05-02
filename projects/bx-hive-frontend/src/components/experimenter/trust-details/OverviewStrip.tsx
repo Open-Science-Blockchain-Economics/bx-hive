@@ -1,8 +1,14 @@
-import { FaPause, FaPlay } from 'react-icons/fa'
+import { Pause, Play, RotateCcw } from 'lucide-react'
+
+import { Btn } from '@/components/ds/button'
+import { Dot } from '@/components/ds/dot'
+import { Gauge } from '@/components/ds/gauge'
+import { Panel } from '@/components/ds/card'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip'
+import { StatCard } from '../../ui'
 import type { VariationInfo } from '../../../hooks/useTrustExperiments'
 import { PHASE_COMPLETED, STATUS_ACTIVE, STATUS_CLOSED, STATUS_COMPLETED } from '../../../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../../../hooks/useTrustVariation'
-import { StatCard } from '../../ui'
 
 interface SubjectEntry {
   address: string
@@ -53,71 +59,76 @@ export default function OverviewStrip({
   const progressPct = totalMatches > 0 ? Math.round((totalCompleted / totalMatches) * 100) : 0
 
   return (
-    <div className="bg-base-200 rounded-box p-4 mb-6">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1 text-xs">
-          <h2 className="text-sm font-semibold text-base-content/60">Overview</h2>
+    <Panel padded={false} className="bg-muted p-4 mb-6">
+      <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <div className="flex items-center gap-2 text-xs">
+          <h2 className="t-micro">Overview</h2>
           {autoRefresh ? (
             <>
-              <span className="tooltip tooltip-bottom" data-tip="Pause auto-refresh">
-                <button type="button" className="btn btn-ghost btn-xs btn-square" onClick={() => onToggleAutoRefresh(false)}>
-                  <FaPause className="w-3 h-3" />
-                </button>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                <span className="text-success font-medium">Live</span>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => onToggleAutoRefresh(false)}
+                    className="inline-flex items-center justify-center size-6 rounded-sm text-muted-foreground hover:text-foreground hover:bg-card"
+                    aria-label="Pause auto-refresh"
+                  >
+                    <Pause className="size-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Pause auto-refresh</TooltipContent>
+              </Tooltip>
+              <span className="inline-flex items-center gap-1.5 text-pos font-medium">
+                <Dot tone="pos" className="animate-pulse" /> Live
               </span>
             </>
           ) : (
             <>
-              <span className="tooltip tooltip-bottom" data-tip="Start auto-refresh">
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-xs btn-square"
-                  onClick={() => {
-                    onToggleAutoRefresh(true)
-                    onRefresh()
-                  }}
-                >
-                  <FaPlay className="w-3 h-3" />
-                </button>
-              </span>
-              <button type="button" className="btn btn-ghost btn-xs" onClick={onRefresh}>
-                ↻ Refresh
-              </button>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onToggleAutoRefresh(true)
+                      onRefresh()
+                    }}
+                    className="inline-flex items-center justify-center size-6 rounded-sm text-muted-foreground hover:text-foreground hover:bg-card"
+                    aria-label="Start auto-refresh"
+                  >
+                    <Play className="size-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Start auto-refresh</TooltipContent>
+              </Tooltip>
+              <Btn variant="ghost" size="sm" onClick={onRefresh}>
+                <RotateCcw className="size-3" /> Refresh
+              </Btn>
             </>
           )}
-          <span
-            className="tooltip tooltip-bottom ml-2"
-            data-tip={
-              !autoMatchEligible
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Btn variant="ghost" size="sm" disabled={!autoMatchEligible} onClick={() => onToggleAutoMatch(!autoMatch)}>
+                {autoMatch ? (
+                  <>
+                    <Dot tone="pos" className="animate-pulse" /> <Pause className="size-3" /> Auto Match
+                  </>
+                ) : (
+                  <>
+                    <Play className="size-3" /> Auto Match
+                  </>
+                )}
+              </Btn>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {!autoMatchEligible
                 ? (autoMatchDisabledReason ?? 'Auto Match unavailable')
                 : autoMatch
                   ? 'Pause auto-matching'
-                  : 'Auto-match unassigned subjects across all active variations (FIFO)'
-            }
-          >
-            <button
-              type="button"
-              className="btn btn-ghost btn-xs gap-1"
-              disabled={!autoMatchEligible}
-              onClick={() => onToggleAutoMatch(!autoMatch)}
-            >
-              {autoMatch ? (
-                <>
-                  <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                  <FaPause className="w-3 h-3" /> Auto Match
-                </>
-              ) : (
-                <>
-                  <FaPlay className="w-3 h-3" /> Auto Match
-                </>
-              )}
-            </button>
-          </span>
+                  : 'Auto-match unassigned subjects across all active variations (FIFO)'}
+            </TooltipContent>
+          </Tooltip>
         </div>
-        <span className="text-xs uppercase tracking-wide text-base-content/30">Trust Experiment</span>
+        <span className="t-micro text-faint">Trust Experiment</span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard
@@ -126,8 +137,8 @@ export default function OverviewStrip({
           desc={
             <>
               {variationsActive > 0 && <span className="text-primary">{variationsActive} active </span>}
-              {variationsClosed > 0 && <span className="text-warning">{variationsClosed} closed </span>}
-              {variationsEnded > 0 && <span className="text-error">{variationsEnded} ended</span>}
+              {variationsClosed > 0 && <span className="text-warn">{variationsClosed} closed </span>}
+              {variationsEnded > 0 && <span className="text-neg">{variationsEnded} ended</span>}
             </>
           }
         />
@@ -137,7 +148,7 @@ export default function OverviewStrip({
           desc={
             <>
               <span className="text-primary">{totalAssigned} playing</span>
-              {' \u00b7 '}
+              {' · '}
               <span>{totalWaiting} waiting</span>
             </>
           }
@@ -145,24 +156,16 @@ export default function OverviewStrip({
         <StatCard
           title="Total Matches"
           value={totalMatches}
-          figure={
-            <div
-              className={`radial-progress text-xs ${progressPct === 100 ? 'text-primary' : 'text-base-content'}`}
-              style={{ '--value': progressPct, '--size': '3rem', '--thickness': '4px' } as React.CSSProperties}
-              role="progressbar"
-            >
-              {progressPct}%
-            </div>
-          }
+          figure={<Gauge value={progressPct} size={48} />}
           desc={
             <>
               <span className="text-primary">{totalCompleted} completed</span>
-              {' \u00b7 '}
+              {' · '}
               <span>{matchesInvestorPhase + matchesTrusteePhase} in play</span>
             </>
           }
         />
       </div>
-    </div>
+    </Panel>
   )
 }

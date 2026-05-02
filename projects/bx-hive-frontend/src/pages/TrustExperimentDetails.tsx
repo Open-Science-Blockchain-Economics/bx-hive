@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useParams } from 'react-router-dom'
+
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip'
+import { cn } from '@/lib/utils'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
 import VariationPanel from '../components/experimenter/trust-details/VariationPanel'
 import { LoadingSpinner, PageHeader, StatusDot } from '../components/ui'
@@ -138,30 +141,36 @@ export default function TrustExperimentDetails() {
         autoMatchDisabledReason={autoMatchDisabledReason}
       />
 
-      <h2 className="text-xs uppercase tracking-wide text-base-content/50 mb-3">Variation Details</h2>
+      <h2 className="t-micro mb-3">Variation Details</h2>
 
       {vars.length === 0 ? (
-        <div className="text-center py-12 text-base-content/50">No variations found.</div>
+        <div className="text-center py-12 text-muted-foreground text-sm">No variations found.</div>
       ) : (
         <>
-          <div role="tablist" className="tabs tabs-border mb-0">
+          <div role="tablist" className="flex flex-wrap gap-1 mb-0 border-b border-border">
             {vars.map((v, idx) => {
               const k = String(v.appId)
               const cfg = cfgs[k]
               const hasWaiting = (subs[k] ?? []).some((s) => s.assigned === 0)
+              const isActive = selectedVarIdx === idx
               return (
-                <button
-                  key={v.varId}
-                  role="tab"
-                  type="button"
-                  className={`tab${selectedVarIdx === idx ? ' tab-active' : ''}`}
-                  onClick={() => setSelectedVarIdx(idx)}
-                >
-                  <span className="tooltip tooltip-bottom flex gap-1 items-center" data-tip={variationTooltip(v, cfg)}>
-                    Var {v.varId + 1}
-                    <StatusDot color={statusDotColor(cfg, hasWaiting)} label={statusLabel(cfg)} />
-                  </span>
-                </button>
+                <Tooltip key={v.varId}>
+                  <TooltipTrigger asChild>
+                    <button
+                      role="tab"
+                      type="button"
+                      onClick={() => setSelectedVarIdx(idx)}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 px-3 py-2 -mb-px border-b-2 text-sm font-medium transition-colors',
+                        isActive ? 'text-foreground border-primary' : 'text-muted-foreground border-transparent hover:text-foreground',
+                      )}
+                    >
+                      Var {v.varId + 1}
+                      <StatusDot color={statusDotColor(cfg, hasWaiting)} label={statusLabel(cfg)} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">{variationTooltip(v, cfg)}</TooltipContent>
+                </Tooltip>
               )
             })}
           </div>

@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useSuspenseQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+
+import { Chip } from '@/components/ds/badge'
+import { Panel } from '@/components/ds/card'
+import { cn } from '@/lib/utils'
 import { EXPERIMENT_RESULTS_COMPONENTS } from '../components/experimenter/results'
 import AggregateResultsTable from '../components/experimenter/batch-details/AggregateResultsTable'
 import BatchConfigCard from '../components/experimenter/batch-details/BatchConfigCard'
@@ -69,24 +73,28 @@ export default function BatchDetails() {
   const { batch, experiments, users } = data
   const template = getTemplateById(batch.templateId)
   const displayedExperiments = activeVariationTab === 'all' ? experiments : [experiments[activeVariationTab]]
+  const ResultsComponent =
+    activeVariationTab !== 'all' && displayedExperiments[0]?.matches.length > 0
+      ? EXPERIMENT_RESULTS_COMPONENTS[displayedExperiments[0].templateId as keyof typeof EXPERIMENT_RESULTS_COMPONENTS]
+      : null
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         title={batch.name}
         backTo="/dashboard/experimenter"
         backTooltip="Back to Experimenter Dashboard"
         subtitle={
           <>
-            <span className="text-base-content/70">{template?.label || template?.name || batch.templateId}</span>
-            <span className="text-base-content/50">&bull;</span>
-            <span className="text-sm text-base-content/50">Created {new Date(batch.createdAt).toLocaleDateString()}</span>
+            <span>{template?.label || template?.name || batch.templateId}</span>
+            <span className="text-faint">·</span>
+            <span>Created {new Date(batch.createdAt).toLocaleDateString()}</span>
           </>
         }
         badges={
           <>
-            <span className="badge badge-primary badge-lg">BATCH</span>
-            <StatusBadge status={batch.status} size="lg" />
+            <Chip tone="accent">Batch</Chip>
+            <StatusBadge status={batch.status} />
           </>
         }
       />
@@ -101,62 +109,65 @@ export default function BatchDetails() {
         onReopenBatch={() => reopenBatchMutation.mutate()}
       />
 
-      {/* Variation Tabs */}
-      <div className="card bg-base-100 border border-base-300">
-        <div className="card-body">
-          <h2 className="card-title mb-4">Variations</h2>
-
-          <div role="tablist" className="tabs tabs-boxed mb-4">
-            <a
+      <Panel>
+        <h2 className="t-h2 mb-4">Variations</h2>
+        <div role="tablist" className="flex flex-wrap gap-1 mb-4 border-b border-border">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeVariationTab === 'all'}
+            onClick={() => setActiveVariationTab('all')}
+            className={cn(
+              'px-3 py-2 -mb-px border-b-2 text-sm font-medium transition-colors',
+              activeVariationTab === 'all'
+                ? 'text-foreground border-primary'
+                : 'text-muted-foreground border-transparent hover:text-foreground',
+            )}
+          >
+            All
+          </button>
+          {experiments.map((exp, idx) => (
+            <button
+              key={exp.id}
+              type="button"
               role="tab"
-              className={`tab ${activeVariationTab === 'all' ? 'tab-active' : ''}`}
-              onClick={() => setActiveVariationTab('all')}
+              aria-selected={activeVariationTab === idx}
+              onClick={() => setActiveVariationTab(idx)}
+              className={cn(
+                'px-3 py-2 -mb-px border-b-2 text-sm font-medium transition-colors',
+                activeVariationTab === idx
+                  ? 'text-foreground border-primary'
+                  : 'text-muted-foreground border-transparent hover:text-foreground',
+              )}
             >
-              All
-            </a>
-            {experiments.map((exp, idx) => (
-              <a
-                key={exp.id}
-                role="tab"
-                className={`tab ${activeVariationTab === idx ? 'tab-active' : ''}`}
-                onClick={() => setActiveVariationTab(idx)}
-              >
-                {getVariationLabel(exp.parameters, batch.variations)}
-              </a>
-            ))}
-          </div>
-
-          <div className="space-y-4">
-            {displayedExperiments.map((exp, idx) => {
-              const actualIndex = activeVariationTab === 'all' ? idx : (activeVariationTab as number)
-              return (
-                <VariationDetail
-                  key={exp.id}
-                  experiment={exp}
-                  variationIndex={actualIndex}
-                  variations={batch.variations}
-                  users={users}
-                  showPlayers={activeVariationTab !== 'all'}
-                  actionInProgress={actionInProgress}
-                  onClose={closeVariationMutation.mutate}
-                  onReopen={reopenVariationMutation.mutate}
-                />
-              )
-            })}
-          </div>
+              {getVariationLabel(exp.parameters, batch.variations)}
+            </button>
+          ))}
         </div>
-      </div>
+
+        <div className="flex flex-col gap-4">
+          {displayedExperiments.map((exp, idx) => {
+            const actualIndex = activeVariationTab === 'all' ? idx : (activeVariationTab as number)
+            return (
+              <VariationDetail
+                key={exp.id}
+                experiment={exp}
+                variationIndex={actualIndex}
+                variations={batch.variations}
+                users={users}
+                showPlayers={activeVariationTab !== 'all'}
+                actionInProgress={actionInProgress}
+                onClose={closeVariationMutation.mutate}
+                onReopen={reopenVariationMutation.mutate}
+              />
+            )
+          })}
+        </div>
+      </Panel>
 
       <AggregateResultsTable experiments={experiments} batch={batch} />
 
-      {/* Detailed Results per Variation */}
-      {activeVariationTab !== 'all' &&
-        displayedExperiments[0].matches.length > 0 &&
-        (() => {
-          const ResultsComponent =
-            EXPERIMENT_RESULTS_COMPONENTS[displayedExperiments[0].templateId as keyof typeof EXPERIMENT_RESULTS_COMPONENTS]
-          return ResultsComponent ? <ResultsComponent experiment={displayedExperiments[0]} users={users} /> : null
-        })()}
+      {ResultsComponent && <ResultsComponent experiment={displayedExperiments[0]} users={users} />}
     </div>
   )
 }
