@@ -13,6 +13,7 @@ import DesignSystemShowcase from './pages/DesignSystemShowcase'
 import ExperimentDetails from './pages/ExperimentDetails'
 import ExperimenterDashboard from './pages/ExperimenterDashboard'
 import Home from './pages/Home'
+import MarketingJournal from './pages/MarketingJournal'
 import PlayExperiment from './pages/PlayExperiment'
 import SubjectDashboard from './pages/SubjectDashboard'
 import TrustExperimentDetails from './pages/TrustExperimentDetails'
@@ -22,6 +23,10 @@ const devRoutes = import.meta.env.DEV
       {
         path: '/dev/ds',
         element: <DesignSystemShowcase />,
+      },
+      {
+        path: '/marketing/journal',
+        element: <MarketingJournal />,
       },
     ]
   : []

@@ -1,0 +1,255 @@
+import { Link } from 'react-router-dom'
+import { ArrowRight, FlaskConical, TriangleAlert, User } from 'lucide-react'
+
+import { cn } from '@/lib/utils'
+
+interface PillBtnProps {
+  children: React.ReactNode
+  kind?: 'primary' | 'secondary' | 'ghost'
+  size?: 'sm' | 'lg'
+  href?: string
+  className?: string
+}
+
+function PillBtn({ children, kind = 'primary', size = 'lg', href, className }: PillBtnProps) {
+  const sizing = size === 'lg' ? 'px-5 py-3 text-[15px]' : 'px-4 py-2 text-[13px]'
+  const variant =
+    kind === 'primary'
+      ? 'bg-foreground text-background border border-foreground hover:bg-foreground/90'
+      : kind === 'secondary'
+        ? 'bg-transparent text-foreground border border-foreground hover:bg-foreground/5'
+        : 'bg-transparent text-foreground border border-transparent underline underline-offset-4 hover:no-underline'
+  const cls = cn(
+    'inline-flex items-center justify-center gap-2 rounded-pill font-medium tracking-[-0.005em] transition-colors',
+    sizing,
+    variant,
+    className,
+  )
+  if (href) {
+    return (
+      <Link to={href} className={cls}>
+        {children}
+      </Link>
+    )
+  }
+  return (
+    <button type="button" className={cls}>
+      {children}
+    </button>
+  )
+}
+
+function MarketingNav() {
+  return (
+    <header className="flex items-center justify-between px-16 py-5 border-b border-border bg-background">
+      <div className="flex items-center gap-8">
+        <Link to="/" className="font-ui text-lg font-semibold tracking-[-0.02em]">
+          bx<span className="font-display italic font-normal mx-0.5">·</span>hive
+        </Link>
+        <nav className="flex items-center gap-6 font-ui text-sm font-medium text-muted-foreground">
+          <a href="#about" className="text-foreground">
+            Home
+          </a>
+          <a href="#methods">Methods</a>
+          <a
+            href="https://open-science-blockchain-economics.github.io/bx-hive/getting-started/overview/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Documentation
+          </a>
+        </nav>
+      </div>
+      <div className="flex items-center gap-2">
+        <PillBtn size="sm" kind="ghost">
+          Sign in
+        </PillBtn>
+        <PillBtn size="sm" kind="primary">
+          Connect wallet
+        </PillBtn>
+      </div>
+    </header>
+  )
+}
+
+interface RoleCardProps {
+  tag: string
+  title: string
+  body: string
+  icon: 'start' | 'exp' | 'part'
+  cta: string
+}
+
+function RoleCard({ tag, title, body, icon, cta }: RoleCardProps) {
+  const Icon = icon === 'start' ? TriangleAlert : icon === 'exp' ? FlaskConical : User
+  return (
+    <div className="bg-card border border-border rounded-2xl p-8 flex flex-col gap-3">
+      <div className="size-9 rounded-sm bg-primary text-primary-foreground grid place-items-center mb-2">
+        <Icon className="size-4.5" strokeWidth={1.6} />
+      </div>
+      <span className="t-micro text-primary">{tag}</span>
+      <div className="font-ui text-2xl font-medium tracking-[-0.012em] mt-1">
+        <span className="font-display italic font-normal">{title}</span>
+      </div>
+      <p className="font-ui text-[15px] leading-[1.5] text-ink-2 m-0">{body}</p>
+      <div className="mt-2">
+        <PillBtn size="sm" kind="ghost" className="-ml-4">
+          {cta} <ArrowRight className="size-3.5" />
+        </PillBtn>
+      </div>
+    </div>
+  )
+}
+
+export default function MarketingJournal() {
+  return (
+    <div className="bg-background text-foreground min-h-screen">
+      <MarketingNav />
+
+      {/* Hero */}
+      <section className="px-20 pt-30 pb-24 border-b border-border">
+        <div className="max-w-[1240px]">
+          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary inline-flex items-center gap-3">
+            <span className="size-2 rounded-full bg-primary" />
+            On-chain behavioral economics · Algorand
+          </span>
+          <h1 className="font-ui font-medium text-[88px] leading-none tracking-[-0.025em] mt-6 max-w-[1180px]">
+            Run economic experiments
+            <br />
+            <span className="font-display italic font-normal text-primary tracking-[-0.02em]">with verifiable</span> participants.
+          </h1>
+          <p className="font-ui text-lg leading-[1.55] mt-7 max-w-[660px] text-ink-2">
+            bxHive is a research instrument for designing, deploying and analyzing incentivized economic games. Participants join with a
+            wallet, decisions are settled on-chain, and your dataset is reproducible by construction.
+          </p>
+          <div className="mt-9 flex flex-wrap items-center gap-3">
+            <PillBtn>
+              Join as Experimenter <ArrowRight className="size-4" />
+            </PillBtn>
+            <PillBtn kind="secondary">
+              Join as Participant <ArrowRight className="size-4" />
+            </PillBtn>
+            <span className="w-px h-6 bg-rule-2 mx-1.5" />
+            <PillBtn kind="ghost">Read the docs</PillBtn>
+          </div>
+        </div>
+      </section>
+
+      {/* What is bxHive? */}
+      <section id="about" className="px-20 py-24 bg-muted border-b border-border">
+        <div className="text-center max-w-[780px] mx-auto mb-14">
+          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">About</span>
+          <h2 className="font-ui font-medium text-[56px] leading-none tracking-[-0.025em] mt-4 mb-4">
+            What is <span className="font-display italic font-normal text-primary">bxHive</span>?
+          </h2>
+          <p className="font-ui text-lg leading-[1.55] text-ink-2">
+            A platform for verifiable human experiments that uses Algorand smart contracts to automate research and transparently manage
+            payouts.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-[1240px] mx-auto">
+          <RoleCard
+            tag="i. Newcomers"
+            title="Getting started"
+            icon="start"
+            body="Learn the fundamentals of bxHive and how to set up your account — wallet, identity, and the laboratory basics."
+            cta="Read the primer"
+          />
+          <RoleCard
+            tag="ii. Researchers"
+            title="Experimenters"
+            icon="exp"
+            body="Design, fund, and manage verifiable experiments using canonical templates. Specify base parameters once; deploy variations atomically."
+            cta="For researchers"
+          />
+          <RoleCard
+            tag="iii. Subjects"
+            title="Participants"
+            icon="part"
+            body="Participate in active research and receive transparent, automated payouts. Settled on-chain after every round."
+            cta="For participants"
+          />
+        </div>
+      </section>
+
+      {/* Protocol */}
+      <section className="px-20 py-30">
+        <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-16 max-w-[1280px] mx-auto">
+          <div>
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Protocol</span>
+            <h2 className="font-ui font-medium text-[56px] leading-none tracking-[-0.025em] mt-4">
+              From hypothesis
+              <br />
+              <span className="font-display italic font-normal text-primary">to dataset.</span>
+            </h2>
+            <p className="font-ui text-[15px] text-muted-foreground mt-4">Four stages, fully reproducible from the on-chain manifest.</p>
+          </div>
+          <ol className="list-none p-0 m-0">
+            {(
+              [
+                ['i.', 'Specify', 'Choose a template, fix base parameters, declare your variations.'],
+                ['ii.', 'Recruit', 'Participants join with an Algorand wallet; assignment is randomized and logged.'],
+                ['iii.', 'Run', 'Matches play to completion; every decision is timestamped on-chain.'],
+                ['iv.', 'Settle', 'Payouts execute automatically. Export the run as CSV or signed JSON.'],
+              ] as const
+            ).map(([n, h, d], i, arr) => (
+              <li
+                key={n}
+                className={cn(
+                  'grid grid-cols-[60px_240px_1fr] py-7 items-baseline border-t border-border',
+                  i === arr.length - 1 && 'border-b border-border',
+                )}
+              >
+                <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">{n}</span>
+                <span className="font-display italic font-normal text-3xl tracking-[-0.015em] text-foreground">{h}</span>
+                <span className="font-ui text-[17px] leading-[1.55] text-ink-2">{d}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* Quote */}
+      <section className="px-20 py-24 bg-muted border-y border-border">
+        <div className="max-w-[980px] mx-auto text-center">
+          <span className="font-display italic text-[80px] leading-[0.5] text-primary">“</span>
+          <p className="font-display italic font-light text-[38px] leading-[1.3] tracking-[-0.012em] mt-4 max-w-[880px] mx-auto">
+            An audit-trail-first replacement for the lab. We replicated Berg, Dickhaut &amp; McCabe in a week.
+          </p>
+          <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground mt-7">
+            Dr. M. Karras — Behavioral Lab, ETH
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="px-20 py-30 text-center">
+        <h3 className="font-ui font-medium text-[64px] leading-none tracking-[-0.025em]">
+          Bring your hypothesis.
+          <br />
+          <span className="font-display italic font-normal text-primary">We'll handle the ledger.</span>
+        </h3>
+        <div className="mt-9 inline-flex gap-3">
+          <PillBtn>
+            Join as Experimenter <ArrowRight className="size-4" />
+          </PillBtn>
+          <PillBtn kind="secondary">
+            Join as Participant <ArrowRight className="size-4" />
+          </PillBtn>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="px-16 py-8 border-t border-border flex justify-between items-center">
+        <span className="font-ui text-base font-semibold tracking-[-0.02em]">
+          bx<span className="font-display italic font-normal mx-0.5">·</span>hive
+        </span>
+        <div className="flex gap-7 font-mono text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+          <span>Open Science · Blockchain · Economics</span>
+          <span>Documentation</span>
+          <span>GitHub</span>
+        </div>
+      </footer>
+    </div>
+  )
+}
