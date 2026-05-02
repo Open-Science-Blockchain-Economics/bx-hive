@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
+import { Loader2 } from 'lucide-react'
 
-const DOCS_BASE_URL = 'https://open-science-blockchain-economics.github.io/bx-hive'
-
-const DOCS_LINKS = {
-  participants: `${DOCS_BASE_URL}/subjects/joining-experiments/#auto-assignment-to-variations`,
-  maxPayout: `${DOCS_BASE_URL}/concepts/payout-calculations/`,
-} as const
+import { Btn } from '@/components/ds/button'
+import { Field } from '@/components/ds/field'
+import { Input } from '@/components/ds/input'
+import { Rule } from '@/components/ds/separator'
+import { Switch } from '@/components/ds/switch'
 import { getVariationLabel } from '../../db'
 import { experimentTemplates, getTemplateById } from '../../experiment-logic/templates'
 import type { ParameterVariation } from '../../types'
@@ -16,6 +16,13 @@ import FundingSummary from './FundingSummary'
 import TemplateSelector from './TemplateSelector'
 import TrustGameParameters from './TrustGameParameters'
 import { VariationBuilder } from './VariationBuilder'
+
+const DOCS_BASE_URL = 'https://open-science-blockchain-economics.github.io/bx-hive'
+
+const DOCS_LINKS = {
+  participants: `${DOCS_BASE_URL}/subjects/joining-experiments/#auto-assignment-to-variations`,
+  maxPayout: `${DOCS_BASE_URL}/concepts/payout-calculations/`,
+} as const
 
 interface CreateExperimentFormProps {
   walletBalanceAlgo: number | null
@@ -33,7 +40,6 @@ export default function CreateExperimentForm({
   const [selectedTemplateId, setSelectedTemplateId] = useState(experimentTemplates[0]?.id || '')
   const [experimentName, setExperimentName] = useState('')
   const [parameters, setParameters] = useState<Record<string, number | string>>({})
-
   const [batchModeEnabled, setBatchModeEnabled] = useState(false)
   const [variations, setVariations] = useState<ParameterVariation[]>([])
   const [maxPerVariation, setMaxPerVariation] = useState<string>('')
@@ -53,10 +59,7 @@ export default function CreateExperimentForm({
   }, [selectedTemplate])
 
   function handleParameterChange(name: string, value: string, type: 'number' | 'string') {
-    setParameters((prev) => ({
-      ...prev,
-      [name]: type === 'number' ? Number(value) : value,
-    }))
+    setParameters((prev) => ({ ...prev, [name]: type === 'number' ? Number(value) : value }))
   }
 
   function resetForm() {
@@ -97,7 +100,7 @@ export default function CreateExperimentForm({
   const creating = trustMutation.isPending
   const error = trustMutation.error?.message ?? null
 
-  function handleCreateExperiment() {
+  function handleCreate() {
     if (!experimentName.trim()) {
       trustMutation.reset()
       return
@@ -107,18 +110,16 @@ export default function CreateExperimentForm({
     trustMutation.mutate()
   }
 
-  // Validation errors shown inline (not from mutation)
   const validationError = !experimentName.trim()
     ? 'Experiment name is required'
-    : selectedTemplateId === 'trust-game' && (!maxPerVariation || Number(maxPerVariation) < 1)
-      ? 'Max matches per variation must be at least 1 for trust game experiments'
+    : !maxPerVariation || Number(maxPerVariation) < 1
+      ? 'Max matches per variation must be at least 1'
       : null
 
-  const maxPayout =
-    selectedTemplateId === 'trust-game' ? (Number(parameters.E1) || 0) * (Number(parameters.m) || 1) + (Number(parameters.E2) || 0) : null
+  const maxPayout = (Number(parameters.E1) || 0) * (Number(parameters.m) || 1) + (Number(parameters.E2) || 0)
 
   const totalEscrowAlgo = (() => {
-    if (selectedTemplateId !== 'trust-game' || !maxPerVariation || Number(maxPerVariation) < 1) return 0
+    if (!maxPerVariation || Number(maxPerVariation) < 1) return 0
     const maxSub = Number(maxPerVariation) * 2
     const combos =
       batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
@@ -127,140 +128,114 @@ export default function CreateExperimentForm({
     return combos.reduce((sum, combo) => sum + computeEscrowAlgo(combo, maxSub), 0)
   })()
 
-  const insufficientBalance =
-    selectedTemplateId === 'trust-game' && walletBalanceAlgo !== null && totalEscrowAlgo > 0 && totalEscrowAlgo > walletBalanceAlgo
+  const insufficientBalance = walletBalanceAlgo !== null && totalEscrowAlgo > 0 && totalEscrowAlgo > walletBalanceAlgo
+  const hasBatch = batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
+  const submitLabel = hasBatch ? `Create with ${variations.reduce((acc, v) => acc * v.values.length, 1)} variations` : 'Create experiment'
 
   return (
-    <div className="card bg-base-100 shadow-xl">
-      <div className="card-body">
-        <h2 className="card-title text-2xl mb-4">Create New Experiment</h2>
+    <div className="flex flex-col gap-6">
+      <h2 className="t-h1">Create New Experiment</h2>
 
-        <div className="space-y-3">
-          {/* Step 1: Template Selection */}
-          <div>
-            <h3 className="font-semibold text-lg mb-2">1. Select Template</h3>
-            <TemplateSelector templates={experimentTemplates} selectedTemplateId={selectedTemplateId} onSelect={setSelectedTemplateId} />
-          </div>
+      {/* Step 1: Template */}
+      <section>
+        <Rule label="1. Select Template" className="mb-4" />
+        <TemplateSelector templates={experimentTemplates} selectedTemplateId={selectedTemplateId} onSelect={setSelectedTemplateId} />
+      </section>
 
-          {/* Step 2: Name */}
-          <div className="divider"></div>
-          <div>
-            <h3 className="font-semibold text-lg mb-4">2. Experiment Details</h3>
-            <fieldset className="fieldset">
-              <legend className="fieldset-legend">Experiment Name</legend>
-              <input
-                type="text"
-                className="input input-bordered w-full"
-                value={experimentName}
-                onChange={(e) => setExperimentName(e.target.value)}
-                placeholder="e.g., Trust Experiment – Spring 2025"
-              />
-            </fieldset>
-          </div>
+      {/* Step 2: Name */}
+      <section>
+        <Rule label="2. Experiment Details" className="mb-4" />
+        <Field label="Experiment Name" htmlFor="experiment-name" required>
+          <Input
+            id="experiment-name"
+            type="text"
+            value={experimentName}
+            onChange={(e) => setExperimentName(e.target.value)}
+            placeholder="e.g., Trust Experiment – Spring 2025"
+          />
+        </Field>
+      </section>
 
+      {selectedTemplate && (
+        <>
           {/* Step 3: Parameters */}
-          {selectedTemplate && (
-            <>
-              <div className="divider"></div>
-              <div>
-                <h3 className="font-semibold text-lg mb-2">3. Configure Base Parameters</h3>
-                <TrustGameParameters parameters={parameters} onChange={handleParameterChange} />
-
-                {maxPayout !== null && !batchModeEnabled && (
-                  <InfoAlert learnMoreHref={DOCS_LINKS.maxPayout} className="mt-4">
-                    Max Payout Per Pair: <strong>{maxPayout} ALGO</strong>
-                  </InfoAlert>
-                )}
-              </div>
-
-              {/* Step 4: Parameter Variations */}
-              <div className="divider"></div>
-              <div>
-                <h3 className="font-semibold text-lg mb-4">4. Parameter Variations (Optional)</h3>
-                <label className="label cursor-pointer justify-start gap-3">
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-primary"
-                    checked={batchModeEnabled}
-                    onChange={(e) => {
-                      setBatchModeEnabled(e.target.checked)
-                      if (!e.target.checked) setVariations([])
-                    }}
-                  />
-                  <span className="label-text">Enable batch mode – create multiple variations</span>
-                </label>
-
-                {batchModeEnabled && (
-                  <div className="mt-4">
-                    <VariationBuilder
-                      parameterSchema={selectedTemplate.parameterSchema}
-                      baseParameters={parameters}
-                      variations={variations}
-                      onVariationsChange={setVariations}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Step 5: Participants */}
-              <>
-                <div className="divider"></div>
-                <div>
-                  <h3 className="font-semibold text-lg mb-4">5. Participants</h3>
-
-                  <InfoAlert learnMoreHref={DOCS_LINKS.participants} className="mb-4">
-                    Subjects self-enroll and are distributed across variations using round robin
-                  </InfoAlert>
-
-                  <fieldset className="fieldset">
-                    <legend className="fieldset-legend">Max matches per variation (required)</legend>
-                    <input
-                      type="number"
-                      className="input input-bordered w-full sm:w-48"
-                      placeholder="e.g. 10"
-                      min={1}
-                      value={maxPerVariation}
-                      onChange={(e) => setMaxPerVariation(e.target.value)}
-                    />
-                  </fieldset>
-
-                  <FundingSummary
-                    parameters={parameters}
-                    variations={variations}
-                    batchModeEnabled={batchModeEnabled}
-                    maxPerVariation={maxPerVariation}
-                    walletBalanceAlgo={walletBalanceAlgo}
-                  />
-                </div>
-              </>
-            </>
-          )}
-        </div>
-
-        {(error ?? validationError) && (
-          <div className="alert alert-error mt-4">
-            <span>{error ?? validationError}</span>
-          </div>
-        )}
-
-        <div className="card-actions justify-end mt-6">
-          <button
-            className="btn btn-primary"
-            onClick={handleCreateExperiment}
-            disabled={creating || !experimentName.trim() || insufficientBalance}
-          >
-            {creating ? (
-              <>
-                <span className="loading loading-spinner loading-sm"></span>
-                Creating...
-              </>
-            ) : batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0) ? (
-              `Create with ${variations.reduce((acc, v) => acc * v.values.length, 1)} Variations`
-            ) : (
-              'Create Experiment'
+          <section>
+            <Rule label="3. Configure Base Parameters" className="mb-4" />
+            <TrustGameParameters parameters={parameters} onChange={handleParameterChange} />
+            {!batchModeEnabled && (
+              <InfoAlert learnMoreHref={DOCS_LINKS.maxPayout} className="mt-4">
+                Max Payout Per Pair: <strong>{maxPayout} ALGO</strong>
+              </InfoAlert>
             )}
-          </button>
+          </section>
+
+          {/* Step 4: Variations */}
+          <section>
+            <Rule label="4. Parameter Variations (Optional)" className="mb-4" />
+            <label className="flex items-center gap-3 cursor-pointer mb-4">
+              <Switch
+                checked={batchModeEnabled}
+                onCheckedChange={(checked) => {
+                  setBatchModeEnabled(checked)
+                  if (!checked) setVariations([])
+                }}
+              />
+              <span className="text-sm">Enable batch mode — create multiple variations</span>
+            </label>
+            {batchModeEnabled && (
+              <VariationBuilder
+                parameterSchema={selectedTemplate.parameterSchema}
+                baseParameters={parameters}
+                variations={variations}
+                onVariationsChange={setVariations}
+              />
+            )}
+          </section>
+
+          {/* Step 5: Participants */}
+          <section>
+            <Rule label="5. Participants" className="mb-4" />
+            <InfoAlert learnMoreHref={DOCS_LINKS.participants} className="mb-4">
+              Subjects self-enroll and are distributed across variations using round robin
+            </InfoAlert>
+            <Field label="Max matches per variation" hint="required" htmlFor="max-per-variation" required className="w-full sm:w-48">
+              <Input
+                id="max-per-variation"
+                mono
+                type="number"
+                placeholder="e.g. 10"
+                min={1}
+                value={maxPerVariation}
+                onChange={(e) => setMaxPerVariation(e.target.value)}
+              />
+            </Field>
+            <FundingSummary
+              parameters={parameters}
+              variations={variations}
+              batchModeEnabled={batchModeEnabled}
+              maxPerVariation={maxPerVariation}
+              walletBalanceAlgo={walletBalanceAlgo}
+            />
+          </section>
+        </>
+      )}
+
+      {(error ?? validationError) && (
+        <div role="alert" className="rounded-sm border border-neg/35 bg-neg-bg text-neg px-3 py-2.5 text-sm">
+          {error ?? validationError}
         </div>
+      )}
+
+      <div className="flex justify-end">
+        <Btn variant="primary" onClick={handleCreate} disabled={creating || !experimentName.trim() || insufficientBalance}>
+          {creating ? (
+            <>
+              <Loader2 className="size-3.5 animate-spin" /> Creating…
+            </>
+          ) : (
+            submitLabel
+          )}
+        </Btn>
       </div>
     </div>
   )

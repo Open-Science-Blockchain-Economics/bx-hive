@@ -8,6 +8,7 @@ function RootErrorElement() {
   return <RouteErrorFallback error={error} resetErrorBoundary={() => window.location.reload()} />
 }
 import BatchDetails from './pages/BatchDetails'
+import CreateExperiment from './pages/CreateExperiment'
 import DesignSystemShowcase from './pages/DesignSystemShowcase'
 import ExperimentDetails from './pages/ExperimentDetails'
 import ExperimenterDashboard from './pages/ExperimenterDashboard'
@@ -46,6 +47,16 @@ export const router = createBrowserRouter([
           <ProtectedRoute requiredRole="experimenter">
             <QueryBoundary>
               <ExperimenterDashboard />
+            </QueryBoundary>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'experimenter/create',
+        element: (
+          <ProtectedRoute requiredRole="experimenter">
+            <QueryBoundary>
+              <CreateExperiment />
             </QueryBoundary>
           </ProtectedRoute>
         ),
