@@ -19,7 +19,7 @@ function LoraLink({ appId }: { appId: bigint }) {
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`View app #${String(appId)} on Lora`}
-          className="text-faint hover:text-primary transition-colors"
+          className="text-muted-foreground hover:text-primary transition-colors"
         >
           <ExternalLink className="size-4" />
         </a>

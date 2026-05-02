@@ -26,7 +26,7 @@ function WaitingState({ title, children, onRefresh }: WaitingStateProps) {
     <Panel className="text-center">
       <h2 className="t-h1 mb-3">{title}</h2>
       <div className="text-sm text-muted-foreground mb-2 flex flex-col gap-2">{children}</div>
-      <p className="text-xs text-faint mt-4">Page auto-refreshes every 3 seconds.</p>
+      <p className="text-xs text-muted-foreground mt-4">Page auto-refreshes every 3 seconds.</p>
       <div className="mt-4 flex justify-center">
         <Btn variant="secondary" size="sm" onClick={onRefresh}>
           Refresh now

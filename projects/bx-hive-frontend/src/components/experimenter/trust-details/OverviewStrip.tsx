@@ -128,7 +128,7 @@ export default function OverviewStrip({
             </TooltipContent>
           </Tooltip>
         </div>
-        <span className="t-micro text-faint">Trust Experiment</span>
+        <span className="t-micro">Trust Experiment</span>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StatCard
