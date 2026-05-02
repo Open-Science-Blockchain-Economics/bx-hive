@@ -10,7 +10,18 @@ interface GaugeProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'childre
 function Gauge({ value = 0, size = 64, className, style, ...props }: GaugeProps) {
   const r = size / 2 - 4
   const c = 2 * Math.PI * r
-  const off = c * (1 - Math.max(0, Math.min(100, value)) / 100)
+  const target = c * (1 - Math.max(0, Math.min(100, value)) / 100)
+  const [offset, setOffset] = React.useState(() => {
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return target
+    }
+    return c
+  })
+
+  React.useEffect(() => {
+    setOffset(target)
+  }, [target])
+
   return (
     <div
       data-slot="gauge"
@@ -32,9 +43,10 @@ function Gauge({ value = 0, size = 64, className, style, ...props }: GaugeProps)
           stroke="var(--brand)"
           strokeWidth="2"
           strokeDasharray={c}
-          strokeDashoffset={off}
+          strokeDashoffset={offset}
           strokeLinecap="butt"
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          className="motion-safe:transition-[stroke-dashoffset] motion-safe:duration-[250ms] motion-safe:ease-out"
         />
       </svg>
       <div className="absolute inset-0 grid place-items-center font-mono text-[13px] text-foreground">
