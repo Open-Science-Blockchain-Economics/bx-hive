@@ -45,49 +45,31 @@ export async function createExperimentAndVariation(
     .first()
     .click()
 
-  // Switch to "Create New" tab and wait for the form heading.
-  await page.getByRole('tab', { name: /Create New/i }).click()
+  // Click "New experiment" — navigates to /experimenter/create.
+  await page.getByRole('link', { name: /New experiment/i }).click()
   await page.getByRole('heading', { name: /Create New Experiment/i }).waitFor()
 
-  await page
-    .getByRole('group', { name: /Experiment Name/i })
-    .getByRole('textbox')
-    .fill(params.name)
+  await page.getByLabel(/Experiment Name/i).fill(params.name)
 
   if (params.e1Algo !== undefined) {
-    await page
-      .getByRole('group', { name: /Investor Endowment/i })
-      .getByRole('spinbutton')
-      .fill(String(params.e1Algo))
+    await page.getByLabel(/Investor Endowment/i).fill(String(params.e1Algo))
   }
   if (params.e2Algo !== undefined) {
-    await page
-      .getByRole('group', { name: /Trustee Endowment/i })
-      .getByRole('spinbutton')
-      .fill(String(params.e2Algo))
+    await page.getByLabel(/Trustee Endowment/i).fill(String(params.e2Algo))
   }
   if (params.multiplier !== undefined) {
-    await page
-      .getByRole('group', { name: /^Multiplier/i })
-      .getByRole('spinbutton')
-      .fill(String(params.multiplier))
+    await page.getByLabel(/^Multiplier/i).fill(String(params.multiplier))
   }
   if (params.unitAlgo !== undefined) {
-    await page
-      .getByRole('group', { name: /Step Size/i })
-      .getByRole('spinbutton')
-      .fill(String(params.unitAlgo))
+    await page.getByLabel(/Step Size/i).fill(String(params.unitAlgo))
   }
 
-  await page
-    .getByRole('group', { name: /Max matches per variation/i })
-    .getByRole('spinbutton')
-    .fill(String(params.maxMatchesPerVariation))
+  await page.getByLabel(/Max matches per variation/i).fill(String(params.maxMatchesPerVariation))
 
-  await page.getByRole('button', { name: /^Create Experiment$/i }).click()
+  await page.getByRole('button', { name: /^Create experiment$/i }).click()
 
-  // On success the form resets and the dashboard switches back to the
-  // experiments tab — wait for the heading to disappear.
+  // On success the page navigates back to /dashboard/experimenter, so the
+  // form heading is unmounted.
   await page.getByRole('heading', { name: /Create New Experiment/i }).waitFor({ state: 'hidden' })
 
   // Pull the freshly-created experiment off-chain so we can return both IDs.
