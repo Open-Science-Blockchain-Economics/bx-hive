@@ -78,6 +78,7 @@ function WalletPill({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
+          aria-label={`Wallet menu: ${display}`}
           className="inline-flex items-center gap-2 px-2.5 py-[5px] rounded-sm border border-border bg-card font-mono text-xs text-ink-2 hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <Dot tone="pos" size={6} />
