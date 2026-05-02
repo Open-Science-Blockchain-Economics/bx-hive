@@ -10,6 +10,7 @@ function RootErrorElement() {
 import BatchDetails from './pages/BatchDetails'
 import CreateExperiment from './pages/CreateExperiment'
 import DesignSystemShowcase from './pages/DesignSystemShowcase'
+import DevLocalnet from './pages/DevLocalnet'
 import ExperimentDetails from './pages/ExperimentDetails'
 import ExperimenterDashboard from './pages/ExperimenterDashboard'
 import Home from './pages/Home'
@@ -22,6 +23,10 @@ const devRoutes = import.meta.env.DEV
       {
         path: '/dev/ds',
         element: <DesignSystemShowcase />,
+      },
+      {
+        path: '/dev/localnet',
+        element: <DevLocalnet />,
       },
     ]
   : []
