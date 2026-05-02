@@ -1,3 +1,5 @@
+import { Btn } from '@/components/ds/button'
+import { Panel } from '@/components/ds/card'
 import type { Match, VariationConfig } from '../../../hooks/useTrustVariation'
 import { PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '../../../hooks/useTrustVariation'
 import { microAlgoToAlgo } from '../../../utils/amount'
@@ -11,6 +13,27 @@ interface TrustExperimentProps {
   config: VariationConfig
   activeAddress: string
   onRefresh: () => void
+}
+
+interface WaitingStateProps {
+  title: string
+  children: React.ReactNode
+  onRefresh: () => void
+}
+
+function WaitingState({ title, children, onRefresh }: WaitingStateProps) {
+  return (
+    <Panel className="text-center">
+      <h2 className="t-h1 mb-3">{title}</h2>
+      <div className="text-sm text-muted-foreground mb-2 flex flex-col gap-2">{children}</div>
+      <p className="text-xs text-faint mt-4">Page auto-refreshes every 3 seconds.</p>
+      <div className="mt-4 flex justify-center">
+        <Btn variant="secondary" size="sm" onClick={onRefresh}>
+          Refresh now
+        </Btn>
+      </div>
+    </Panel>
+  )
 }
 
 export default function TrustExperiment({ appId, match, config, activeAddress, onRefresh }: TrustExperimentProps) {
@@ -42,16 +65,9 @@ export default function TrustExperiment({ appId, match, config, activeAddress, o
       return <InvestorInterface appId={appId} matchId={match.matchId} E1={E1} m={m} UNIT={UNIT} onDecisionMade={onRefresh} />
     }
     return (
-      <div className="card bg-base-100 border border-base-300">
-        <div className="card-body text-center">
-          <h2 className="card-title justify-center">Waiting for Investor</h2>
-          <p className="text-base-content/70 mt-2">The Investor is deciding how much to send you.</p>
-          <p className="text-sm text-base-content/50 mt-4">Page auto-refreshes every 3 seconds.</p>
-          <button className="btn btn-outline mt-4" onClick={onRefresh}>
-            Refresh Now
-          </button>
-        </div>
-      </div>
+      <WaitingState title="Waiting for Investor" onRefresh={onRefresh}>
+        <p>The Investor is deciding how much to send you.</p>
+      </WaitingState>
     )
   }
 
@@ -70,29 +86,23 @@ export default function TrustExperiment({ appId, match, config, activeAddress, o
         />
       )
     }
+    const invested = microAlgoToAlgo(match.investment)
     return (
-      <div className="card bg-base-100 border border-base-300">
-        <div className="card-body text-center">
-          <h2 className="card-title justify-center">Waiting for Trustee</h2>
-          <p className="text-base-content/70 mt-2">
-            You invested <span className="font-bold">{microAlgoToAlgo(match.investment).toLocaleString()} ALGO</span>.
-          </p>
-          <p className="text-base-content/70">
-            The Trustee received <span className="font-bold">{(microAlgoToAlgo(match.investment) * m).toLocaleString()} ALGO</span> and is
-            deciding how much to return.
-          </p>
-          <p className="text-sm text-base-content/50 mt-4">Page auto-refreshes every 3 seconds.</p>
-          <button className="btn btn-outline mt-4" onClick={onRefresh}>
-            Refresh Now
-          </button>
-        </div>
-      </div>
+      <WaitingState title="Waiting for Trustee" onRefresh={onRefresh}>
+        <p>
+          You invested <span className="font-mono font-semibold text-foreground">{invested.toLocaleString()} ALGO</span>.
+        </p>
+        <p>
+          The Trustee received <span className="font-mono font-semibold text-foreground">{(invested * m).toLocaleString()} ALGO</span> and
+          is deciding how much to return.
+        </p>
+      </WaitingState>
     )
   }
 
   return (
-    <div className="text-center py-8 text-base-content/60">
+    <Panel className="text-center py-8 text-muted-foreground text-sm">
       <p>Unknown experiment state</p>
-    </div>
+    </Panel>
   )
 }
