@@ -1,18 +1,23 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, Pause, Play } from 'lucide-react'
 
+import { Chip } from '@/components/ds/badge'
+import { Btn } from '@/components/ds/button'
+import { Dot } from '@/components/ds/dot'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip'
 import { cn } from '@/lib/utils'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
 import VariationPanel from '../components/experimenter/trust-details/VariationPanel'
-import { LoadingSpinner, PageHeader, StatusDot } from '../components/ui'
+import { LoadingSpinner, StatusDot } from '../components/ui'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
-import { STATUS_ACTIVE, useTrustVariation } from '../hooks/useTrustVariation'
+import { STATUS_ACTIVE, STATUS_COMPLETED, useTrustVariation } from '../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../hooks/useTrustVariation'
 import { useExperimentManager } from '../hooks/useExperimentManager'
 import { queryKeys } from '../lib/queryKeys'
+import { truncateAddress } from '../utils/address'
 import { statusDotColor, statusLabel, variationTooltip } from '../utils/variationStatus'
 
 interface SubjectEntry {
@@ -27,6 +32,24 @@ interface ExperimentDetailsData {
   subjects: Record<string, SubjectEntry[]>
   matches: Record<string, Match[]>
   configs: Record<string, VariationConfig>
+}
+
+function formatExpId(id: number): string {
+  return `EXP-${String(id).padStart(4, '0')}`
+}
+
+function formatCreatedAt(timestamp: bigint | number): string {
+  const ms = Number(timestamp) * 1000
+  return new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function deriveExperimentStatus(configs: VariationConfig[]): { tone: 'pos' | 'warn' | 'neutral'; label: string } {
+  if (configs.length === 0) return { tone: 'neutral', label: 'Unknown' }
+  const hasActive = configs.some((c) => c.status === STATUS_ACTIVE)
+  if (hasActive) return { tone: 'pos', label: 'Live' }
+  const allComplete = configs.every((c) => c.status === STATUS_COMPLETED)
+  if (allComplete) return { tone: 'neutral', label: 'Complete' }
+  return { tone: 'warn', label: 'Paused' }
 }
 
 export default function TrustExperimentDetails() {
@@ -122,24 +145,83 @@ export default function TrustExperimentDetails() {
   const { group, variations: vars, subjects: subs, matches, configs: cfgs } = data
   const selectedVar = vars[selectedVarIdx]
   const varKey = selectedVar ? String(selectedVar.appId) : ''
+  const expStatus = deriveExperimentStatus(Object.values(cfgs))
 
   return (
     <div>
-      <PageHeader title={group.name} backTo="/dashboard/experimenter" backTooltip="Back to Experimenter Dashboard" />
+      {/* Title row: back + name + chips + actions */}
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-2">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                to="/dashboard/experimenter"
+                aria-label="Back to Experimenter Dashboard"
+                className="inline-flex items-center justify-center size-8 rounded-sm border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <ArrowLeft className="size-4" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Back to Experimenter Dashboard</TooltipContent>
+          </Tooltip>
+          <h1 className="t-h1">{group.name}</h1>
+          <Chip tone={expStatus.tone}>
+            {expStatus.tone === 'pos' && <Dot tone="pos" size={6} />}
+            {expStatus.label}
+          </Chip>
+          <Chip tone="accent">TRUST · TG</Chip>
+        </div>
+        <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Btn
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  if (autoRefresh) {
+                    setAutoRefresh(false)
+                  } else {
+                    setAutoRefresh(true)
+                    void refetch()
+                  }
+                }}
+              >
+                {autoRefresh ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
+                {autoRefresh ? 'Pause' : 'Resume'}
+              </Btn>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{autoRefresh ? 'Pause auto-refresh' : 'Resume auto-refresh (every 5s)'}</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Btn variant="secondary" size="sm" disabled={!autoMatchEligible} onClick={() => setAutoMatch(!autoMatch)}>
+                {autoMatch && <Dot tone="pos" className="animate-pulse" />}
+                Auto-match
+              </Btn>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {!autoMatchEligible
+                ? (autoMatchDisabledReason ?? 'Auto Match unavailable')
+                : autoMatch
+                  ? 'Pause auto-matching'
+                  : 'Auto-match unassigned subjects across all active variations (FIFO)'}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
 
-      <OverviewStrip
-        variations={vars}
-        subjects={subs}
-        matches={matches}
-        configs={cfgs}
-        autoRefresh={autoRefresh}
-        onToggleAutoRefresh={setAutoRefresh}
-        onRefresh={() => void refetch()}
-        autoMatch={autoMatch}
-        onToggleAutoMatch={setAutoMatch}
-        autoMatchEligible={autoMatchEligible}
-        autoMatchDisabledReason={autoMatchDisabledReason}
-      />
+      {/* Subtitle metadata row */}
+      <div className="flex flex-wrap items-center gap-3 ml-11 text-sm text-muted-foreground mb-6">
+        <span className="font-mono text-xs">{formatExpId(Number(group.expId))}</span>
+        <span className="text-faint">·</span>
+        <span>Created {formatCreatedAt(group.createdAt)}</span>
+        <span className="text-faint">·</span>
+        <span>
+          Principal: <span className="font-mono text-xs text-ink-2">{truncateAddress(group.owner)}</span>
+        </span>
+      </div>
+
+      <OverviewStrip variations={vars} subjects={subs} matches={matches} configs={cfgs} />
 
       <h2 className="t-micro mb-3">Variation Details</h2>
 
