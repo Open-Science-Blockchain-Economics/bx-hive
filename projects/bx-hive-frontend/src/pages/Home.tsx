@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { ArrowRight, FlaskConical, TriangleAlert, User } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -7,9 +8,10 @@ interface PillBtnProps {
   kind?: 'primary' | 'secondary' | 'ghost'
   size?: 'sm' | 'lg'
   className?: string
+  to?: string
 }
 
-function PillBtn({ children, kind = 'primary', size = 'lg', className }: PillBtnProps) {
+function PillBtn({ children, kind = 'primary', size = 'lg', className, to }: PillBtnProps) {
   const sizing = size === 'lg' ? 'px-5 py-3 text-[15px]' : 'px-4 py-2 text-[13px]'
   const variant =
     kind === 'primary'
@@ -17,16 +19,21 @@ function PillBtn({ children, kind = 'primary', size = 'lg', className }: PillBtn
       : kind === 'secondary'
         ? 'bg-transparent text-foreground border border-foreground hover:bg-foreground/5'
         : 'bg-transparent text-foreground border border-transparent underline underline-offset-4 hover:no-underline'
+  const classes = cn(
+    'inline-flex items-center justify-center gap-2 rounded-pill font-medium tracking-[-0.005em] transition-colors',
+    sizing,
+    variant,
+    className,
+  )
+  if (to) {
+    return (
+      <Link to={to} className={classes}>
+        {children}
+      </Link>
+    )
+  }
   return (
-    <button
-      type="button"
-      className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-pill font-medium tracking-[-0.005em] transition-colors',
-        sizing,
-        variant,
-        className,
-      )}
-    >
+    <button type="button" className={classes}>
       {children}
     </button>
   )
@@ -75,10 +82,10 @@ export default function Home() {
             wallet, decisions are settled on-chain, and your dataset is reproducible by construction.
           </p>
           <div className="mt-9 flex flex-wrap items-center gap-3">
-            <PillBtn>
+            <PillBtn to="/join?role=experimenter">
               Join as Experimenter <ArrowRight className="size-4" />
             </PillBtn>
-            <PillBtn kind="secondary">
+            <PillBtn kind="secondary" to="/join?role=subject">
               Join as Participant <ArrowRight className="size-4" />
             </PillBtn>
             <span className="w-px h-6 bg-rule-2 mx-1.5" />
@@ -177,10 +184,10 @@ export default function Home() {
           <span className="font-display italic font-normal text-primary">We'll handle the ledger.</span>
         </h3>
         <div className="mt-9 inline-flex flex-wrap justify-center gap-3">
-          <PillBtn>
+          <PillBtn to="/join?role=experimenter">
             Join as Experimenter <ArrowRight className="size-4" />
           </PillBtn>
-          <PillBtn kind="secondary">
+          <PillBtn kind="secondary" to="/join?role=subject">
             Join as Participant <ArrowRight className="size-4" />
           </PillBtn>
         </div>

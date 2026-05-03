@@ -14,6 +14,7 @@ import DevLocalnet from './pages/DevLocalnet'
 import ExperimentDetails from './pages/ExperimentDetails'
 import ExperimenterDashboard from './pages/ExperimenterDashboard'
 import Home from './pages/Home'
+import Join from './pages/Join'
 import PlayExperiment from './pages/PlayExperiment'
 import SubjectDashboard from './pages/SubjectDashboard'
 import TrustExperimentDetails from './pages/TrustExperimentDetails'
@@ -50,6 +51,14 @@ export const router = createBrowserRouter([
         element: (
           <QueryBoundary>
             <Home />
+          </QueryBoundary>
+        ),
+      },
+      {
+        path: 'join',
+        element: (
+          <QueryBoundary>
+            <Join />
           </QueryBoundary>
         ),
       },
