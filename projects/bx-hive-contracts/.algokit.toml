@@ -17,6 +17,15 @@ artifacts = 'smart_contracts/artifacts'
 [project.deploy]
 command = "poetry run python -m smart_contracts deploy"
 
+[project.deploy.localnet]
+# Uses the localnet dispenser; no secrets needed.
+
+[project.deploy.localnet-dev]
+# Hosted dev localnet — dispenser-funded, no secrets needed.
+
+[project.deploy.localnet-prod]
+# Hosted prod-style localnet — dispenser-funded, no secrets needed.
+
 [project.deploy.testnet]
 environment_secrets = [
   "DEPLOYER_MNEMONIC",
