@@ -26,6 +26,10 @@ export default defineConfig({
     // Runs on a separate port so it never collides with a manually-started `pnpm dev` on :5173.
     // reuseExistingServer is false so each test run picks up the fresh app IDs
     // globalSetup wrote into .env.e2e.local — a stale dev:e2e server would have stale env.
+    //
+    // env-mode: dev:e2e launches `vite --mode e2e`, which loads .env (LocalNet @ localhost)
+    // and overlays .env.e2e.local (the freshly-deployed app IDs). All algod / indexer / KMD
+    // URLs come from .env, so e2e is hard-locked to the runner's localhost localnet.
     command: 'pnpm run dev:e2e',
     url: baseURL,
     reuseExistingServer: false,

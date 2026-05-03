@@ -11,6 +11,10 @@ const ENV_FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../../.env.e2
  * (TrustExperiments) plus the TrustVariation bytecode so the dev server
  * (started after this) can spawn variations. Writes the deployed app IDs
  * into .env.e2e.local; vite picks them up via `--mode e2e`.
+ *
+ * Network: hard-locked to localhost via `defaultLocalNet()`. Both local dev
+ * and CI run AlgoKit localnet on the runner's machine, so there is no
+ * environment switch here — e2e never targets hosted environments.
  */
 export default async function globalSetup() {
   const algorand = AlgorandClient.defaultLocalNet()
