@@ -47,7 +47,7 @@ export async function createExperimentAndVariation(
 
   // Click "New experiment" — navigates to /experimenter/create.
   await page.getByRole('link', { name: /New experiment/i }).click()
-  await page.getByRole('heading', { name: /Create New Experiment/i }).waitFor()
+  await page.getByRole('heading', { name: /Specify a new experiment/i }).waitFor()
 
   await page.getByLabel(/Experiment Name/i).fill(params.name)
 
@@ -64,13 +64,16 @@ export async function createExperimentAndVariation(
     await page.getByLabel(/Step Size/i).fill(String(params.unitAlgo))
   }
 
-  await page.getByLabel(/Max matches per variation/i).fill(String(params.maxMatchesPerVariation))
+  // Field renamed from "Max matches per variation" to "Subjects target" (with
+  // hint "max matches per variation"). Match against the hint text via getByLabel.
+  await page.getByLabel(/Subjects target/i).fill(String(params.maxMatchesPerVariation))
 
-  await page.getByRole('button', { name: /^Create experiment$/i }).click()
+  // Submit button label: "Deploy experiment" (single) or "Deploy with N variations" (batch).
+  await page.getByRole('button', { name: /^Deploy/i }).click()
 
   // On success the page navigates back to /dashboard/experimenter, so the
   // form heading is unmounted.
-  await page.getByRole('heading', { name: /Create New Experiment/i }).waitFor({ state: 'hidden' })
+  await page.getByRole('heading', { name: /Specify a new experiment/i }).waitFor({ state: 'hidden' })
 
   // Pull the freshly-created experiment off-chain so we can return both IDs.
   const { trustExperimentsAppId } = readDeployedContracts()

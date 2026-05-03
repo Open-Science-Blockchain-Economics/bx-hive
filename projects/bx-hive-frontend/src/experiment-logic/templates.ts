@@ -44,7 +44,29 @@ export const trustExperimentTemplate: ExperimentTemplate = {
   ],
 }
 
-export const experimentTemplates: ExperimentTemplate[] = [trustExperimentTemplate]
+// Disabled placeholders so the template picker can preview future experiment
+// types. Keep parameterSchema empty until they're built.
+const bombRiskPlaceholder: ExperimentTemplate = {
+  id: 'bomb-risk',
+  name: 'Bomb Risk',
+  label: 'Bomb Risk',
+  description: 'Crosetto–Filippin. Single-player risk preference via box collection.',
+  playerCount: 1,
+  parameterSchema: [],
+  disabled: true,
+}
+
+const dictatorPlaceholder: ExperimentTemplate = {
+  id: 'dictator',
+  name: 'Dictator',
+  label: 'Dictator',
+  description: 'One-shot allocation between proposer and recipient.',
+  playerCount: 2,
+  parameterSchema: [],
+  disabled: true,
+}
+
+export const experimentTemplates: ExperimentTemplate[] = [trustExperimentTemplate, bombRiskPlaceholder, dictatorPlaceholder]
 
 export function getTemplateById(id: string): ExperimentTemplate | undefined {
   return experimentTemplates.find((t) => t.id === id)

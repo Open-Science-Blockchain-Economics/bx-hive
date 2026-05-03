@@ -1,12 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
+import { ArrowLeft, Check, Loader2 } from 'lucide-react'
 
 import { Btn } from '@/components/ds/button'
 import { Field } from '@/components/ds/field'
 import { Input } from '@/components/ds/input'
-import { Rule } from '@/components/ds/separator'
 import { Switch } from '@/components/ds/switch'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip'
+import { cn } from '@/lib/utils'
 import { getVariationLabel } from '../../db'
 import { experimentTemplates, getTemplateById } from '../../experiment-logic/templates'
 import type { ParameterVariation } from '../../types'
@@ -23,6 +25,73 @@ const DOCS_LINKS = {
   participants: `${DOCS_BASE_URL}/subjects/joining-experiments/#auto-assignment-to-variations`,
   maxPayout: `${DOCS_BASE_URL}/concepts/payout-calculations/`,
 } as const
+
+type StepState = 'done' | 'active' | 'pending'
+
+interface StepProps {
+  n: number
+  title: string
+  state: StepState
+  isLast?: boolean
+  children: ReactNode
+}
+
+function Step({ n, title, state, isLast = false, children }: StepProps) {
+  return (
+    <div className="grid grid-cols-[40px_1fr] sm:grid-cols-[60px_1fr] gap-4 sm:gap-6">
+      <div className="flex flex-col items-center">
+        <div
+          className={cn(
+            'size-8 rounded-pill grid place-items-center font-mono text-xs font-semibold border shrink-0',
+            state === 'done' && 'border-primary bg-primary text-primary-foreground',
+            state === 'active' && 'border-primary text-primary',
+            state === 'pending' && 'border-rule-2 text-muted-foreground',
+          )}
+        >
+          {state === 'done' ? <Check className="size-4" /> : n}
+        </div>
+        {!isLast && <div className="flex-1 w-px bg-border mt-2" />}
+      </div>
+      <div className={cn('pb-9', isLast && 'pb-0')}>
+        <h3
+          className={cn(
+            'font-display text-2xl font-normal leading-tight',
+            state === 'pending' ? 'text-muted-foreground' : 'text-foreground',
+          )}
+        >
+          {title}
+        </h3>
+        <div className="mt-4">{children}</div>
+      </div>
+    </div>
+  )
+}
+
+function PayoffPreview({ e1, m }: { e1: number; m: number }) {
+  const sent = e1 || 0
+  const multiplied = sent * (m || 1)
+  return (
+    <div className="rounded-sm border border-dashed border-rule-2 bg-muted px-4 py-3">
+      <div className="t-micro mb-2">Payoff preview · max send</div>
+      <div className="flex items-center gap-2 flex-wrap font-mono text-xs sm:text-sm text-ink-2">
+        <span>Investor sends</span>
+        <span className="text-primary font-medium">{sent}</span>
+        <span className="text-faint">→</span>
+        <span>Multiplied ×{m || 1}</span>
+        <span className="text-faint">→</span>
+        <span className="text-primary font-medium">{multiplied}</span>
+        <span className="text-faint">→</span>
+        <span>Trustee returns r</span>
+        <span className="text-faint">→</span>
+        <span>
+          Investor: <span className="text-foreground">r</span>
+          {' · '}
+          Trustee: <span className="text-foreground">{multiplied}−r</span>
+        </span>
+      </div>
+    </div>
+  )
+}
 
 interface CreateExperimentFormProps {
   walletBalanceAlgo: number | null
@@ -130,48 +199,90 @@ export default function CreateExperimentForm({
 
   const insufficientBalance = walletBalanceAlgo !== null && totalEscrowAlgo > 0 && totalEscrowAlgo > walletBalanceAlgo
   const hasBatch = batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
-  const submitLabel = hasBatch ? `Create with ${variations.reduce((acc, v) => acc * v.values.length, 1)} variations` : 'Create experiment'
+  const variationCount = hasBatch ? variations.reduce((acc, v) => acc * v.values.length, 1) : 1
+  const submitLabel = hasBatch ? `Deploy with ${variationCount} variations` : 'Deploy experiment'
+
+  // Step state machine
+  const step1Done = !!selectedTemplate && !selectedTemplate.disabled
+  const step2Done = !!experimentName.trim()
+  const step3Done = step2Done && !!maxPerVariation && Number(maxPerVariation) >= 1
+  const step4Done = step3Done && (!batchModeEnabled || hasBatch)
+  const stepsDone = [step1Done, step2Done, step3Done, step4Done]
+  const activeIdx = stepsDone.findIndex((d) => !d)
+  const stateForStep = (idx: number): StepState => {
+    if (stepsDone[idx]) return 'done'
+    if (activeIdx === idx) return 'active'
+    return 'pending'
+  }
+  const reviewState: StepState = step4Done ? 'active' : 'pending'
 
   return (
-    <div className="flex flex-col gap-6">
-      <h2 className="t-h1">Create New Experiment</h2>
+    <div>
+      <div className="mb-9">
+        <div className="flex items-center gap-3 mb-1.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                to="/dashboard/experimenter"
+                aria-label="Back to Experimenter Dashboard"
+                className="inline-flex items-center justify-center size-8 rounded-sm border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <ArrowLeft className="size-4" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Back to Experimenter Dashboard</TooltipContent>
+          </Tooltip>
+          <h1 className="t-h1">Specify a new experiment</h1>
+        </div>
+        <p className="text-sm text-muted-foreground ml-11">Pin parameters now; you can add variations once the base case is locked.</p>
+      </div>
 
-      {/* Step 1: Template */}
-      <section>
-        <Rule label="1. Select Template" className="mb-4" />
+      <Step n={1} title="Choose a template" state={stateForStep(0)}>
         <TemplateSelector templates={experimentTemplates} selectedTemplateId={selectedTemplateId} onSelect={setSelectedTemplateId} />
-      </section>
+      </Step>
 
-      {/* Step 2: Name */}
-      <section>
-        <Rule label="2. Experiment Details" className="mb-4" />
-        <Field label="Experiment Name" htmlFor="experiment-name" required>
-          <Input
-            id="experiment-name"
-            type="text"
-            value={experimentName}
-            onChange={(e) => setExperimentName(e.target.value)}
-            placeholder="e.g., Trust Experiment – Spring 2025"
-          />
-        </Field>
-      </section>
+      <Step n={2} title="Identify the experiment" state={stateForStep(1)}>
+        <div className="max-w-xl">
+          <Field label="Experiment Name" htmlFor="experiment-name" required>
+            <Input
+              id="experiment-name"
+              type="text"
+              value={experimentName}
+              onChange={(e) => setExperimentName(e.target.value)}
+              placeholder="e.g., Trust Experiment – Spring 2025"
+            />
+          </Field>
+        </div>
+      </Step>
 
       {selectedTemplate && (
         <>
-          {/* Step 3: Parameters */}
-          <section>
-            <Rule label="3. Configure Base Parameters" className="mb-4" />
+          <Step n={3} title="Configure base parameters" state={stateForStep(2)}>
             <TrustGameParameters parameters={parameters} onChange={handleParameterChange} />
+            <div className="mt-5 max-w-xs">
+              <Field label="Subjects target" hint="max matches per variation" htmlFor="max-per-variation" required>
+                <Input
+                  id="max-per-variation"
+                  mono
+                  type="number"
+                  placeholder="e.g. 10"
+                  min={1}
+                  value={maxPerVariation}
+                  onChange={(e) => setMaxPerVariation(e.target.value)}
+                />
+              </Field>
+            </div>
+            <div className="mt-5">
+              <PayoffPreview e1={Number(parameters.E1) || 0} m={Number(parameters.m) || 1} />
+            </div>
             {!batchModeEnabled && (
               <InfoAlert learnMoreHref={DOCS_LINKS.maxPayout} className="mt-4">
-                Max Payout Per Pair: <strong>{maxPayout} ALGO</strong>
+                Max payout per pair: <strong>{maxPayout} ALGO</strong>
               </InfoAlert>
             )}
-          </section>
+          </Step>
 
-          {/* Step 4: Variations */}
-          <section>
-            <Rule label="4. Parameter Variations (Optional)" className="mb-4" />
+          <Step n={4} title="Variations" state={stateForStep(3)}>
             <label className="flex items-center gap-3 cursor-pointer mb-4">
               <Switch
                 checked={batchModeEnabled}
@@ -182,33 +293,24 @@ export default function CreateExperimentForm({
               />
               <span className="text-sm">Enable batch mode — create multiple variations</span>
             </label>
-            {batchModeEnabled && (
+            {batchModeEnabled ? (
               <VariationBuilder
                 parameterSchema={selectedTemplate.parameterSchema}
                 baseParameters={parameters}
                 variations={variations}
                 onVariationsChange={setVariations}
               />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Single variation will be deployed with the base parameters above. Toggle batch mode to deploy multiple variations.
+              </p>
             )}
-          </section>
+          </Step>
 
-          {/* Step 5: Participants */}
-          <section>
-            <Rule label="5. Participants" className="mb-4" />
+          <Step n={5} title="Review &amp; deploy" state={reviewState} isLast>
             <InfoAlert learnMoreHref={DOCS_LINKS.participants} className="mb-4">
-              Subjects self-enroll and are distributed across variations using round robin
+              Subjects self-enroll and are distributed across variations using round robin.
             </InfoAlert>
-            <Field label="Max matches per variation" hint="required" htmlFor="max-per-variation" required className="w-full sm:w-48">
-              <Input
-                id="max-per-variation"
-                mono
-                type="number"
-                placeholder="e.g. 10"
-                min={1}
-                value={maxPerVariation}
-                onChange={(e) => setMaxPerVariation(e.target.value)}
-              />
-            </Field>
             <FundingSummary
               parameters={parameters}
               variations={variations}
@@ -216,27 +318,25 @@ export default function CreateExperimentForm({
               maxPerVariation={maxPerVariation}
               walletBalanceAlgo={walletBalanceAlgo}
             />
-          </section>
+            {(error ?? validationError) && (
+              <div role="alert" className="mt-4 rounded-sm border border-neg/35 bg-neg-bg text-neg px-3 py-2.5 text-sm">
+                {error ?? validationError}
+              </div>
+            )}
+            <div className="flex justify-end mt-5">
+              <Btn variant="primary" onClick={handleCreate} disabled={creating || !experimentName.trim() || insufficientBalance}>
+                {creating ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" /> Deploying…
+                  </>
+                ) : (
+                  submitLabel
+                )}
+              </Btn>
+            </div>
+          </Step>
         </>
       )}
-
-      {(error ?? validationError) && (
-        <div role="alert" className="rounded-sm border border-neg/35 bg-neg-bg text-neg px-3 py-2.5 text-sm">
-          {error ?? validationError}
-        </div>
-      )}
-
-      <div className="flex justify-end">
-        <Btn variant="primary" onClick={handleCreate} disabled={creating || !experimentName.trim() || insufficientBalance}>
-          {creating ? (
-            <>
-              <Loader2 className="size-3.5 animate-spin" /> Creating…
-            </>
-          ) : (
-            submitLabel
-          )}
-        </Btn>
-      </div>
     </div>
   )
 }

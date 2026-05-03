@@ -10,7 +10,7 @@ interface TemplateSelectorProps {
 
 export default function TemplateSelector({ templates, selectedTemplateId, onSelect }: TemplateSelectorProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
       {templates.map((template) => {
         const isSelected = selectedTemplateId === template.id
         const isDisabled = !!template.disabled
