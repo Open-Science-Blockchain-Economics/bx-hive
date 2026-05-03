@@ -18,26 +18,33 @@ import PlayExperiment from './pages/PlayExperiment'
 import SubjectDashboard from './pages/SubjectDashboard'
 import TrustExperimentDetails from './pages/TrustExperimentDetails'
 
-const devRoutes = import.meta.env.DEV
+// /dev/ds stays outside Layout — design system showcase wants a clean canvas.
+const devTopLevelRoutes = import.meta.env.DEV
   ? [
       {
         path: '/dev/ds',
         element: <DesignSystemShowcase />,
       },
+    ]
+  : []
+
+const devLayoutRoutes = import.meta.env.DEV
+  ? [
       {
-        path: '/dev/localnet',
+        path: 'dev/localnet',
         element: <DevLocalnet />,
       },
     ]
   : []
 
 export const router = createBrowserRouter([
-  ...devRoutes,
+  ...devTopLevelRoutes,
   {
     path: '/',
     element: <Layout />,
     errorElement: <RootErrorElement />,
     children: [
+      ...devLayoutRoutes,
       {
         index: true,
         element: (
