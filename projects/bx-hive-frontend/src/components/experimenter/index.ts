@@ -1,6 +1,5 @@
 export { default as CreateExperimentForm } from './CreateExperimentForm'
 export { default as ExperimentListTab } from './ExperimentListTab'
 export { default as FundingSummary } from './FundingSummary'
-export { default as OnChainExperimentCard } from './OnChainExperimentCard'
 export { default as TemplateSelector } from './TemplateSelector'
 export { VariationBuilder } from './VariationBuilder'

@@ -13,12 +13,12 @@ import VariationPanel from '../components/experimenter/trust-details/VariationPa
 import { LoadingSpinner, StatusDot } from '../components/ui'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
-import { STATUS_ACTIVE, STATUS_COMPLETED, useTrustVariation } from '../hooks/useTrustVariation'
+import { STATUS_ACTIVE, useTrustVariation } from '../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../hooks/useTrustVariation'
 import { useExperimentManager } from '../hooks/useExperimentManager'
 import { queryKeys } from '../lib/queryKeys'
 import { truncateAddress } from '../utils/address'
-import { statusDotColor, statusLabel, variationTooltip } from '../utils/variationStatus'
+import { deriveExperimentStatus, statusDotColor, statusLabel, variationTooltip } from '../utils/variationStatus'
 
 interface SubjectEntry {
   address: string
@@ -41,15 +41,6 @@ function formatExpId(id: number): string {
 function formatCreatedAt(timestamp: bigint | number): string {
   const ms = Number(timestamp) * 1000
   return new Date(ms).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-function deriveExperimentStatus(configs: VariationConfig[]): { tone: 'pos' | 'warn' | 'neutral'; label: string } {
-  if (configs.length === 0) return { tone: 'neutral', label: 'Unknown' }
-  const hasActive = configs.some((c) => c.status === STATUS_ACTIVE)
-  if (hasActive) return { tone: 'pos', label: 'Live' }
-  const allComplete = configs.every((c) => c.status === STATUS_COMPLETED)
-  if (allComplete) return { tone: 'neutral', label: 'Complete' }
-  return { tone: 'warn', label: 'Paused' }
 }
 
 export default function TrustExperimentDetails() {
