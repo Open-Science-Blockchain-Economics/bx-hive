@@ -88,8 +88,6 @@ export default function Home() {
             <PillBtn kind="secondary" to="/join?role=subject">
               Join as Participant <ArrowRight className="size-4" />
             </PillBtn>
-            <span className="w-px h-6 bg-rule-2 mx-1.5" />
-            <PillBtn kind="ghost">Read the docs</PillBtn>
           </div>
         </div>
       </section>

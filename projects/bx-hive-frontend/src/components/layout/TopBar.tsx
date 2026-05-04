@@ -73,24 +73,23 @@ function MobileNavPanel({ open, onClose, activeUser, dashboardPath, address, net
         )}
       >
         <nav className="flex flex-col py-2">
-          <Link to="/" onClick={onClose} className={mobileRowClass}>
-            Home
-          </Link>
           {activeUser && (
-            <Link to={dashboardPath} onClick={onClose} className={mobileRowClass}>
-              Dashboard
-            </Link>
+            <>
+              <Link to={dashboardPath} onClick={onClose} className={mobileRowClass}>
+                Dashboard
+              </Link>
+              <a
+                href="https://open-science-blockchain-economics.github.io/bx-hive/getting-started/overview/"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={onClose}
+                className={cn(mobileRowClass, 'justify-between')}
+              >
+                <span>Docs</span>
+                <ExternalLink className="size-3.5 text-muted-foreground" />
+              </a>
+            </>
           )}
-          <a
-            href="https://open-science-blockchain-economics.github.io/bx-hive/getting-started/overview/"
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={onClose}
-            className={cn(mobileRowClass, 'justify-between')}
-          >
-            <span>Docs</span>
-            <ExternalLink className="size-3.5 text-muted-foreground" />
-          </a>
         </nav>
 
         {activeUser && (
@@ -281,22 +280,21 @@ export default function TopBar() {
           </NavLink>
 
           <nav className="hidden md:flex ml-3 items-center gap-5">
-            <NavLink to="/" end className={navLinkClass}>
-              Home
-            </NavLink>
             {activeUser && (
-              <NavLink to={dashboardPath} className={navLinkClass}>
-                Dashboard
-              </NavLink>
+              <>
+                <NavLink to={dashboardPath} className={navLinkClass}>
+                  Dashboard
+                </NavLink>
+                <a
+                  href="https://open-science-blockchain-economics.github.io/bx-hive/getting-started/overview/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="pb-0.5 text-[13px] tracking-[-0.005em] font-normal text-muted-foreground border-b border-transparent hover:text-foreground transition-colors"
+                >
+                  Docs
+                </a>
+              </>
             )}
-            <a
-              href="https://open-science-blockchain-economics.github.io/bx-hive/getting-started/overview/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="pb-0.5 text-[13px] tracking-[-0.005em] font-normal text-muted-foreground border-b border-transparent hover:text-foreground transition-colors"
-            >
-              Docs
-            </a>
           </nav>
 
           <div className="hidden md:flex ml-auto items-center gap-3">
