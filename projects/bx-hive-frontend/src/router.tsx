@@ -19,8 +19,10 @@ import PlayExperiment from './pages/PlayExperiment'
 import SubjectDashboard from './pages/SubjectDashboard'
 import TrustExperimentDetails from './pages/TrustExperimentDetails'
 
+const isLocalEnv = import.meta.env.VITE_ENVIRONMENT === 'local'
+
 // /dev/ds stays outside Layout — design system showcase wants a clean canvas.
-const devTopLevelRoutes = import.meta.env.DEV
+const devTopLevelRoutes = isLocalEnv
   ? [
       {
         path: '/dev/ds',
@@ -29,7 +31,7 @@ const devTopLevelRoutes = import.meta.env.DEV
     ]
   : []
 
-const devLayoutRoutes = import.meta.env.DEV
+const devLayoutRoutes = isLocalEnv
   ? [
       {
         path: 'dev/localnet',
