@@ -28,7 +28,7 @@ graph TB
             EXP[experiments Store]
             SESS[sessions Store]
             DEC[decisions Store]
-            SUB[participants Store]
+            PART[participants Store]
         end
 
         SS[sessionStorage<br/>Active Account]
@@ -38,10 +38,10 @@ graph TB
     EXP -->|createdBy| UA
     SESS -->|experimentId| EXP
     SESS -->|createdBy| UA
-    SESS -->|pairs[].s1_id| SUB
-    SESS -->|pairs[].s2_id| SUB
+    SESS -->|pairs[].p1_id| PART
+    SESS -->|pairs[].p2_id| PART
     DEC -->|sessionId| SESS
-    DEC -->|participantId| SUB
+    DEC -->|participantId| PART
 
     style DB1 fill:#e1f5ff
     style DB2 fill:#fff4e1
@@ -106,8 +106,8 @@ graph TB
 **Parameters Object (Trust Game):**
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| E1 | number | ✓ | S1 endowment (µALGO) |
-| E2 | number | ✓ | S2 endowment (µALGO) |
+| E1 | number | ✓ | P1 endowment (µALGO) |
+| E2 | number | ✓ | P2 endowment (µALGO) |
 | m | number | ✓ | Multiplier |
 | UNIT | number | ✓ | Step size (µALGO) |
 
@@ -154,13 +154,13 @@ graph TB
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | pairId | string | ✓ | UUID |
-| s1_id | string | ✓ | Investor participant ID |
-| s2_id | string | ✓ | Trustee participant ID |
-| phase | enum | ✓ | 'waiting_s1' \| 'waiting_s2' \| 'completed' |
+| p1_id | string | ✓ | Investor participant ID |
+| p2_id | string | ✓ | Trustee participant ID |
+| phase | enum | ✓ | 'waiting_p1' \| 'waiting_p2' \| 'completed' |
 | s_invested | number \| null | ✓ | Investment amount (µALGO) |
 | r_returned | number \| null | ✓ | Return amount (µALGO) |
-| s1_payout | number \| null | ✓ | S1 final payout (µALGO) |
-| s2_payout | number \| null | ✓ | S2 final payout (µALGO) |
+| p1_payout | number \| null | ✓ | P1 final payout (µALGO) |
+| p2_payout | number \| null | ✓ | P2 final payout (µALGO) |
 | completedAt | number \| null | ✓ | Unix timestamp (ms) |
 
 **Indexes:**
@@ -180,24 +180,24 @@ graph TB
   "pairs": [
     {
       "pairId": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
-      "s1_id": "participant-uuid-001",
-      "s2_id": "participant-uuid-002",
-      "phase": "waiting_s2",
+      "p1_id": "participant-uuid-001",
+      "p2_id": "participant-uuid-002",
+      "phase": "waiting_p2",
       "s_invested": 500000,
       "r_returned": null,
-      "s1_payout": null,
-      "s2_payout": null,
+      "p1_payout": null,
+      "p2_payout": null,
       "completedAt": null
     },
     {
       "pairId": "a9b8c7d6-e5f4-3210-9876-543210fedcba",
-      "s1_id": "participant-uuid-003",
-      "s2_id": "participant-uuid-004",
+      "p1_id": "participant-uuid-003",
+      "p2_id": "participant-uuid-004",
       "phase": "completed",
       "s_invested": 700000,
       "r_returned": 1200000,
-      "s1_payout": 1500000,
-      "s2_payout": 1800000,
+      "p1_payout": 1500000,
+      "p2_payout": 1800000,
       "completedAt": 1699651500000
     }
   ]
@@ -279,8 +279,8 @@ erDiagram
     SESSIONS ||--o{ SESSION_PAIRS : "contains"
     SESSIONS ||--o{ DECISIONS : "records"
 
-    SESSION_PAIRS }o--|| PARTICIPANTS : "s1_id"
-    SESSION_PAIRS }o--|| PARTICIPANTS : "s2_id"
+    SESSION_PAIRS }o--|| PARTICIPANTS : "p1_id"
+    SESSION_PAIRS }o--|| PARTICIPANTS : "p2_id"
 
     PARTICIPANTS ||--o{ DECISIONS : "makes"
 
@@ -316,13 +316,13 @@ erDiagram
 
     SESSION_PAIRS {
         string pairId PK
-        string s1_id FK
-        string s2_id FK
+        string p1_id FK
+        string p2_id FK
         enum phase
         number s_invested
         number r_returned
-        number s1_payout
-        number s2_payout
+        number p1_payout
+        number p2_payout
         number completedAt
     }
 
@@ -403,46 +403,46 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    actor S1 as Investor (S1)
-    actor S2 as Trustee (S2)
+    actor P1 as Investor (P1)
+    actor P2 as Trustee (P2)
     participant UI as Game Interface
     participant DB as IndexedDB
 
-    Note over S1,DB: Phase: waiting_s1
+    Note over P1,DB: Phase: waiting_p1
 
-    S1->>UI: Opens InvestorInterface
-    S1->>UI: Selects investment (s)
-    S1->>UI: Clicks "Submit Investment"
+    P1->>UI: Opens InvestorInterface
+    P1->>UI: Selects investment (s)
+    P1->>UI: Clicks "Submit Investment"
     UI->>DB: submitInvestorDecision(s)
     DB->>DB: Create decision record
-    DB->>DB: Update pair: s_invested, phase=waiting_s2
+    DB->>DB: Update pair: s_invested, phase=waiting_p2
     DB-->>UI: Success
-    UI-->>S1: Shows WaitingRoom
+    UI-->>P1: Shows WaitingRoom
 
-    Note over S1,DB: Phase: waiting_s2
+    Note over P1,DB: Phase: waiting_p2
 
-    S2->>UI: Polls every 3s
+    P2->>UI: Polls every 3s
     UI->>DB: findParticipantPair()
-    DB-->>UI: pair.phase = waiting_s2
-    UI-->>S2: Shows TrusteeInterface
+    DB-->>UI: pair.phase = waiting_p2
+    UI-->>P2: Shows TrusteeInterface
 
-    S2->>UI: Sees investment (s)
-    S2->>UI: Selects return (r)
-    S2->>UI: Clicks "Submit Return"
+    P2->>UI: Sees investment (s)
+    P2->>UI: Selects return (r)
+    P2->>UI: Clicks "Submit Return"
     UI->>DB: submitTrusteeDecision(r)
     DB->>DB: Create decision record
     DB->>DB: Calculate payouts
     DB->>DB: Update pair: r_returned, payouts, phase=completed
     DB->>DB: Check if all pairs done → session.status=completed
     DB-->>UI: Success
-    UI-->>S2: Shows ResultsDisplay
+    UI-->>P2: Shows ResultsDisplay
 
-    Note over S1,DB: Phase: completed
+    Note over P1,DB: Phase: completed
 
-    S1->>UI: Polls every 3s
+    P1->>UI: Polls every 3s
     UI->>DB: findParticipantPair()
     DB-->>UI: pair.phase = completed
-    UI-->>S1: Shows ResultsDisplay
+    UI-->>P1: Shows ResultsDisplay
 ```
 
 ---
@@ -462,7 +462,7 @@ graph LR
 graph LR
     A[ParticipantDashboard] -->|participantId| B[sessions store]
     B -->|Scan all sessions| C[Filter pairs array]
-    C -->|Match s1_id or s2_id| D[Assigned Sessions]
+    C -->|Match p1_id or p2_id| D[Assigned Sessions]
     D --> E[Session List UI]
 ```
 
@@ -526,16 +526,16 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-    [*] --> waiting_s1: Session created
-    waiting_s1 --> waiting_s2: S1 submits investment
-    waiting_s2 --> completed: S2 submits return
+    [*] --> waiting_p1: Session created
+    waiting_p1 --> waiting_p2: P1 submits investment
+    waiting_p2 --> completed: P2 submits return
     completed --> [*]
 
-    note right of waiting_s1
+    note right of waiting_p1
         Investment decision pending
     end note
 
-    note right of waiting_s2
+    note right of waiting_p2
         Return decision pending
     end note
 
@@ -571,8 +571,8 @@ stateDiagram-v2
 | Create account | user_accounts | Insert | None | < 20ms |
 | Create experiment | experiments | Insert | None | < 20ms |
 | Create session | sessions, participants | Insert | Register participants | < 50ms |
-| Submit S1 decision | decisions, sessions | Insert + Update | Update pair in session | < 100ms |
-| Submit S2 decision | decisions, sessions | Insert + Update | Update pair + check session | < 150ms |
+| Submit P1 decision | decisions, sessions | Insert + Update | Update pair in session | < 100ms |
+| Submit P2 decision | decisions, sessions | Insert + Update | Update pair + check session | < 150ms |
 
 ---
 
@@ -618,8 +618,8 @@ stateDiagram-v2
 | experiments.createdBy → user_accounts.accountAddress | Must exist | Client-side check |
 | sessions.experimentId → experiments.id | Must exist | Client-side check |
 | sessions.createdBy → user_accounts.accountAddress | Must exist | Client-side check |
-| sessions.pairs[].s1_id → participants.id | Auto-create if missing | Auto-registration |
-| sessions.pairs[].s2_id → participants.id | Auto-create if missing | Auto-registration |
+| sessions.pairs[].p1_id → participants.id | Auto-create if missing | Auto-registration |
+| sessions.pairs[].p2_id → participants.id | Auto-create if missing | Auto-registration |
 | decisions.sessionId → sessions.id | Must exist | Client-side check |
 | decisions.participantId → participants.id | Must exist | Client-side check |
 
@@ -629,9 +629,9 @@ stateDiagram-v2
 
 | Event | Trigger | Update |
 |-------|---------|--------|
-| S1 submits decision | submitInvestorDecision() | decisions store + sessions.pairs[] |
-| S2 submits decision | submitTrusteeDecision() | decisions store + sessions.pairs[] + session.status |
-| All pairs complete | Last S2 decision | session.status → 'completed' |
+| P1 submits decision | submitInvestorDecision() | decisions store + sessions.pairs[] |
+| P2 submits decision | submitTrusteeDecision() | decisions store + sessions.pairs[] + session.status |
+| All pairs complete | Last P2 decision | session.status → 'completed' |
 
 ---
 

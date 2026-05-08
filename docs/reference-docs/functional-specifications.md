@@ -74,8 +74,8 @@ Platform administrators (limited implementation).
 - **Step 1:** Choose template (Trust Game, Dictator Game)
 - **Step 2:** Set name and description
 - **Step 3:** Configure parameters:
-  - `E1`: S1 endowment (µALGO)
-  - `E2`: S2 endowment (µALGO)
+  - `E1`: P1 endowment (µALGO)
+  - `E2`: P2 endowment (µALGO)
   - `m`: Multiplier
   - `UNIT`: Step size
 
@@ -101,14 +101,14 @@ Platform administrators (limited implementation).
 - Add participants (manual entry or bulk paste)
 - Must have even number of participants
 - Auto-pair: [0,1], [2,3], [4,5], etc.
-- S1 (even index) = Investor, S2 (odd) = Trustee
+- P1 (even index) = Investor, P2 (odd) = Trustee
 
 **FR-SES-002: Monitor Session**
 
 - View all pairs in session
 - Show phase status per pair:
-  - `waiting_s1`: Yellow
-  - `waiting_s2`: Blue
+  - `waiting_p1`: Yellow
+  - `waiting_p2`: Blue
   - `completed`: Green
 - Display decisions and payouts
 
@@ -116,45 +116,45 @@ Platform administrators (limited implementation).
 
 ### 3.4 Participant Participation
 
-**FR-SUB-001: View Assigned Sessions**
+**FR-PART-001: View Assigned Sessions**
 
 - Poll every 3 seconds for updates
 - Show session name and status
 - "Play" button when ready
 
-**FR-SUB-002: Game Interface Routing**
+**FR-PART-002: Game Interface Routing**
 
 | Role | Phase      | Interface          |
 | ---- | ---------- | ------------------ |
-| S1   | waiting_s1 | Investor Interface |
-| S1   | waiting_s2 | Waiting Room       |
-| S1   | completed  | Results Display    |
-| S2   | waiting_s1 | Waiting Room       |
-| S2   | waiting_s2 | Trustee Interface  |
-| S2   | completed  | Results Display    |
+| P1   | waiting_p1 | Investor Interface |
+| P1   | waiting_p2 | Waiting Room       |
+| P1   | completed  | Results Display    |
+| P2   | waiting_p1 | Waiting Room       |
+| P2   | waiting_p2 | Trustee Interface  |
+| P2   | completed  | Results Display    |
 
 ---
 
 ### 3.5 Trust Game Gameplay
 
-**FR-GAME-001: Investor (S1) Decision**
+**FR-GAME-001: Investor (P1) Decision**
 
 - View endowment (E1) and multiplier (m)
 - Select investment amount (0 to E1, in UNIT steps)
 - Input method: buttons or slider
 - Preview: refund, trustee receives
-- Submit → phase changes to `waiting_s2`
+- Submit → phase changes to `waiting_p2`
 
-**FR-GAME-002: Trustee (S2) Decision**
+**FR-GAME-002: Trustee (P2) Decision**
 
 - View endowment (E2) and received amount (s × m)
-- See S1's investment
+- See P1's investment
 - Select return amount (0 to received, in UNIT steps)
 - Preview: trustee keeps, investor's final
 - Submit → phase changes to `completed`
 - Calculate final payouts:
-  - `s1_payout = (E1 - s) + r`
-  - `s2_payout = E2 + (s × m) - r`
+  - `p1_payout = (E1 - s) + r`
+  - `p2_payout = E2 + (s × m) - r`
 
 **FR-GAME-003: Waiting Room**
 
@@ -224,13 +224,13 @@ Platform administrators (limited implementation).
 ```typescript
 {
   pairId: string; // UUID
-  s1_id: string; // Investor
-  s2_id: string; // Trustee
-  phase: "waiting_s1" | "waiting_s2" | "completed";
+  p1_id: string; // Investor
+  p2_id: string; // Trustee
+  phase: "waiting_p1" | "waiting_p2" | "completed";
   s_invested: number | null;
   r_returned: number | null;
-  s1_payout: number | null;
-  s2_payout: number | null;
+  p1_payout: number | null;
+  p2_payout: number | null;
   completedAt: number | null;
 }
 ```
@@ -269,24 +269,24 @@ Platform administrators (limited implementation).
 
 - **Investment:** Must be 0 ≤ s ≤ E1, divisible by UNIT
 - **Return:** Must be 0 ≤ r ≤ (s × m), divisible by UNIT
-- **S1 Payout:** (E1 - s) + r
-- **S2 Payout:** E2 + (s × m) - r
+- **P1 Payout:** (E1 - s) + r
+- **P2 Payout:** E2 + (s × m) - r
 
 ### Pairing Rules
 
 - Sessions require even number of participants (min 2)
 - Sequential pairing: participants[0,1], [2,3], [4,5]
-- Even index = S1 (Investor)
-- Odd index = S2 (Trustee)
+- Even index = P1 (Investor)
+- Odd index = P2 (Trustee)
 
 ### Phase Transitions
 
 ```
-waiting_s1 → waiting_s2 → completed
+waiting_p1 → waiting_p2 → completed
 ```
 
-- S1 decides → `waiting_s2`
-- S2 decides → `completed`
+- P1 decides → `waiting_p2`
+- P2 decides → `completed`
 - All pairs complete → session `completed`
 
 ---

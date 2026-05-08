@@ -128,8 +128,8 @@ So that I can run the experiment with a specific group of participants.
 - Can add participants via manual entry or bulk paste
 - System validates even number of participants (minimum 2)
 - Participants are auto-paired sequentially: [0,1], [2,3], [4,5]
-- Even index participants are S1 (Investor), odd are S2 (Trustee)
-- All pairs initialize in "waiting_s1" phase
+- Even index participants are P1 (Investor), odd are P2 (Trustee)
+- All pairs initialize in "waiting_p1" phase
 - Session appears immediately in session list
 
 **Priority:** P1 (Critical)
@@ -149,13 +149,13 @@ So that I can monitor when participants make decisions and when the session is c
 
 **Acceptance Criteria:**
 - Shows all pairs in the session
-- Displays S1 and S2 participant IDs for each pair
+- Displays P1 and P2 participant IDs for each pair
 - Shows current phase with color-coded badges:
-  - Yellow for "waiting_s1"
-  - Blue for "waiting_s2"
+  - Yellow for "waiting_p1"
+  - Blue for "waiting_p2"
   - Green for "completed"
-- Shows investment amount when S1 decides
-- Shows return amount and payouts when S2 decides
+- Shows investment amount when P1 decides
+- Shows return amount and payouts when P2 decides
 - Can refresh manually to see updates
 
 **Priority:** P1 (Critical)
@@ -208,7 +208,7 @@ So that I can verify my experiment design before running it.
 
 ### Epic: Account and Session Discovery
 
-**US-SUB-001: Create Participant Account**
+**US-PART-001: Create Participant Account**
 ```
 As a Participant,
 I want to create an account with a display name,
@@ -229,7 +229,7 @@ So that I can participate in experiments.
 
 ---
 
-**US-SUB-002: View My Assigned Sessions**
+**US-PART-002: View My Assigned Sessions**
 ```
 As a Participant,
 I want to see which experimental sessions I'm assigned to,
@@ -252,9 +252,9 @@ So that I know when I can participate.
 
 ### Epic: Trust Game Gameplay
 
-**US-SUB-003: Make Investment Decision as Investor (S1)**
+**US-PART-003: Make Investment Decision as Investor (P1)**
 ```
-As an Investor (S1) in a Trust Game,
+As an Investor (P1) in a Trust Game,
 I want to decide how much of my endowment to send to the Trustee,
 So that I can make a strategic decision based on trust and potential returns.
 ```
@@ -280,9 +280,9 @@ So that I can make a strategic decision based on trust and potential returns.
 
 ---
 
-**US-SUB-004: Make Return Decision as Trustee (S2)**
+**US-PART-004: Make Return Decision as Trustee (P2)**
 ```
-As a Trustee (S2) in a Trust Game,
+As a Trustee (P2) in a Trust Game,
 I want to decide how much to return to the Investor after receiving the multiplied investment,
 So that I can make a reciprocal decision.
 ```
@@ -307,7 +307,7 @@ So that I can make a reciprocal decision.
 
 ---
 
-**US-SUB-005: Wait for Partner's Decision**
+**US-PART-005: Wait for Partner's Decision**
 ```
 As a Participant,
 I want to see a clear waiting screen while my partner makes their decision,
@@ -316,8 +316,8 @@ So that I know the experiment is progressing and I should wait.
 
 **Acceptance Criteria:**
 - Shows clear waiting message:
-  - S1 sees "Waiting for your partner (Trustee)..."
-  - S2 sees "Waiting for your partner (Investor)..."
+  - P1 sees "Waiting for your partner (Trustee)..."
+  - P2 sees "Waiting for your partner (Investor)..."
 - Polls for updates every 3 seconds
 - Automatically advances when partner decides
 - No action required from user
@@ -329,7 +329,7 @@ So that I know the experiment is progressing and I should wait.
 
 ---
 
-**US-SUB-006: View Game Results and Payouts**
+**US-PART-006: View Game Results and Payouts**
 ```
 As a Participant,
 I want to see the final results of the game including both players' decisions and our payouts,
@@ -337,11 +337,11 @@ So that I understand what happened and how much I earned.
 ```
 
 **Acceptance Criteria:**
-- **For Investor (S1):**
+- **For Investor (P1):**
   - Shows my investment amount
   - Shows partner's return amount
   - Shows my final payout with clear calculation
-- **For Trustee (S2):**
+- **For Trustee (P2):**
   - Shows partner's investment amount
   - Shows how much I received (s × m)
   - Shows my return amount
@@ -359,7 +359,7 @@ So that I understand what happened and how much I earned.
 
 ### Epic: User Experience
 
-**US-SUB-007: Understand Game Rules Before Playing**
+**US-PART-007: Understand Game Rules Before Playing**
 ```
 As a Participant,
 I want to see clear instructions about the Trust Game rules,
@@ -378,7 +378,7 @@ So that I understand how to play and how payouts work.
 
 ---
 
-**US-SUB-008: Switch Between Multiple Participant Accounts**
+**US-PART-008: Switch Between Multiple Participant Accounts**
 ```
 As a Participant with multiple accounts (e.g., for testing),
 I want to switch between accounts easily,
@@ -509,7 +509,7 @@ So that I can oversee platform usage and activity.
    ↓
 5. Clicks "Play" button
    ↓
-6. Views Investor Interface (role: S1, phase: waiting_s1)
+6. Views Investor Interface (role: P1, phase: waiting_p1)
    ↓
 7. Sees endowment (E1) and multiplier (m)
    ↓
@@ -545,11 +545,11 @@ So that I can oversee platform usage and activity.
    ↓
 3. Clicks "Play" button
    ↓
-4. Sees Waiting Room (role: S2, phase: waiting_s1)
+4. Sees Waiting Room (role: P2, phase: waiting_p1)
    ↓
 5. [System polls every 3 seconds]
    ↓
-6. Investor makes decision → phase changes to waiting_s2
+6. Investor makes decision → phase changes to waiting_p2
    ↓
 7. Automatically advances to Trustee Interface
    ↓
