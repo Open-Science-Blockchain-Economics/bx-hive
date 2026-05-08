@@ -303,6 +303,7 @@ class TrustVariation(ARC4Contract):
             unit=arc4.UInt64(self.unit.value),
             asset_id=arc4.UInt64(self.asset_id.value),
             status=arc4.UInt8(self.status.value),
+            max_subjects=arc4.UInt64(self.max_subjects.value),
         )
 
     @arc4.abimethod(readonly=True)

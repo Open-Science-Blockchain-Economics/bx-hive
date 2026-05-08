@@ -75,3 +75,4 @@ class VariationConfig(arc4.Struct, frozen=True):
     unit: arc4.UInt64
     asset_id: arc4.UInt64
     status: arc4.UInt8
+    max_subjects: arc4.UInt64

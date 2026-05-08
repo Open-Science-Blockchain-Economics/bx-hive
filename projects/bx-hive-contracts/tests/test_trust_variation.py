@@ -402,6 +402,7 @@ def test_get_config(context: AlgopyTestContext) -> None:
     assert config.multiplier == arc4.UInt64(MULTIPLIER)
     assert config.unit == arc4.UInt64(UNIT)
     assert config.status == arc4.UInt8(STATUS_ACTIVE)
+    assert config.max_subjects == arc4.UInt64(0)
 
 
 def test_get_escrow_balance(context: AlgopyTestContext) -> None:
