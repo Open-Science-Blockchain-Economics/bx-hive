@@ -1,7 +1,7 @@
 from algopy import arc4
 
 # User role constants
-ROLE_SUBJECT: int = 0
+ROLE_PARTICIPANT: int = 0
 ROLE_EXPERIMENTER: int = 1
 
 # Admin role constants
@@ -49,7 +49,7 @@ class VariationInfo(arc4.Struct, frozen=True):
     created_at: arc4.UInt64
 
 
-class SubjectInfo(arc4.Struct, frozen=True):
+class ParticipantInfo(arc4.Struct, frozen=True):
     enrolled: arc4.UInt8
     assigned: arc4.UInt8
 
@@ -75,4 +75,4 @@ class VariationConfig(arc4.Struct, frozen=True):
     unit: arc4.UInt64
     asset_id: arc4.UInt64
     status: arc4.UInt8
-    max_subjects: arc4.UInt64
+    max_participants: arc4.UInt64

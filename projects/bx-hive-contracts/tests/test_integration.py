@@ -1,7 +1,7 @@
 """
 Integration test: full Alice → Bob → Dan scenario across all three contract layers.
 
-Layer 1 — BxHiveRegistry:  Alice registers as experimenter; Bob and Dan register as subjects.
+Layer 1 — BxHiveRegistry:  Alice registers as experimenter; Bob and Dan register as participants.
 Layer 2 — TrustExperiments: Alice creates an experiment group.
 Layer 3 — TrustVariation:   Alice funds escrow; Bob and Dan are enrolled; Bob invests,
                              Dan returns; payouts verified.
@@ -20,11 +20,11 @@ from smart_contracts.registry.contract import BxHiveRegistry
 from smart_contracts.shared.types import (
     PHASE_COMPLETED,
     ROLE_EXPERIMENTER,
-    ROLE_SUBJECT,
+    ROLE_PARTICIPANT,
     STATUS_ACTIVE,
 )
 from smart_contracts.trust_experiments.contract import TrustExperiments
-from smart_contracts.trust_variation.contract import MATCH_MBR, SUBJECT_MBR, TrustVariation
+from smart_contracts.trust_variation.contract import MATCH_MBR, PARTICIPANT_MBR, TrustVariation
 
 # Game parameters
 E1 = 100       # investor endowment
@@ -67,20 +67,20 @@ def test_full_experiment_flow(context: AlgopyTestContext) -> None:
     assert alice_id == arc4.UInt32(0)
     assert registry.user_count.value == 1
 
-    # Bob registers as subject (switch sender via create_group)
+    # Bob registers as participant (switch sender via create_group)
     bob_app_call = context.any.txn.application_call(
         sender=bob, app_id=Application(registry.__app_id__)
     )
     with context.txn.create_group(gtxns=[bob_app_call], active_txn_index=0):
-        bob_id = registry.register_user(arc4.UInt8(ROLE_SUBJECT), arc4.String("Bob"))
+        bob_id = registry.register_user(arc4.UInt8(ROLE_PARTICIPANT), arc4.String("Bob"))
     assert bob_id == arc4.UInt32(1)
 
-    # Dan registers as subject
+    # Dan registers as participant
     dan_app_call = context.any.txn.application_call(
         sender=dan, app_id=Application(registry.__app_id__)
     )
     with context.txn.create_group(gtxns=[dan_app_call], active_txn_index=0):
-        dan_id = registry.register_user(arc4.UInt8(ROLE_SUBJECT), arc4.String("Dan"))
+        dan_id = registry.register_user(arc4.UInt8(ROLE_PARTICIPANT), arc4.String("Dan"))
     assert dan_id == arc4.UInt32(2)
     assert registry.user_count.value == 3
 
@@ -88,9 +88,9 @@ def test_full_experiment_flow(context: AlgopyTestContext) -> None:
     alice_user = registry.get_user(alice)
     assert alice_user.role == arc4.UInt8(ROLE_EXPERIMENTER)
     bob_user = registry.get_user(bob)
-    assert bob_user.role == arc4.UInt8(ROLE_SUBJECT)
+    assert bob_user.role == arc4.UInt8(ROLE_PARTICIPANT)
     dan_user = registry.get_user(dan)
-    assert dan_user.role == arc4.UInt8(ROLE_SUBJECT)
+    assert dan_user.role == arc4.UInt8(ROLE_PARTICIPANT)
 
     # ------------------------------------------------------------------
     # Layer 2: TrustExperiments — Alice creates an experiment group
@@ -124,7 +124,7 @@ def test_full_experiment_flow(context: AlgopyTestContext) -> None:
         arc4.UInt64(UNIT),
         arc4.UInt64(ASSET_ID),
         arc4.UInt64(registry.__app_id__),  # registry_app
-        arc4.UInt64(0),  # max_subjects (0 = unlimited)
+        arc4.UInt64(0),  # max_participants (0 = unlimited)
     )
     assert variation.status.value == STATUS_ACTIVE
     assert variation.e1.value == E1
@@ -139,13 +139,13 @@ def test_full_experiment_flow(context: AlgopyTestContext) -> None:
     assert variation.escrow_deposited.value == ESCROW_AMOUNT
 
     # Enroll Bob (investor) and Dan (trustee)
-    subjects: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(
+    participants: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(
         arc4.Address(bob), arc4.Address(dan)
     )
-    subj_mbr = context.any.txn.payment(sender=alice, receiver=app_addr, amount=SUBJECT_MBR * 2)
-    variation.add_subjects(subjects, subj_mbr)
-    assert arc4.Address(bob) in variation.subjects
-    assert arc4.Address(dan) in variation.subjects
+    enroll_mbr = context.any.txn.payment(sender=alice, receiver=app_addr, amount=PARTICIPANT_MBR * 2)
+    variation.add_participants(participants, enroll_mbr)
+    assert arc4.Address(bob) in variation.participants
+    assert arc4.Address(dan) in variation.participants
 
     # Create the match
     match_mbr = context.any.txn.payment(sender=alice, receiver=app_addr, amount=MATCH_MBR)
@@ -201,7 +201,7 @@ def test_multiple_variations_independent(context: AlgopyTestContext) -> None:
         exp_id, arc4.UInt32(0), alice,
         arc4.UInt64(E1), arc4.UInt64(E2),
         arc4.UInt64(2), arc4.UInt64(UNIT), arc4.UInt64(ASSET_ID),
-        arc4.UInt64(0), arc4.UInt64(0),  # registry_app, max_subjects
+        arc4.UInt64(0), arc4.UInt64(0),  # registry_app, max_participants
     )
 
     # Variation B: multiplier=4
@@ -211,7 +211,7 @@ def test_multiple_variations_independent(context: AlgopyTestContext) -> None:
         exp_id, arc4.UInt32(1), alice,
         arc4.UInt64(E1), arc4.UInt64(E2),
         arc4.UInt64(4), arc4.UInt64(UNIT), arc4.UInt64(ASSET_ID),
-        arc4.UInt64(0), arc4.UInt64(0),  # registry_app, max_subjects
+        arc4.UInt64(0), arc4.UInt64(0),  # registry_app, max_participants
     )
 
     assert var_a.multiplier.value == 2
@@ -221,11 +221,11 @@ def test_multiple_variations_independent(context: AlgopyTestContext) -> None:
     addr_a = context.ledger.get_app(var_a.__app_id__).address
     var_a.deposit_escrow(context.any.txn.payment(receiver=addr_a, amount=400))
 
-    subjects_a: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(
+    participants_a: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(
         arc4.Address(bob), arc4.Address(dan)
     )
-    subj_mbr_a = context.any.txn.payment(receiver=addr_a, amount=SUBJECT_MBR * 2)
-    var_a.add_subjects(subjects_a, subj_mbr_a)
+    enroll_mbr_a = context.any.txn.payment(receiver=addr_a, amount=PARTICIPANT_MBR * 2)
+    var_a.add_participants(participants_a, enroll_mbr_a)
     match_mbr_a = context.any.txn.payment(receiver=addr_a, amount=MATCH_MBR)
     mid_a = var_a.create_match(arc4.Address(bob), arc4.Address(dan), match_mbr_a)
 

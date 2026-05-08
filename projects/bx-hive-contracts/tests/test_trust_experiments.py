@@ -116,7 +116,7 @@ def test_create_variation_experiment_not_found_fails(context: AlgopyTestContext)
             arc4.UInt64(3),
             arc4.UInt64(10),
             arc4.UInt64(0),
-            arc4.UInt64(0),  # max_subjects
+            arc4.UInt64(0),  # max_participants
             dummy_payment,
         )
 
@@ -144,7 +144,7 @@ def test_create_variation_not_owner_fails(context: AlgopyTestContext) -> None:
                 arc4.UInt64(3),
                 arc4.UInt64(10),
                 arc4.UInt64(0),
-                arc4.UInt64(0),  # max_subjects
+                arc4.UInt64(0),  # max_participants
                 dummy_payment,
             )
 

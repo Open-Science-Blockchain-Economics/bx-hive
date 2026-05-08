@@ -5,7 +5,7 @@ from algopy import arc4
 from algopy_testing import AlgopyTestContext, algopy_testing_context
 
 from smart_contracts.registry.contract import BxHiveRegistry
-from smart_contracts.shared.types import ADMIN_OPERATOR, ROLE_EXPERIMENTER, ROLE_SUBJECT
+from smart_contracts.shared.types import ADMIN_OPERATOR, ROLE_EXPERIMENTER, ROLE_PARTICIPANT
 
 
 @pytest.fixture()
@@ -34,11 +34,11 @@ def test_register_user_returns_id(context: AlgopyTestContext, registry: BxHiveRe
 
 
 def test_register_user_stores_user(context: AlgopyTestContext, registry: BxHiveRegistry) -> None:
-    registry.register_user(arc4.UInt8(ROLE_SUBJECT), arc4.String("Bob"))
+    registry.register_user(arc4.UInt8(ROLE_PARTICIPANT), arc4.String("Bob"))
 
     user = registry.get_user(context.default_sender)
     assert user.name == arc4.String("Bob")
-    assert user.role == arc4.UInt8(ROLE_SUBJECT)
+    assert user.role == arc4.UInt8(ROLE_PARTICIPANT)
     assert user.user_id == arc4.UInt32(0)
 
 

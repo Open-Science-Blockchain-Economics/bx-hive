@@ -12,7 +12,7 @@ from smart_contracts.shared.types import (
     STATUS_CLOSED,
     STATUS_COMPLETED,
 )
-from smart_contracts.trust_variation.contract import MATCH_MBR, SUBJECT_MBR, TrustVariation
+from smart_contracts.trust_variation.contract import MATCH_MBR, PARTICIPANT_MBR, TrustVariation
 
 # Game parameters used across tests (simple round numbers)
 E1 = 100
@@ -31,13 +31,13 @@ def context() -> Iterator[AlgopyTestContext]:
 def _make_variation(
     ctx: AlgopyTestContext,
     owner: Account | None = None,
-    max_subjects: int = 0,
+    max_participants: int = 0,
 ) -> TrustVariation:
     """Create and initialise a TrustVariation.
 
     If owner is None the contract is owned by ctx.default_sender (the implicit Txn.sender).
     Pass a different account to test non-owner access-control paths.
-    max_subjects=0 means unlimited; a positive value caps self-enrollment.
+    max_participants=0 means unlimited; a positive value caps self-enrollment.
     """
     contract = TrustVariation()
     contract.create(
@@ -51,15 +51,15 @@ def _make_variation(
         arc4.UInt64(UNIT),
         arc4.UInt64(ASSET_ID),
         arc4.UInt64(0),  # registry_app
-        arc4.UInt64(max_subjects),
+        arc4.UInt64(max_participants),
     )
     return contract
 
 
-def _add_subjects(
+def _add_participants(
     ctx: AlgopyTestContext, contract: TrustVariation
 ) -> tuple[arc4.Address, arc4.Address, Account]:
-    """Enroll two subjects.
+    """Enroll two participants.
 
     Returns (investor_addr, trustee_addr, trustee_account).
     investor_addr wraps ctx.default_sender so investor decisions can be submitted
@@ -68,14 +68,14 @@ def _add_subjects(
     trustee_acct = ctx.any.account()
     investor = arc4.Address(ctx.default_sender)
     trustee = arc4.Address(trustee_acct)
-    subjects: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(
+    participants: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(
         investor.copy(), trustee.copy()
     )
     app_addr = ctx.ledger.get_app(contract.__app_id__).address
     mbr_pay = ctx.any.txn.payment(
-        sender=ctx.default_sender, receiver=app_addr, amount=SUBJECT_MBR * 2
+        sender=ctx.default_sender, receiver=app_addr, amount=PARTICIPANT_MBR * 2
     )
-    contract.add_subjects(subjects, mbr_pay)
+    contract.add_participants(participants, mbr_pay)
     return investor, trustee, trustee_acct
 
 
@@ -124,7 +124,7 @@ def test_create_zero_unit_fails(context: AlgopyTestContext) -> None:
             arc4.UInt64(0),  # zero unit
             arc4.UInt64(ASSET_ID),
             arc4.UInt64(0),  # registry_app
-            arc4.UInt64(0),  # max_subjects
+            arc4.UInt64(0),  # max_participants
         )
 
 
@@ -175,45 +175,45 @@ def test_deposit_escrow_not_owner_fails(context: AlgopyTestContext) -> None:
 
 
 # -------------------------------------------------------------------------
-# add_subjects
+# add_participants
 # -------------------------------------------------------------------------
 
 
-def test_add_subjects(context: AlgopyTestContext) -> None:
+def test_add_participants(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
-    investor, trustee, _ = _add_subjects(context, contract)
+    investor, trustee, _ = _add_participants(context, contract)
 
-    assert investor in contract.subjects
-    assert trustee in contract.subjects
-    assert contract.subjects[investor].enrolled == arc4.UInt8(1)
-    assert contract.subjects[investor].assigned == arc4.UInt8(0)
+    assert investor in contract.participants
+    assert trustee in contract.participants
+    assert contract.participants[investor].enrolled == arc4.UInt8(1)
+    assert contract.participants[investor].assigned == arc4.UInt8(0)
 
 
-def test_add_subjects_duplicate_fails(context: AlgopyTestContext) -> None:
+def test_add_participants_duplicate_fails(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
     app_addr = context.ledger.get_app(contract.__app_id__).address
     acct = context.any.account()
     addr = arc4.Address(acct)
     s1: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(addr.copy())
-    mbr1 = context.any.txn.payment(sender=context.default_sender, receiver=app_addr, amount=SUBJECT_MBR)
-    contract.add_subjects(s1, mbr1)
+    mbr1 = context.any.txn.payment(sender=context.default_sender, receiver=app_addr, amount=PARTICIPANT_MBR)
+    contract.add_participants(s1, mbr1)
 
     s2: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(addr.copy())
-    mbr2 = context.any.txn.payment(sender=context.default_sender, receiver=app_addr, amount=SUBJECT_MBR)
+    mbr2 = context.any.txn.payment(sender=context.default_sender, receiver=app_addr, amount=PARTICIPANT_MBR)
     with pytest.raises(Exception, match="Already enrolled"):
-        contract.add_subjects(s2, mbr2)
+        contract.add_participants(s2, mbr2)
 
 
-def test_add_subjects_after_close_fails(context: AlgopyTestContext) -> None:
+def test_add_participants_after_close_fails(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
     contract.close_registration()
 
     app_addr = context.ledger.get_app(contract.__app_id__).address
     acct = context.any.account()
-    subjects: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(arc4.Address(acct))
-    mbr_pay = context.any.txn.payment(sender=context.default_sender, receiver=app_addr, amount=SUBJECT_MBR)
+    participants: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(arc4.Address(acct))
+    mbr_pay = context.any.txn.payment(sender=context.default_sender, receiver=app_addr, amount=PARTICIPANT_MBR)
     with pytest.raises(Exception, match="Not active"):
-        contract.add_subjects(subjects, mbr_pay)
+        contract.add_participants(participants, mbr_pay)
 
 
 # -------------------------------------------------------------------------
@@ -223,7 +223,7 @@ def test_add_subjects_after_close_fails(context: AlgopyTestContext) -> None:
 
 def test_create_match(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
-    investor, trustee, _ = _add_subjects(context, contract)
+    investor, trustee, _ = _add_participants(context, contract)
 
     match_id = _create_match(context, contract, investor.copy(), trustee.copy())
 
@@ -240,7 +240,7 @@ def test_create_match(context: AlgopyTestContext) -> None:
 
 def test_create_match_unenrolled_investor_fails(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
-    _, trustee, _ = _add_subjects(context, contract)
+    _, trustee, _ = _add_participants(context, contract)
     stranger = arc4.Address(context.any.account())
 
     with pytest.raises(Exception, match="Investor not enrolled"):
@@ -249,12 +249,12 @@ def test_create_match_unenrolled_investor_fails(context: AlgopyTestContext) -> N
 
 def test_create_match_already_assigned_fails(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
-    investor, trustee, _ = _add_subjects(context, contract)
+    investor, trustee, _ = _add_participants(context, contract)
     third = arc4.Address(context.any.account())
     app_addr = context.ledger.get_app(contract.__app_id__).address
     extra: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(third.copy())
-    mbr_pay = context.any.txn.payment(sender=context.default_sender, receiver=app_addr, amount=SUBJECT_MBR)
-    contract.add_subjects(extra, mbr_pay)
+    mbr_pay = context.any.txn.payment(sender=context.default_sender, receiver=app_addr, amount=PARTICIPANT_MBR)
+    contract.add_participants(extra, mbr_pay)
 
     _create_match(context, contract, investor.copy(), trustee.copy())
 
@@ -270,7 +270,7 @@ def test_create_match_already_assigned_fails(context: AlgopyTestContext) -> None
 
 def test_submit_investor_decision(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
-    investor, trustee, _ = _add_subjects(context, contract)
+    investor, trustee, _ = _add_participants(context, contract)
     match_id = _create_match(context, contract, investor.copy(), trustee.copy())
 
     contract.submit_investor_decision(match_id, arc4.UInt64(40))
@@ -282,7 +282,7 @@ def test_submit_investor_decision(context: AlgopyTestContext) -> None:
 
 def test_submit_investor_decision_wrong_caller_fails(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
-    investor, trustee, trustee_acct = _add_subjects(context, contract)
+    investor, trustee, trustee_acct = _add_participants(context, contract)
     match_id = _create_match(context, contract, investor.copy(), trustee.copy())
 
     # Trustee tries to submit the investor decision
@@ -296,7 +296,7 @@ def test_submit_investor_decision_wrong_caller_fails(context: AlgopyTestContext)
 
 def test_submit_investor_decision_exceeds_e1_fails(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
-    investor, trustee, _ = _add_subjects(context, contract)
+    investor, trustee, _ = _add_participants(context, contract)
     match_id = _create_match(context, contract, investor.copy(), trustee.copy())
 
     with pytest.raises(Exception, match="Investment exceeds endowment"):
@@ -305,7 +305,7 @@ def test_submit_investor_decision_exceeds_e1_fails(context: AlgopyTestContext) -
 
 def test_submit_investor_decision_not_multiple_fails(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
-    investor, trustee, _ = _add_subjects(context, contract)
+    investor, trustee, _ = _add_participants(context, contract)
     match_id = _create_match(context, contract, investor.copy(), trustee.copy())
 
     with pytest.raises(Exception, match="Not a multiple of unit"):
@@ -321,7 +321,7 @@ def test_submit_investor_decision_not_multiple_fails(context: AlgopyTestContext)
 def test_submit_trustee_decision_payouts(context: AlgopyTestContext) -> None:
     """E1=100, E2=50, m=3, s=40, r=60 → investor_payout=120, trustee_payout=110."""
     contract = _make_variation(context)
-    investor, trustee, trustee_acct = _add_subjects(context, contract)
+    investor, trustee, trustee_acct = _add_participants(context, contract)
     match_id = _create_match(context, contract, investor.copy(), trustee.copy())
 
     # Investor decision (default_sender is investor)
@@ -345,7 +345,7 @@ def test_submit_trustee_decision_payouts(context: AlgopyTestContext) -> None:
 
 def test_submit_trustee_decision_exceeds_max_return_fails(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
-    investor, trustee, trustee_acct = _add_subjects(context, contract)
+    investor, trustee, trustee_acct = _add_participants(context, contract)
     match_id = _create_match(context, contract, investor.copy(), trustee.copy())
 
     contract.submit_investor_decision(match_id, arc4.UInt64(40))
@@ -361,7 +361,7 @@ def test_submit_trustee_decision_exceeds_max_return_fails(context: AlgopyTestCon
 
 def test_submit_trustee_decision_wrong_caller_fails(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
-    investor, trustee, _ = _add_subjects(context, contract)
+    investor, trustee, _ = _add_participants(context, contract)
     match_id = _create_match(context, contract, investor.copy(), trustee.copy())
 
     contract.submit_investor_decision(match_id, arc4.UInt64(40))
@@ -378,7 +378,7 @@ def test_submit_trustee_decision_wrong_caller_fails(context: AlgopyTestContext) 
 
 def test_withdraw_escrow_before_all_paid_fails(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
-    investor, trustee, _ = _add_subjects(context, contract)
+    investor, trustee, _ = _add_participants(context, contract)
     _create_match(context, contract, investor.copy(), trustee.copy())  # 1 match, 0 paid out
 
     with pytest.raises(Exception, match="Matches not all paid out"):
@@ -408,14 +408,14 @@ def test_get_config(context: AlgopyTestContext) -> None:
     assert config.unit == arc4.UInt64(UNIT)
     assert config.asset_id == arc4.UInt64(ASSET_ID)
     assert config.status == arc4.UInt8(STATUS_ACTIVE)
-    assert config.max_subjects == arc4.UInt64(0)
+    assert config.max_participants == arc4.UInt64(0)
 
 
-def test_get_config_returns_max_subjects(context: AlgopyTestContext) -> None:
+def test_get_config_returns_max_participants(context: AlgopyTestContext) -> None:
     """Capacity flows through `create()` → state → `get_config()`."""
-    contract = _make_variation(context, max_subjects=5)
-    assert contract.max_subjects.value == 5
-    assert contract.get_config().max_subjects == arc4.UInt64(5)
+    contract = _make_variation(context, max_participants=5)
+    assert contract.max_participants.value == 5
+    assert contract.get_config().max_participants == arc4.UInt64(5)
 
 
 def test_get_escrow_balance(context: AlgopyTestContext) -> None:
@@ -433,40 +433,40 @@ def test_close_registration(context: AlgopyTestContext) -> None:
 
 
 # -------------------------------------------------------------------------
-# subject_count and capacity (max_subjects)
+# participant_count and capacity (max_participants)
 # -------------------------------------------------------------------------
 
 
-def test_add_subjects_increments_subject_count(context: AlgopyTestContext) -> None:
+def test_add_participants_increments_participant_count(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
-    assert contract.subject_count.value == 0
-    _add_subjects(context, contract)
-    assert contract.subject_count.value == 2
+    assert contract.participant_count.value == 0
+    _add_participants(context, contract)
+    assert contract.participant_count.value == 2
 
 
-def test_get_subject_count_returns_live_count(context: AlgopyTestContext) -> None:
+def test_get_participant_count_returns_live_count(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
-    assert contract.get_subject_count() == arc4.UInt64(0)
-    _add_subjects(context, contract)
-    assert contract.get_subject_count() == arc4.UInt64(2)
+    assert contract.get_participant_count() == arc4.UInt64(0)
+    _add_participants(context, contract)
+    assert contract.get_participant_count() == arc4.UInt64(2)
 
 
 def test_self_enroll_full_rejects(context: AlgopyTestContext) -> None:
-    """When subject_count == max_subjects > 0, self_enroll fails with 'Full'.
+    """When participant_count == max_participants > 0, self_enroll fails with 'Full'.
 
     The capacity assertion fires before the registry inner-txn, so this path is
     reachable in unit tests despite registry_app=0.
     """
-    contract = _make_variation(context, max_subjects=1)
+    contract = _make_variation(context, max_participants=1)
 
-    # Fill the cap via owner-driven add_subjects (an account that is NOT default_sender,
+    # Fill the cap via owner-driven add_participants (an account that is NOT default_sender,
     # so default_sender's subsequent self_enroll attempt is not pre-empted by 'Already enrolled').
     other = context.any.account()
     app_addr = context.ledger.get_app(contract.__app_id__).address
     fill: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(arc4.Address(other))
-    mbr = context.any.txn.payment(receiver=app_addr, amount=SUBJECT_MBR)
-    contract.add_subjects(fill, mbr)
-    assert contract.subject_count.value == 1
+    mbr = context.any.txn.payment(receiver=app_addr, amount=PARTICIPANT_MBR)
+    contract.add_participants(fill, mbr)
+    assert contract.participant_count.value == 1
 
     # default_sender attempts self_enroll → 'Full' assertion fires before inner txn.
     self_mbr = context.any.txn.payment(receiver=app_addr, amount=16_900)
@@ -474,16 +474,16 @@ def test_self_enroll_full_rejects(context: AlgopyTestContext) -> None:
         contract.self_enroll(self_mbr)
 
 
-def test_add_subjects_bypasses_max_subjects(context: AlgopyTestContext) -> None:
-    """Owner-driven add_subjects intentionally has no capacity check.
+def test_add_participants_bypasses_max_participants(context: AlgopyTestContext) -> None:
+    """Owner-driven add_participants intentionally has no capacity check.
 
-    This documents the asymmetry: max_subjects only gates self-enrollment, not
+    This documents the asymmetry: max_participants only gates self-enrollment, not
     owner-driven enrollment. Experimenters retain manual override.
     """
-    contract = _make_variation(context, max_subjects=1)
-    # add_subjects enrolls 2 subjects despite max_subjects=1 — no exception expected.
-    _add_subjects(context, contract)
-    assert contract.subject_count.value == 2
+    contract = _make_variation(context, max_participants=1)
+    # add_participants enrolls 2 participants despite max_participants=1 — no exception expected.
+    _add_participants(context, contract)
+    assert contract.participant_count.value == 2
 
 
 # -------------------------------------------------------------------------
@@ -493,7 +493,7 @@ def test_add_subjects_bypasses_max_subjects(context: AlgopyTestContext) -> None:
 
 def _make_variation_with_experiments_app(
     ctx: AlgopyTestContext,
-    max_subjects: int = 0,
+    max_participants: int = 0,
 ) -> tuple[TrustVariation, "Application"]:
     """Create a variation whose experiments_app is a real mock application."""
     experiments_app = ctx.any.application()
@@ -509,7 +509,7 @@ def _make_variation_with_experiments_app(
         arc4.UInt64(UNIT),
         arc4.UInt64(ASSET_ID),
         arc4.UInt64(0),  # registry_app
-        arc4.UInt64(max_subjects),
+        arc4.UInt64(max_participants),
     )
     return contract, experiments_app
 
@@ -612,7 +612,7 @@ def test_end_variation_already_ended_fails(context: AlgopyTestContext) -> None:
 def test_submit_trustee_decision_after_end_variation_fails(context: AlgopyTestContext) -> None:
     """submit_trustee_decision must be rejected after variation is ended."""
     contract = _make_variation(context)
-    investor, trustee, trustee_acct = _add_subjects(context, contract)
+    investor, trustee, trustee_acct = _add_participants(context, contract)
     contract.escrow_deposited.value = UInt64(10_000)
     match_id = _create_match(context, contract, investor.copy(), trustee.copy())
     contract.submit_investor_decision(match_id, arc4.UInt64(40))
