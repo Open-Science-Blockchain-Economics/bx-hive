@@ -28,11 +28,16 @@ def context() -> Iterator[AlgopyTestContext]:
         yield ctx
 
 
-def _make_variation(ctx: AlgopyTestContext, owner: Account | None = None) -> TrustVariation:
+def _make_variation(
+    ctx: AlgopyTestContext,
+    owner: Account | None = None,
+    max_subjects: int = 0,
+) -> TrustVariation:
     """Create and initialise a TrustVariation.
 
     If owner is None the contract is owned by ctx.default_sender (the implicit Txn.sender).
     Pass a different account to test non-owner access-control paths.
+    max_subjects=0 means unlimited; a positive value caps self-enrollment.
     """
     contract = TrustVariation()
     contract.create(
@@ -46,7 +51,7 @@ def _make_variation(ctx: AlgopyTestContext, owner: Account | None = None) -> Tru
         arc4.UInt64(UNIT),
         arc4.UInt64(ASSET_ID),
         arc4.UInt64(0),  # registry_app
-        arc4.UInt64(0),  # max_subjects (0 = unlimited)
+        arc4.UInt64(max_subjects),
     )
     return contract
 
@@ -401,8 +406,16 @@ def test_get_config(context: AlgopyTestContext) -> None:
     assert config.e2 == arc4.UInt64(E2)
     assert config.multiplier == arc4.UInt64(MULTIPLIER)
     assert config.unit == arc4.UInt64(UNIT)
+    assert config.asset_id == arc4.UInt64(ASSET_ID)
     assert config.status == arc4.UInt8(STATUS_ACTIVE)
     assert config.max_subjects == arc4.UInt64(0)
+
+
+def test_get_config_returns_max_subjects(context: AlgopyTestContext) -> None:
+    """Capacity flows through `create()` → state → `get_config()`."""
+    contract = _make_variation(context, max_subjects=5)
+    assert contract.max_subjects.value == 5
+    assert contract.get_config().max_subjects == arc4.UInt64(5)
 
 
 def test_get_escrow_balance(context: AlgopyTestContext) -> None:
@@ -420,12 +433,67 @@ def test_close_registration(context: AlgopyTestContext) -> None:
 
 
 # -------------------------------------------------------------------------
+# subject_count and capacity (max_subjects)
+# -------------------------------------------------------------------------
+
+
+def test_add_subjects_increments_subject_count(context: AlgopyTestContext) -> None:
+    contract = _make_variation(context)
+    assert contract.subject_count.value == 0
+    _add_subjects(context, contract)
+    assert contract.subject_count.value == 2
+
+
+def test_get_subject_count_returns_live_count(context: AlgopyTestContext) -> None:
+    contract = _make_variation(context)
+    assert contract.get_subject_count() == arc4.UInt64(0)
+    _add_subjects(context, contract)
+    assert contract.get_subject_count() == arc4.UInt64(2)
+
+
+def test_self_enroll_full_rejects(context: AlgopyTestContext) -> None:
+    """When subject_count == max_subjects > 0, self_enroll fails with 'Full'.
+
+    The capacity assertion fires before the registry inner-txn, so this path is
+    reachable in unit tests despite registry_app=0.
+    """
+    contract = _make_variation(context, max_subjects=1)
+
+    # Fill the cap via owner-driven add_subjects (an account that is NOT default_sender,
+    # so default_sender's subsequent self_enroll attempt is not pre-empted by 'Already enrolled').
+    other = context.any.account()
+    app_addr = context.ledger.get_app(contract.__app_id__).address
+    fill: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(arc4.Address(other))
+    mbr = context.any.txn.payment(receiver=app_addr, amount=SUBJECT_MBR)
+    contract.add_subjects(fill, mbr)
+    assert contract.subject_count.value == 1
+
+    # default_sender attempts self_enroll → 'Full' assertion fires before inner txn.
+    self_mbr = context.any.txn.payment(receiver=app_addr, amount=16_900)
+    with pytest.raises(Exception, match="Full"):
+        contract.self_enroll(self_mbr)
+
+
+def test_add_subjects_bypasses_max_subjects(context: AlgopyTestContext) -> None:
+    """Owner-driven add_subjects intentionally has no capacity check.
+
+    This documents the asymmetry: max_subjects only gates self-enrollment, not
+    owner-driven enrollment. Experimenters retain manual override.
+    """
+    contract = _make_variation(context, max_subjects=1)
+    # add_subjects enrolls 2 subjects despite max_subjects=1 — no exception expected.
+    _add_subjects(context, contract)
+    assert contract.subject_count.value == 2
+
+
+# -------------------------------------------------------------------------
 # record_escrow
 # -------------------------------------------------------------------------
 
 
 def _make_variation_with_experiments_app(
     ctx: AlgopyTestContext,
+    max_subjects: int = 0,
 ) -> tuple[TrustVariation, "Application"]:
     """Create a variation whose experiments_app is a real mock application."""
     experiments_app = ctx.any.application()
@@ -441,7 +509,7 @@ def _make_variation_with_experiments_app(
         arc4.UInt64(UNIT),
         arc4.UInt64(ASSET_ID),
         arc4.UInt64(0),  # registry_app
-        arc4.UInt64(0),  # max_subjects
+        arc4.UInt64(max_subjects),
     )
     return contract, experiments_app
 
