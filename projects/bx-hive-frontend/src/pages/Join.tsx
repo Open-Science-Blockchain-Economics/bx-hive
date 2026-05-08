@@ -35,7 +35,7 @@ const ROLE_COPY: Record<UserRole, { label: string; line: string; bullets: string
       'Requires: Algorand wallet · institutional or independent affiliation.',
     ],
   },
-  subject: {
+  participant: {
     label: 'Participant',
     kind: 'ROLE · 02',
     line: 'You opt into running experiments and get paid for your time and decisions.',
@@ -49,7 +49,7 @@ const ROLE_COPY: Record<UserRole, { label: string; line: string; bullets: string
 }
 
 function isRole(value: string | null): value is UserRole {
-  return value === 'experimenter' || value === 'subject'
+  return value === 'experimenter' || value === 'participant'
 }
 
 function RoleCard({ role, selected, onSelect }: { role: UserRole; selected: boolean; onSelect: () => void }) {
@@ -164,7 +164,7 @@ export default function Join() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-10">
         <RoleCard role="experimenter" selected={role === 'experimenter'} onSelect={() => setRole('experimenter')} />
-        <RoleCard role="subject" selected={role === 'subject'} onSelect={() => setRole('subject')} />
+        <RoleCard role="participant" selected={role === 'participant'} onSelect={() => setRole('participant')} />
       </div>
 
       <Panel>
@@ -184,9 +184,7 @@ export default function Join() {
 
       <div className="mt-5 px-4 py-3.5 border border-dashed border-rule-2 rounded-sm bg-muted flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3.5">
-          <span className="size-8 rounded-sm bg-card border border-border grid place-items-center font-mono text-sm text-primary">
-            ◈
-          </span>
+          <span className="size-8 rounded-sm bg-card border border-border grid place-items-center font-mono text-sm text-primary">◈</span>
           <div>
             <div className="font-ui font-semibold text-sm text-foreground">
               {activeAddress ? 'Wallet connected' : 'Connect your Algorand wallet'}
@@ -223,9 +221,7 @@ export default function Join() {
       {error && <div className="mt-4 p-3 rounded-sm border border-neg/35 bg-neg-bg text-neg text-[13px]">{error}</div>}
 
       <div className="mt-7 pt-5 border-t border-border flex items-center justify-between gap-3 flex-wrap">
-        <span className="font-ui text-[12px] text-muted-foreground">
-          By continuing you agree to the research participation terms.
-        </span>
+        <span className="font-ui text-[12px] text-muted-foreground">By continuing you agree to the research participation terms.</span>
         <div className="flex gap-2.5">
           <Btn asChild variant="ghost">
             <Link to="/">

@@ -47,10 +47,10 @@ export function useTrustVariation() {
   )
 
   /**
-   * Adds subject wallet addresses to a variation (owner-only).
-   * Sends a grouped MBR payment (16,900 microAlgo per subject) for subject boxes.
+   * Adds participant wallet addresses to a variation (owner-only).
+   * Sends a grouped MBR payment (16,900 microAlgo per participant) for participant boxes.
    */
-  const addSubjects = useCallback(
+  const addParticipants = useCallback(
     async (appId: bigint, addresses: string[]): Promise<void> => {
       if (!algorand || !activeAddress) throw new Error('Wallet not connected')
       const client = getTrustVariationClient(appId)
@@ -63,7 +63,7 @@ export function useTrustVariation() {
         amount: AlgoAmount.MicroAlgos(16_900 * addresses.length),
       })
 
-      await client.send.addSubjects({ args: { addresses, mbrPayment } })
+      await client.send.addParticipants({ args: { addresses, mbrPayment } })
     },
     [algorand, activeAddress, getTrustVariationClient],
   )
@@ -186,13 +186,13 @@ export function useTrustVariation() {
   )
 
   /**
-   * Returns all enrolled subjects for a variation (subjects BoxMap read).
+   * Returns all enrolled participants for a variation (participants BoxMap read).
    */
-  const getEnrolledSubjects = useCallback(
+  const getEnrolledParticipants = useCallback(
     async (appId: bigint): Promise<Array<{ address: string; enrolled: number; assigned: number }>> => {
       const client = getTrustVariationClient(appId)
       if (!client) return []
-      const map = await client.state.box.subjects.getMap()
+      const map = await client.state.box.participants.getMap()
       return Array.from(map.entries())
         .map(([address, info]) => ({ address, ...info }))
         .sort((a, b) => a.enrolled - b.enrolled)
@@ -214,26 +214,26 @@ export function useTrustVariation() {
   )
 
   /**
-   * Checks if an address is enrolled as a subject in a variation (subjects box read).
+   * Checks if an address is enrolled as a participant in a variation (participants box read).
    */
-  const isSubjectEnrolled = useCallback(
+  const isParticipantEnrolled = useCallback(
     async (appId: bigint, address: string): Promise<boolean> => {
       const client = getTrustVariationClient(appId)
       if (!client) return false
-      const info = await client.state.box.subjects.value(address)
+      const info = await client.state.box.participants.value(address)
       return info !== undefined && info.enrolled === 1
     },
     [getTrustVariationClient],
   )
 
   /**
-   * Fetches the current subject count for a variation.
+   * Fetches the current participant count for a variation.
    */
-  const getSubjectCount = useCallback(
+  const getParticipantCount = useCallback(
     async (appId: bigint): Promise<number> => {
       const client = getTrustVariationClient(appId)
       if (!client) throw new Error('Wallet not connected')
-      const result = await client.send.getSubjectCount({ args: {} })
+      const result = await client.send.getParticipantCount({ args: {} })
       return Number(result.return!)
     },
     [getTrustVariationClient],
@@ -273,7 +273,7 @@ export function useTrustVariation() {
 
   return {
     depositEscrow,
-    addSubjects,
+    addParticipants,
     selfEnroll,
     createMatch,
     submitInvestorDecision,
@@ -281,10 +281,10 @@ export function useTrustVariation() {
     getMatch,
     getPlayerMatch,
     getConfig,
-    getSubjectCount,
-    getEnrolledSubjects,
+    getParticipantCount,
+    getEnrolledParticipants,
     getMatches,
-    isSubjectEnrolled,
+    isParticipantEnrolled,
     endVariation,
   }
 }

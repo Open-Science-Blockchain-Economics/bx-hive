@@ -22,7 +22,7 @@ import { VariationBuilder } from './VariationBuilder'
 const DOCS_BASE_URL = 'https://open-science-blockchain-economics.github.io/bx-hive'
 
 const DOCS_LINKS = {
-  participants: `${DOCS_BASE_URL}/subjects/joining-experiments/#auto-assignment-to-variations`,
+  participants: `${DOCS_BASE_URL}/participants/joining-experiments/#auto-assignment-to-variations`,
   maxPayout: `${DOCS_BASE_URL}/concepts/payout-calculations/`,
 } as const
 
@@ -260,7 +260,7 @@ export default function CreateExperimentForm({
           <Step n={3} title="Configure base parameters" state={stateForStep(2)}>
             <TrustGameParameters parameters={parameters} onChange={handleParameterChange} />
             <div className="mt-5 max-w-xs">
-              <Field label="Subjects target" hint="max matches per variation" htmlFor="max-per-variation" required>
+              <Field label="Participants target" hint="max matches per variation" htmlFor="max-per-variation" required>
                 <Input
                   id="max-per-variation"
                   mono
@@ -309,7 +309,7 @@ export default function CreateExperimentForm({
 
           <Step n={5} title="Review &amp; deploy" state={reviewState} isLast>
             <InfoAlert learnMoreHref={DOCS_LINKS.participants} className="mb-4">
-              Subjects self-enroll and are distributed across variations using round robin.
+              Participants self-enroll and are distributed across variations using round robin.
             </InfoAlert>
             <FundingSummary
               parameters={parameters}

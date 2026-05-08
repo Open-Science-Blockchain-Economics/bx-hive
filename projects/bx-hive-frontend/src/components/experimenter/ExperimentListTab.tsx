@@ -15,7 +15,7 @@ interface OnChainExperiment {
 
 interface ExperimentListTabProps {
   onChainExps: OnChainExperiment[]
-  subjectCounts: Record<string, number>
+  participantCounts: Record<string, number>
   variationConfigs: Record<string, VariationConfig>
   filter: 'all' | 'live' | 'paused' | 'complete'
   onCreateClick: () => void
@@ -25,12 +25,18 @@ function formatExpId(id: number): string {
   return `EXP-${String(id).padStart(4, '0')}`
 }
 
-export default function ExperimentListTab({ onChainExps, subjectCounts, variationConfigs, filter, onCreateClick }: ExperimentListTabProps) {
+export default function ExperimentListTab({
+  onChainExps,
+  participantCounts,
+  variationConfigs,
+  filter,
+  onCreateClick,
+}: ExperimentListTabProps) {
   const enriched = onChainExps.map((exp) => {
     const configs = exp.variations.map((v) => variationConfigs[String(v.appId)]).filter((c): c is VariationConfig => Boolean(c))
-    const subjectTotal = exp.variations.reduce((sum, v) => sum + (subjectCounts[String(v.appId)] ?? 0), 0)
+    const participantTotal = exp.variations.reduce((sum, v) => sum + (participantCounts[String(v.appId)] ?? 0), 0)
     const status = deriveExperimentStatus(configs)
-    return { ...exp, configs, subjectTotal, status }
+    return { ...exp, configs, participantTotal, status }
   })
 
   const filtered = enriched.filter((e) => {
@@ -69,7 +75,7 @@ export default function ExperimentListTab({ onChainExps, subjectCounts, variatio
             <th className="text-left t-micro px-3 py-2">Name</th>
             <th className="text-left t-micro px-3 py-2">Template</th>
             <th className="text-right t-micro px-3 py-2">Vars</th>
-            <th className="text-right t-micro px-3 py-2">Subjects</th>
+            <th className="text-right t-micro px-3 py-2">Participants</th>
             <th className="text-left t-micro px-3 py-2">Status</th>
           </tr>
         </thead>
@@ -93,7 +99,7 @@ export default function ExperimentListTab({ onChainExps, subjectCounts, variatio
                 <Chip tone="accent">TG</Chip>
               </td>
               <td className="px-3 py-3 text-right font-mono text-xs text-ink-2">{e.variations.length}</td>
-              <td className="px-3 py-3 text-right font-mono text-xs text-ink-2">{e.subjectTotal}</td>
+              <td className="px-3 py-3 text-right font-mono text-xs text-ink-2">{e.participantTotal}</td>
               <td className="px-3 py-3">
                 <Chip tone={e.status.tone}>{e.status.label}</Chip>
               </td>

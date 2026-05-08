@@ -20,7 +20,7 @@ import { queryKeys } from '../lib/queryKeys'
 import { truncateAddress } from '../utils/address'
 import { deriveExperimentStatus, statusDotColor, statusLabel, variationTooltip } from '../utils/variationStatus'
 
-interface SubjectEntry {
+interface ParticipantEntry {
   address: string
   enrolled: number
   assigned: number
@@ -29,7 +29,7 @@ interface SubjectEntry {
 interface ExperimentDetailsData {
   group: ExperimentGroup
   variations: VariationInfo[]
-  subjects: Record<string, SubjectEntry[]>
+  participants: Record<string, ParticipantEntry[]>
   matches: Record<string, Match[]>
   configs: Record<string, VariationConfig>
 }
@@ -48,7 +48,7 @@ export default function TrustExperimentDetails() {
   const expId = Number(expIdParam ?? '0')
 
   const { getExperiment, listVariations } = useTrustExperiments()
-  const { getEnrolledSubjects, getMatches, getConfig, createMatch } = useTrustVariation()
+  const { getEnrolledParticipants, getMatches, getConfig, createMatch } = useTrustVariation()
   const { getExpConfig, setExpConfig, registerExperimentVariations } = useExperimentManager()
   const queryClient = useQueryClient()
 
@@ -66,7 +66,7 @@ export default function TrustExperimentDetails() {
       const g = await getExperiment(expId)
       const vars = await listVariations(expId, Number(g.variationCount))
 
-      const subjects: Record<string, SubjectEntry[]> = {}
+      const participants: Record<string, ParticipantEntry[]> = {}
       const matches: Record<string, Match[]> = {}
       const configs: Record<string, VariationConfig> = {}
 
@@ -74,8 +74,8 @@ export default function TrustExperimentDetails() {
         vars.map(async (v) => {
           const key = String(v.appId)
           try {
-            const [subs, matchList, cfg] = await Promise.all([getEnrolledSubjects(v.appId), getMatches(v.appId), getConfig(v.appId)])
-            subjects[key] = subs
+            const [subs, matchList, cfg] = await Promise.all([getEnrolledParticipants(v.appId), getMatches(v.appId), getConfig(v.appId)])
+            participants[key] = subs
             matches[key] = matchList
             configs[key] = cfg
           } catch {
@@ -84,7 +84,7 @@ export default function TrustExperimentDetails() {
         }),
       )
 
-      return { group: g, variations: vars, subjects, matches, configs }
+      return { group: g, variations: vars, participants, matches, configs }
     },
     refetchInterval: autoRefresh ? 5000 : false,
   })
@@ -133,7 +133,7 @@ export default function TrustExperimentDetails() {
     return <LoadingSpinner />
   }
 
-  const { group, variations: vars, subjects: subs, matches, configs: cfgs } = data
+  const { group, variations: vars, participants: subs, matches, configs: cfgs } = data
   const selectedVar = vars[selectedVarIdx]
   const varKey = selectedVar ? String(selectedVar.appId) : ''
   const expStatus = deriveExperimentStatus(Object.values(cfgs))
@@ -195,7 +195,7 @@ export default function TrustExperimentDetails() {
                 ? (autoMatchDisabledReason ?? 'Auto Match unavailable')
                 : autoMatch
                   ? 'Pause auto-matching'
-                  : 'Auto-match unassigned subjects across all active variations (FIFO)'}
+                  : 'Auto-match unassigned participants across all active variations (FIFO)'}
             </TooltipContent>
           </Tooltip>
         </div>
@@ -212,7 +212,7 @@ export default function TrustExperimentDetails() {
         </span>
       </div>
 
-      <OverviewStrip variations={vars} subjects={subs} matches={matches} configs={cfgs} />
+      <OverviewStrip variations={vars} participants={subs} matches={matches} configs={cfgs} />
 
       <h2 className="t-micro mb-3">Variation Details</h2>
 
@@ -251,7 +251,7 @@ export default function TrustExperimentDetails() {
           {selectedVar && (
             <VariationPanel
               variation={selectedVar}
-              subjects={subs[varKey] ?? []}
+              participants={subs[varKey] ?? []}
               matches={matches[varKey] ?? []}
               config={cfgs[varKey]}
               onCreateMatch={async (appId, investor, trustee) => {

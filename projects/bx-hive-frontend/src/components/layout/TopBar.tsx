@@ -115,7 +115,7 @@ function MobileNavPanel({ open, onClose, activeUser, dashboardPath, address, net
             <div className="flex items-center gap-2 px-4 py-3">
               <Dot tone="pos" size={6} />
               {activeUser?.role === 'experimenter' && <FlaskConical className="size-3.5" />}
-              {activeUser?.role === 'subject' && <User className="size-3.5" />}
+              {activeUser?.role === 'participant' && <User className="size-3.5" />}
               <span className="font-mono text-xs text-ink-2">{activeUser?.name ?? truncateAddress(address)}</span>
             </div>
             <button type="button" onClick={handleCopy} className={mobileRowClass}>
@@ -208,7 +208,7 @@ function WalletPill({
     })
   }, [address])
 
-  const RoleIcon = activeUser?.role === 'experimenter' ? FlaskConical : activeUser?.role === 'subject' ? User : null
+  const RoleIcon = activeUser?.role === 'experimenter' ? FlaskConical : activeUser?.role === 'participant' ? User : null
   const display = activeUser?.name ?? truncateAddress(address)
 
   return (
@@ -269,7 +269,7 @@ export default function TopBar() {
     setMobileOpen(false)
   }, [location.pathname])
 
-  const dashboardPath = activeUser ? `/dashboard/${activeUser.role}` : '/dashboard/subject'
+  const dashboardPath = activeUser ? `/dashboard/${activeUser.role}` : '/dashboard/participant'
 
   return (
     <>

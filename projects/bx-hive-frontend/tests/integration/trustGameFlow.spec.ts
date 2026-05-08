@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest'
 import { deployContracts, enableVariations } from './helpers/deployContracts'
 import {
   ROLE_EXPERIMENTER,
-  ROLE_SUBJECT,
-  enrollSubject,
+  ROLE_PARTICIPANT,
+  enrollParticipant,
   investorDecide,
   ownerCreateMatch,
   registerUser,
@@ -37,8 +37,8 @@ describe('trust-game flow (integration)', () => {
     await enableVariations(algorand, owner, trustExperimentsClient)
 
     await registerUser(registryClient, owner, ROLE_EXPERIMENTER, 'Owner')
-    await registerUser(registryClient, investor, ROLE_SUBJECT, 'Investor')
-    await registerUser(registryClient, trustee, ROLE_SUBJECT, 'Trustee')
+    await registerUser(registryClient, investor, ROLE_PARTICIPANT, 'Investor')
+    await registerUser(registryClient, trustee, ROLE_PARTICIPANT, 'Trustee')
 
     const { variationClient } = await setupExperiment(algorand, trustExperimentsClient, owner, {
       e1: E1,
@@ -48,8 +48,8 @@ describe('trust-game flow (integration)', () => {
       escrow: ESCROW,
     })
 
-    await enrollSubject(algorand, variationClient, investor)
-    await enrollSubject(algorand, variationClient, trustee)
+    await enrollParticipant(algorand, variationClient, investor)
+    await enrollParticipant(algorand, variationClient, trustee)
 
     const matchId = await ownerCreateMatch(algorand, variationClient, owner, investor, trustee)
 

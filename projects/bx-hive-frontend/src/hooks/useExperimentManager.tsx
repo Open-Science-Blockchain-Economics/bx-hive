@@ -130,7 +130,7 @@ export function ExperimentManagerProvider({ children }: { children: ReactNode })
               const sender = activeAddressRef.current
               if (!client || !algo || !sender) return
 
-              const map = await client.state.box.subjects.getMap()
+              const map = await client.state.box.participants.getMap()
               const unassigned = Array.from(map.entries())
                 .filter(([, info]) => info.assigned === 0)
                 .map(([address]) => address)

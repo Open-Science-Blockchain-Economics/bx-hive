@@ -85,7 +85,7 @@ export default function Home() {
             <PillBtn to="/join?role=experimenter">
               Join as Experimenter <ArrowRight className="size-4" />
             </PillBtn>
-            <PillBtn kind="secondary" to="/join?role=subject">
+            <PillBtn kind="secondary" to="/join?role=participant">
               Join as Participant <ArrowRight className="size-4" />
             </PillBtn>
           </div>
@@ -185,7 +185,7 @@ export default function Home() {
           <PillBtn to="/join?role=experimenter">
             Join as Experimenter <ArrowRight className="size-4" />
           </PillBtn>
-          <PillBtn kind="secondary" to="/join?role=subject">
+          <PillBtn kind="secondary" to="/join?role=participant">
             Join as Participant <ArrowRight className="size-4" />
           </PillBtn>
         </div>

@@ -2,8 +2,8 @@ import { useCallback } from 'react'
 import type { User as ContractUser } from '../contracts/BxHiveRegistry'
 import { useAlgorand } from './useAlgorand'
 
-// Role encoding matches contract constants: 0=experimenter, 1=subject
-const ROLE_MAP = { experimenter: 0, subject: 1 } as const
+// Role encoding matches contract constants: 0=experimenter, 1=participant
+const ROLE_MAP = { experimenter: 0, participant: 1 } as const
 
 export type { ContractUser }
 
@@ -19,7 +19,7 @@ export function useRegistry() {
    * Returns the on-chain user_id (uint32).
    */
   const registerUser = useCallback(
-    async (role: 'experimenter' | 'subject', name: string): Promise<number> => {
+    async (role: 'experimenter' | 'participant', name: string): Promise<number> => {
       if (!registryClient || !activeAddress) throw new Error('Wallet not connected')
       const result = await registryClient.send.registerUser({
         args: { role: ROLE_MAP[role], name },

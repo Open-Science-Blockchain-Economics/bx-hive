@@ -16,7 +16,7 @@ import ExperimenterDashboard from './pages/ExperimenterDashboard'
 import Home from './pages/Home'
 import Join from './pages/Join'
 import PlayExperiment from './pages/PlayExperiment'
-import SubjectDashboard from './pages/SubjectDashboard'
+import ParticipantDashboard from './pages/ParticipantDashboard'
 import TrustExperimentDetails from './pages/TrustExperimentDetails'
 
 const isLocalEnv = import.meta.env.VITE_ENVIRONMENT === 'local'
@@ -105,11 +105,11 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'dashboard/subject',
+        path: 'dashboard/participant',
         element: (
-          <ProtectedRoute requiredRole="subject">
+          <ProtectedRoute requiredRole="participant">
             <QueryBoundary>
-              <SubjectDashboard />
+              <ParticipantDashboard />
             </QueryBoundary>
           </ProtectedRoute>
         ),
@@ -127,7 +127,7 @@ export const router = createBrowserRouter([
       {
         path: 'play/:experimentId',
         element: (
-          <ProtectedRoute requiredRole="subject">
+          <ProtectedRoute requiredRole="participant">
             <QueryBoundary>
               <PlayExperiment />
             </QueryBoundary>

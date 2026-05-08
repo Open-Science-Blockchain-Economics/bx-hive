@@ -9,7 +9,7 @@ import { loraApplicationUrl } from '../../../utils/lora'
 interface VariationConfigCardProps {
   config: VariationConfig | undefined
   appId: bigint
-  subjectCount: number
+  participantCount: number
 }
 
 function LoraLink({ appId }: { appId: bigint }) {
@@ -57,18 +57,15 @@ function CapacityBar({ pct }: { pct: number }) {
       aria-valuemax={100}
       className="mt-1 h-1 w-full rounded-full bg-(--rule) overflow-hidden"
     >
-      <div
-        className="h-full bg-(--brand) motion-safe:transition-[width] motion-safe:duration-250"
-        style={{ width: `${clamped}%` }}
-      />
+      <div className="h-full bg-(--brand) motion-safe:transition-[width] motion-safe:duration-250" style={{ width: `${clamped}%` }} />
     </div>
   )
 }
 
-function CapacityUnit({ subjectCount, maxSubjects }: { subjectCount: number; maxSubjects: bigint }) {
-  if (maxSubjects === 0n) return <>unlimited</>
-  const max = Number(maxSubjects)
-  const pct = max > 0 ? (subjectCount / max) * 100 : 0
+function CapacityUnit({ participantCount, maxParticipants }: { participantCount: number; maxParticipants: bigint }) {
+  if (maxParticipants === 0n) return <>unlimited</>
+  const max = Number(maxParticipants)
+  const pct = max > 0 ? (participantCount / max) * 100 : 0
   return (
     <>
       <span>{`${Math.round(pct)}%`}</span>
@@ -77,7 +74,7 @@ function CapacityUnit({ subjectCount, maxSubjects }: { subjectCount: number; max
   )
 }
 
-export default function VariationConfigCard({ config, appId, subjectCount }: VariationConfigCardProps) {
+export default function VariationConfigCard({ config, appId, participantCount }: VariationConfigCardProps) {
   if (!config) {
     return (
       <div className="flex items-center gap-2">
@@ -88,9 +85,7 @@ export default function VariationConfigCard({ config, appId, subjectCount }: Var
   }
 
   const capacityValue =
-    config.maxSubjects === 0n
-      ? `${subjectCount} / ∞`
-      : `${subjectCount} / ${String(config.maxSubjects)}`
+    config.maxParticipants === 0n ? `${participantCount} / ∞` : `${participantCount} / ${String(config.maxParticipants)}`
 
   return (
     <div className="bg-muted rounded-sm p-3">
@@ -107,7 +102,7 @@ export default function VariationConfigCard({ config, appId, subjectCount }: Var
           <Metric
             label="Capacity"
             value={capacityValue}
-            unit={<CapacityUnit subjectCount={subjectCount} maxSubjects={config.maxSubjects} />}
+            unit={<CapacityUnit participantCount={participantCount} maxParticipants={config.maxParticipants} />}
           />
         </div>
       </div>

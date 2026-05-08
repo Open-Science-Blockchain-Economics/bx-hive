@@ -47,7 +47,7 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
       <Panel className="text-center py-10">
         <p className="text-sm text-neg mb-4">{error || 'Something went wrong'}</p>
         <Btn asChild variant="primary" size="sm">
-          <Link to="/dashboard/subject">Back to dashboard</Link>
+          <Link to="/dashboard/participant">Back to dashboard</Link>
         </Btn>
       </Panel>
     )
@@ -65,7 +65,7 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
         title={isInvestor ? 'Investor Instructions' : 'Trustee Instructions'}
         markdownContent={instructionsMarkdown}
       />
-      <PageHeader title="Trust Game" backTo="/dashboard/subject" backTooltip="Back to Subject Dashboard" />
+      <PageHeader title="Trust Game" backTo="/dashboard/participant" backTooltip="Back to Participant Dashboard" />
       <TrustExperiment
         appId={appId}
         match={data.match}

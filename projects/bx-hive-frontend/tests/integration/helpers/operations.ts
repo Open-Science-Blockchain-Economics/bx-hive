@@ -6,12 +6,12 @@ import { TrustVariationClient } from '../../../src/contracts/TrustVariation'
 // Role byte values mirror the convention in src/hooks/useRegistry.ts.
 // The contract stores role as an opaque uint8 — any value is accepted.
 export const ROLE_EXPERIMENTER = 0
-export const ROLE_SUBJECT = 1
+export const ROLE_PARTICIPANT = 1
 
 // Box-MBR amounts mirror those used by the production hooks
 // (see src/hooks/useTrustVariation.ts) so tests exercise the same
 // caller-pays-MBR pattern the app uses in production.
-const SUBJECT_BOX_MBR_MICROALGOS = 16_900
+const PARTICIPANT_BOX_MBR_MICROALGOS = 16_900
 const MATCH_BOX_MBR_MICROALGOS = 88_300
 
 export interface VariationParams {
@@ -59,7 +59,7 @@ export async function setupExperiment(
       multiplier: params.multiplier,
       unit: params.unit,
       assetId: 0n,
-      maxSubjects: 0n,
+      maxParticipants: 0n,
       escrowPayment,
     },
     coverAppCallInnerTransactionFees: true,
@@ -76,16 +76,16 @@ export async function setupExperiment(
 }
 
 /**
- * Self-enrolls a subject into a TrustVariation, paying the per-subject box MBR.
+ * Self-enrolls a participant into a TrustVariation, paying the per-participant box MBR.
  */
-export async function enrollSubject(algorand: AlgorandClient, variationClient: TrustVariationClient, subject: Address): Promise<void> {
+export async function enrollParticipant(algorand: AlgorandClient, variationClient: TrustVariationClient, participant: Address): Promise<void> {
   const mbrPayment = await algorand.createTransaction.payment({
-    sender: subject,
+    sender: participant,
     receiver: getApplicationAddress(variationClient.appId),
-    amount: AlgoAmount.MicroAlgos(SUBJECT_BOX_MBR_MICROALGOS),
+    amount: AlgoAmount.MicroAlgos(PARTICIPANT_BOX_MBR_MICROALGOS),
   })
   await variationClient.send.selfEnroll({
-    sender: subject,
+    sender: participant,
     args: { mbrPayment },
     coverAppCallInnerTransactionFees: true,
     maxFee: AlgoAmount.MicroAlgos(3_000),
@@ -115,9 +115,9 @@ export async function ownerCreateMatch(
 }
 
 /**
- * Registers an account as a Registry user. Subjects must be registered before
+ * Registers an account as a Registry user. Participants must be registered before
  * they can selfEnroll in a TrustVariation (the variation's selfEnroll makes an
- * inner call to Registry.get_user that asserts the subject exists).
+ * inner call to Registry.get_user that asserts the participant exists).
  */
 export async function registerUser(
   registryClient: BxHiveRegistryClient,

@@ -14,14 +14,7 @@ interface JoinableExperimentCardProps {
   onJoin: (expId: number, variations: VariationInfo[]) => void
 }
 
-export default function JoinableExperimentCard({
-  group,
-  variations,
-  joining,
-  joinError,
-  isFull,
-  onJoin,
-}: JoinableExperimentCardProps) {
+export default function JoinableExperimentCard({ group, variations, joining, joinError, isFull, onJoin }: JoinableExperimentCardProps) {
   const joinDisabled = isFull || joining !== null
   return (
     <Panel>
@@ -31,9 +24,7 @@ export default function JoinableExperimentCard({
           <p className="text-sm text-muted-foreground">
             Trust Game · Experiment ID: <span className="font-mono">{group.expId}</span>
           </p>
-          {isFull && (
-            <p className="text-xs text-muted-foreground mt-1">All variations are full.</p>
-          )}
+          {isFull && <p className="text-xs text-muted-foreground mt-1">All variations are full.</p>}
         </div>
         {isFull ? <Chip tone="warn">Full</Chip> : <Chip tone="info">Open</Chip>}
       </div>

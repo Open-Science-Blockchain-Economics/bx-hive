@@ -1,15 +1,15 @@
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
 import { test as base } from '@playwright/test'
 import { BxHiveRegistryClient } from '../../../src/contracts/BxHiveRegistry'
-import { ROLE_EXPERIMENTER, ROLE_SUBJECT, registerUser } from '../../integration/helpers/operations'
+import { ROLE_EXPERIMENTER, ROLE_PARTICIPANT, registerUser } from '../../integration/helpers/operations'
 import { createKmdAccount, type KmdAccount } from './accounts'
 import { readDeployedContracts } from './deployedContracts'
 
 interface Fixtures {
   algorand: AlgorandClient
   experimenter: KmdAccount
-  subject1: KmdAccount
-  subject2: KmdAccount
+  participant1: KmdAccount
+  participant2: KmdAccount
 }
 
 async function makeRegisteredAccount(algorand: AlgorandClient, role: number, name: string, fundAlgo: number): Promise<KmdAccount> {
@@ -34,11 +34,11 @@ export const test = base.extend<Fixtures>({
     // escrow per match) with headroom for fees and multiple matches.
     await use(await makeRegisteredAccount(algorand, ROLE_EXPERIMENTER, 'E2E Experimenter', 500))
   },
-  subject1: async ({ algorand }, use) => {
-    await use(await makeRegisteredAccount(algorand, ROLE_SUBJECT, 'E2E Subject 1', 5))
+  participant1: async ({ algorand }, use) => {
+    await use(await makeRegisteredAccount(algorand, ROLE_PARTICIPANT, 'E2E Participant 1', 5))
   },
-  subject2: async ({ algorand }, use) => {
-    await use(await makeRegisteredAccount(algorand, ROLE_SUBJECT, 'E2E Subject 2', 5))
+  participant2: async ({ algorand }, use) => {
+    await use(await makeRegisteredAccount(algorand, ROLE_PARTICIPANT, 'E2E Participant 2', 5))
   },
 })
 

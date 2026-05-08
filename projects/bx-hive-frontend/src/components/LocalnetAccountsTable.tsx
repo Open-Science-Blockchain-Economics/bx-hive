@@ -129,7 +129,7 @@ function AccountRow({
   onConnect: (address: string) => Promise<void>
 }) {
   const [name, setName] = useState(account.name)
-  const [role, setRole] = useState<LocalnetAccountRole>('subject')
+  const [role, setRole] = useState<LocalnetAccountRole>('participant')
   const [registering, setRegistering] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -216,7 +216,7 @@ function AccountRow({
                 onChange={(e) => setRole(e.target.value as LocalnetAccountRole)}
                 disabled={registering}
               >
-                <option value="subject">Subject</option>
+                <option value="participant">Participant</option>
                 <option value="experimenter">Experimenter</option>
               </select>
               <Btn variant="primary" size="sm" onClick={() => void handleRegister()} disabled={registering}>

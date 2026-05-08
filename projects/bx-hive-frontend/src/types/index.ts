@@ -1,4 +1,4 @@
-export type UserRole = 'experimenter' | 'subject'
+export type UserRole = 'experimenter' | 'participant'
 
 export interface User {
   /** Wallet address — the on-chain identity */
