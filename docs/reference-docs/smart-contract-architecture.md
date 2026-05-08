@@ -14,7 +14,7 @@ This document describes the smart contract architecture for migrating the bx-hiv
 ### 1.1 Goals
 
 - Store experiment data on-chain for transparency and auditability
-- Enable real ALGO/USDCa payouts to experiment subjects
+- Enable real ALGO/USDCa payouts to experiment participants
 - Provide financial isolation between experimenters
 - Support multiple game types (Trust Game, BRET, etc.)
 - Enable future features: risk profiling, privacy/anonymization
@@ -25,7 +25,7 @@ This document describes the smart contract architecture for migrating the bx-hiv
 |----------|--------|-----------|
 | Architecture | 3-Layer (Registry → Experiments → Variations) | Financial isolation between experimenters |
 | Language | Algorand Python (PuyaPy) | User preference, Python ecosystem |
-| Payouts | Real ALGO/USDCa transfers | Actual incentives for subjects |
+| Payouts | Real ALGO/USDCa transfers | Actual incentives for participants |
 | Escrow | Per-experiment contract | Isolation, clear ownership |
 | MVP Scope | Trust Game only | Focus, add BRET later |
 
@@ -182,7 +182,7 @@ classDiagram
 
 ### 3.3 Trust Variation Contract (Layer 3)
 
-**Purpose**: Single variation - configuration, subjects, matches, escrow, and payouts.
+**Purpose**: Single variation - configuration, participants, matches, escrow, and payouts.
 
 **Holds Money**: Yes (experimenter's escrow)
 
@@ -202,11 +202,11 @@ classDiagram
         +GlobalState asset_id: UInt64
         +GlobalState escrow_deposited: UInt64
         +GlobalState escrow_paid_out: UInt64
-        +BoxMap subjects: Address → SubjectInfo
+        +BoxMap participants: Address → ParticipantInfo
         +BoxMap matches: UInt32 → Match
         +BoxMap player_match: Address → UInt32
         +deposit_escrow(payment_txn)
-        +add_subjects(addresses)
+        +add_participants(addresses)
         +create_match(investor, trustee) UInt32
         +close_registration()
         +submit_investor_decision(match_id, investment)
@@ -215,7 +215,7 @@ classDiagram
         +get_match(match_id) Match
     }
 
-    class SubjectInfo {
+    class ParticipantInfo {
         +UInt8 enrolled
         +UInt8 assigned
     }
@@ -248,7 +248,7 @@ classDiagram
         COMPLETED = 2
     }
 
-    TrustVariation --> SubjectInfo
+    TrustVariation --> ParticipantInfo
     TrustVariation --> Match
     TrustVariation --> VariationStatus
     Match --> MatchPhase
@@ -260,11 +260,11 @@ classDiagram
 |--------|--------|-------------|
 | **Setup (Owner)** | | |
 | `deposit_escrow(payment_txn)` | Owner | Fund the variation escrow |
-| `add_subjects([addresses])` | Owner | Enroll subjects in variation |
-| `create_match(investor, trustee)` | Owner | Pair two subjects into a match |
-| `close_registration()` | Owner | Prevent new subjects |
+| `add_participants([addresses])` | Owner | Enroll participants in variation |
+| `create_match(investor, trustee)` | Owner | Pair two participants into a match |
+| `close_registration()` | Owner | Prevent new participants |
 | `withdraw_escrow()` | Owner | Reclaim unused escrow (when completed) |
-| **Participation (Subjects)** | | |
+| **Participation (Participants)** | | |
 | `submit_investor_decision(match_id, investment)` | Investor | Submit investment amount |
 | `submit_trustee_decision(match_id, return_amount)` | Trustee | Submit return, triggers payout |
 | **Queries (Public)** | | |
@@ -285,10 +285,10 @@ erDiagram
     REGISTRY ||--o{ EXPERIMENT_TEMPLATE : "tracks"
     EXPERIMENT_TEMPLATE ||--o{ EXPERIMENT_GROUP : "contains"
     EXPERIMENT_GROUP ||--o{ VARIATION : "spawns"
-    VARIATION ||--o{ SUBJECT : "enrolls"
+    VARIATION ||--o{ PARTICIPANT : "enrolls"
     VARIATION ||--o{ MATCH : "contains"
-    MATCH ||--|| SUBJECT : "investor"
-    MATCH ||--|| SUBJECT : "trustee"
+    MATCH ||--|| PARTICIPANT : "investor"
+    MATCH ||--|| PARTICIPANT : "trustee"
 
     USER {
         UInt32 user_id PK
@@ -327,7 +327,7 @@ erDiagram
         UInt64 escrow_paid_out
     }
 
-    SUBJECT {
+    PARTICIPANT {
         Address address PK
         UInt8 enrolled
         UInt8 assigned
@@ -357,7 +357,7 @@ erDiagram
 | Experiment Groups | Experiments | BoxMap | `e_` + exp_id |
 | Variations | Experiments | BoxMap | `v_` + exp_id + var_id |
 | Owner's Experiments | Experiments | BoxMap | `oe_` + address |
-| Subjects | Variation | BoxMap | `s_` + address |
+| Participants | Variation | BoxMap | `s_` + address |
 | Matches | Variation | BoxMap | `m_` + match_id |
 | Player Active Match | Variation | BoxMap | `pm_` + address |
 
@@ -419,9 +419,9 @@ EXPERIMENTER CREATES EXPERIMENT WITH VARIATIONS:
          │ deposit_escrow(300 ALGO) → Var #2
          │ deposit_escrow(400 ALGO) → Var #3
          │
-         │ 5. Add subjects & create matches
+         │ 5. Add participants & create matches
          │
-         │ add_subjects([Bob, Dan]) → Var #1
+         │ add_participants([Bob, Dan]) → Var #1
          │ create_match(Bob, Dan)   → Var #1
          ▼
       READY!
@@ -599,12 +599,12 @@ projects/bx-hive-contracts/tests/
 | Item | Size | Cost |
 |------|------|------|
 | Variation contract MBR | - | ~0.1 ALGO |
-| Subject enrollment (per subject) | ~50 bytes | ~0.045 ALGO |
+| Participant enrollment (per participant) | ~50 bytes | ~0.045 ALGO |
 | Match record (per match) | ~150 bytes | ~0.085 ALGO |
 
-**Example: 1 experiment with 3 variations, 20 subjects each, 10 matches each**
+**Example: 1 experiment with 3 variations, 20 participants each, 10 matches each**
 - Variation contracts: 3 × 0.1 = 0.3 ALGO
-- Subjects: 3 × 20 × 0.045 = 2.7 ALGO
+- Participants: 3 × 20 × 0.045 = 2.7 ALGO
 - Matches: 3 × 10 × 0.085 = 2.55 ALGO
 - **Total: ~5.55 ALGO** (plus escrow for payouts)
 
@@ -621,7 +621,7 @@ projects/bx-hive-contracts/tests/
 | Create experiment | Registered experimenters |
 | Create variation | Experiment owner only |
 | Deposit escrow | Variation owner only |
-| Add subjects | Variation owner only |
+| Add participants | Variation owner only |
 | Create matches | Variation owner only |
 | Submit decisions | Assigned player only |
 | Withdraw escrow | Variation owner (when complete) |
@@ -729,13 +729,13 @@ flowchart LR
 | Term | Definition |
 |------|------------|
 | **Experimenter** | User who creates and manages experiments |
-| **Subject** | User who participates in experiments |
+| **Participant** | User who participates in experiments |
 | **Experiment Group** | A named collection of variations created by an experimenter |
 | **Variation** | A specific experiment configuration with parameters and escrow |
-| **Match** | A single instance of gameplay between subjects |
-| **Escrow** | Funds deposited by experimenter for subject payouts |
+| **Match** | A single instance of gameplay between participants |
+| **Escrow** | Funds deposited by experimenter for participant payouts |
 | **Experiments Contract** | Layer 2 contract that manages experiment groups and spawns variations |
-| **Variation Contract** | Layer 3 contract holding game config, subjects, matches, and escrow |
+| **Variation Contract** | Layer 3 contract holding game config, participants, matches, and escrow |
 | **MBR** | Minimum Balance Requirement (Algorand) |
 | **ASA** | Algorand Standard Asset (e.g., USDCa) |
 

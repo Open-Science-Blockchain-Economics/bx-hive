@@ -3,7 +3,7 @@ title: Variations & Batches
 description: Running multiple experiment variations with batch mode and factorial combinations.
 ---
 
-Batch mode lets you run multiple treatment conditions within a single experiment. Instead of creating separate experiments for each parameter configuration, you define variations and bx-hive generates all combinations, deploys them together, and manages subject assignment across them.
+Batch mode lets you run multiple treatment conditions within a single experiment. Instead of creating separate experiments for each parameter configuration, you define variations and bx-hive generates all combinations, deploys them together, and manages participant assignment across them.
 
 ## Batch Mode
 
@@ -75,16 +75,16 @@ If the total is 10 or fewer variations, the Variation Builder shows a complete l
 
 ## Assignment Strategies
 
-When subjects enroll in a batch experiment, they are assigned to one of the variations. The assignment strategy determines how this distribution works.
+When participants enroll in a batch experiment, they are assigned to one of the variations. The assignment strategy determines how this distribution works.
 
 ### Round-robin
 
-The default strategy. Subjects are distributed evenly across all variations in a rotating fashion. If there are 3 variations and 9 subjects enroll, each variation gets 3 subjects.
+The default strategy. Participants are distributed evenly across all variations in a rotating fashion. If there are 3 variations and 9 participants enroll, each variation gets 3 participants.
 
 This is the recommended approach for most experiments, as it ensures balanced group sizes without requiring manual intervention.
 
 ### Max per variation
 
-You can set a cap on how many matches (pairs) each variation can have. Once a variation reaches its maximum, no additional subjects are assigned to it. This applies uniformly across all variations in the batch.
+You can set a cap on how many matches (pairs) each variation can have. Once a variation reaches its maximum, no additional participants are assigned to it. This applies uniformly across all variations in the batch.
 
 For Trust Game experiments, the max matches setting is required — each match consists of one Investor and one Trustee.

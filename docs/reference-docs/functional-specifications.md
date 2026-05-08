@@ -14,7 +14,7 @@
 
 ## 2. User Roles
 
-### Subject
+### Participant
 
 Experiment participants who make decisions and earn payouts.
 
@@ -33,7 +33,7 @@ Researchers who design and run experiments.
 
 - Create experiments from templates
 - Configure parameters (endowments, multipliers)
-- Create sessions and assign subjects
+- Create sessions and assign participants
 - Monitor session progress
 - View results
 
@@ -55,7 +55,7 @@ Platform administrators (limited implementation).
 **FR-ACC-001: Account Creation**
 
 - Generate UUID-based accounts
-- Select role: Subject, Experimenter, or Admin
+- Select role: Participant, Experimenter, or Admin
 - Store in IndexedDB (`btree_accounts`)
 - Set active account in sessionStorage
 
@@ -98,8 +98,8 @@ Platform administrators (limited implementation).
 **FR-SES-001: Create Session**
 
 - Input session name
-- Add subjects (manual entry or bulk paste)
-- Must have even number of subjects
+- Add participants (manual entry or bulk paste)
+- Must have even number of participants
 - Auto-pair: [0,1], [2,3], [4,5], etc.
 - S1 (even index) = Investor, S2 (odd) = Trustee
 
@@ -114,7 +114,7 @@ Platform administrators (limited implementation).
 
 ---
 
-### 3.4 Subject Participation
+### 3.4 Participant Participation
 
 **FR-SUB-001: View Assigned Sessions**
 
@@ -177,7 +177,7 @@ Platform administrators (limited implementation).
 ```typescript
 {
   accountAddress: string;           // UUID
-  userType: 'subject' | 'experimenter' | 'admin';
+  userType: 'participant' | 'experimenter' | 'admin';
   createdAt: number;
   lastLogin: number;
   displayName?: string;
@@ -242,14 +242,14 @@ Platform administrators (limited implementation).
   id: string; // UUID
   sessionId: string;
   pairId: string;
-  subjectId: string;
+  participantId: string;
   role: "s1" | "s2";
   decision: number;
   timestamp: number;
 }
 ```
 
-### Subject
+### Participant
 
 ```typescript
 {
@@ -274,8 +274,8 @@ Platform administrators (limited implementation).
 
 ### Pairing Rules
 
-- Sessions require even number of subjects (min 2)
-- Sequential pairing: subjects[0,1], [2,3], [4,5]
+- Sessions require even number of participants (min 2)
+- Sequential pairing: participants[0,1], [2,3], [4,5]
 - Even index = S1 (Investor)
 - Odd index = S2 (Trustee)
 
@@ -300,10 +300,10 @@ waiting_s1 → waiting_s2 → completed
 - `/docs` - Documentation
 - `/status` - System status
 
-### Subject
+### Participant
 
-- `/dashboard/subject` - Dashboard
-- `/subject/*` - Registration, play
+- `/dashboard/participant` - Dashboard
+- `/participant/*` - Registration, play
 
 ### Experimenter
 

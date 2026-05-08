@@ -82,7 +82,7 @@ cd projects/bx-hive-frontend
 pnpm seed:localnet
 ```
 
-This creates test experimenter and subject accounts on LocalNet with funded wallets, so you can log in and run experiments without setting up accounts manually.
+This creates test experimenter and participant accounts on LocalNet with funded wallets, so you can log in and run experiments without setting up accounts manually.
 
 ---
 

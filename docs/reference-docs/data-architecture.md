@@ -11,7 +11,7 @@
 The bTree platform uses **IndexedDB** for client-side data persistence. The architecture consists of two separate databases with distinct purposes:
 
 1. **`btree_accounts`** - User account management
-2. **`btree_experiments`** - Experimental data (experiments, sessions, decisions, subjects)
+2. **`btree_experiments`** - Experimental data (experiments, sessions, decisions, participants)
 
 ---
 
@@ -28,7 +28,7 @@ graph TB
             EXP[experiments Store]
             SESS[sessions Store]
             DEC[decisions Store]
-            SUB[subjects Store]
+            SUB[participants Store]
         end
 
         SS[sessionStorage<br/>Active Account]
@@ -41,7 +41,7 @@ graph TB
     SESS -->|pairs[].s1_id| SUB
     SESS -->|pairs[].s2_id| SUB
     DEC -->|sessionId| SESS
-    DEC -->|subjectId| SUB
+    DEC -->|participantId| SUB
 
     style DB1 fill:#e1f5ff
     style DB2 fill:#fff4e1
@@ -63,7 +63,7 @@ graph TB
 | Field | Type | Key | Required | Description |
 |-------|------|-----|----------|-------------|
 | accountAddress | string | PRIMARY | ✓ | UUID, unique identifier |
-| userType | enum | - | ✓ | 'subject' \| 'experimenter' \| 'admin' |
+| userType | enum | - | ✓ | 'participant' \| 'experimenter' \| 'admin' |
 | createdAt | number | - | ✓ | Unix timestamp (ms) |
 | lastLogin | number | - | ✓ | Unix timestamp (ms) |
 | displayName | string | - | - | Optional alias/name |
@@ -85,7 +85,7 @@ graph TB
 
 ### 3.2 Database: `btree_experiments`
 
-**Purpose:** Store all experimental data including experiments, sessions, decisions, and subjects.
+**Purpose:** Store all experimental data including experiments, sessions, decisions, and participants.
 
 **Version:** 1
 
@@ -154,8 +154,8 @@ graph TB
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | pairId | string | ✓ | UUID |
-| s1_id | string | ✓ | Investor subject ID |
-| s2_id | string | ✓ | Trustee subject ID |
+| s1_id | string | ✓ | Investor participant ID |
+| s2_id | string | ✓ | Trustee participant ID |
 | phase | enum | ✓ | 'waiting_s1' \| 'waiting_s2' \| 'completed' |
 | s_invested | number \| null | ✓ | Investment amount (µALGO) |
 | r_returned | number \| null | ✓ | Return amount (µALGO) |
@@ -180,8 +180,8 @@ graph TB
   "pairs": [
     {
       "pairId": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
-      "s1_id": "subject-uuid-001",
-      "s2_id": "subject-uuid-002",
+      "s1_id": "participant-uuid-001",
+      "s2_id": "participant-uuid-002",
       "phase": "waiting_s2",
       "s_invested": 500000,
       "r_returned": null,
@@ -191,8 +191,8 @@ graph TB
     },
     {
       "pairId": "a9b8c7d6-e5f4-3210-9876-543210fedcba",
-      "s1_id": "subject-uuid-003",
-      "s2_id": "subject-uuid-004",
+      "s1_id": "participant-uuid-003",
+      "s2_id": "participant-uuid-004",
       "phase": "completed",
       "s_invested": 700000,
       "r_returned": 1200000,
@@ -213,7 +213,7 @@ graph TB
 | id | string | PRIMARY | - | ✓ | UUID |
 | sessionId | string | - | ✓ | ✓ | FK to sessions.id |
 | pairId | string | - | ✓ | ✓ | FK to sessions.pairs[].pairId |
-| subjectId | string | - | ✓ | ✓ | FK to subjects.id |
+| participantId | string | - | ✓ | ✓ | FK to participants.id |
 | role | enum | - | - | ✓ | 's1' \| 's2' |
 | decision | number | - | - | ✓ | Amount (µALGO) |
 | timestamp | number | - | - | ✓ | Unix timestamp (ms) |
@@ -221,7 +221,7 @@ graph TB
 **Indexes:**
 - `sessionId` (decisions by session)
 - `pairId` (decisions by pair)
-- `subjectId` (decisions by subject)
+- `participantId` (decisions by participant)
 
 **Example Record:**
 ```json
@@ -229,7 +229,7 @@ graph TB
   "id": "dec12345-6789-abcd-ef01-234567890abc",
   "sessionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "pairId": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
-  "subjectId": "subject-uuid-001",
+  "participantId": "participant-uuid-001",
   "role": "s1",
   "decision": 500000,
   "timestamp": 1699651230000
@@ -238,7 +238,7 @@ graph TB
 
 ---
 
-#### Store: `subjects`
+#### Store: `participants`
 
 | Field | Type | Key | Indexed | Required | Description |
 |-------|------|-----|---------|----------|-------------|
@@ -256,8 +256,8 @@ graph TB
 **Example Record:**
 ```json
 {
-  "id": "subject-uuid-001",
-  "account": "subject-uuid-001",
+  "id": "participant-uuid-001",
+  "account": "participant-uuid-001",
   "alias": "Alex Martinez",
   "createdAt": 1699564800000,
   "lastParticipated": 1699651230000
@@ -272,17 +272,17 @@ graph TB
 erDiagram
     USER_ACCOUNTS ||--o{ EXPERIMENTS : "creates"
     USER_ACCOUNTS ||--o{ SESSIONS : "creates"
-    USER_ACCOUNTS ||--o{ SUBJECTS : "registers as"
+    USER_ACCOUNTS ||--o{ PARTICIPANTS : "registers as"
 
     EXPERIMENTS ||--o{ SESSIONS : "contains"
 
     SESSIONS ||--o{ SESSION_PAIRS : "contains"
     SESSIONS ||--o{ DECISIONS : "records"
 
-    SESSION_PAIRS }o--|| SUBJECTS : "s1_id"
-    SESSION_PAIRS }o--|| SUBJECTS : "s2_id"
+    SESSION_PAIRS }o--|| PARTICIPANTS : "s1_id"
+    SESSION_PAIRS }o--|| PARTICIPANTS : "s2_id"
 
-    SUBJECTS ||--o{ DECISIONS : "makes"
+    PARTICIPANTS ||--o{ DECISIONS : "makes"
 
     USER_ACCOUNTS {
         string accountAddress PK
@@ -330,13 +330,13 @@ erDiagram
         string id PK
         string sessionId FK
         string pairId FK
-        string subjectId FK
+        string participantId FK
         enum role
         number decision
         number timestamp
     }
 
-    SUBJECTS {
+    PARTICIPANTS {
         string id PK
         string account
         string alias
@@ -377,18 +377,18 @@ sequenceDiagram
 sequenceDiagram
     actor E as Experimenter
     participant UI as SessionCreator
-    participant DB as IndexedDB (sessions, subjects)
+    participant DB as IndexedDB (sessions, participants)
 
     E->>UI: Enters session name
-    E->>UI: Adds subject IDs (bulk or manual)
+    E->>UI: Adds participant IDs (bulk or manual)
     UI->>UI: Validates even count (≥2)
     UI->>UI: Creates sequential pairs
     Note over UI: [0,1], [2,3], [4,5]...
     UI->>UI: Generates UUIDs (session, pairs)
     E->>UI: Clicks "Create Session"
 
-    loop For each subject
-        UI->>DB: registerSubject(id, alias)
+    loop For each participant
+        UI->>DB: registerParticipant(id, alias)
         Note over DB: Auto-register if not exists
     end
 
@@ -399,7 +399,7 @@ sequenceDiagram
 
 ---
 
-### 5.3 Subject Gameplay Flow
+### 5.3 Participant Gameplay Flow
 
 ```mermaid
 sequenceDiagram
@@ -422,7 +422,7 @@ sequenceDiagram
     Note over S1,DB: Phase: waiting_s2
 
     S2->>UI: Polls every 3s
-    UI->>DB: findSubjectPair()
+    UI->>DB: findParticipantPair()
     DB-->>UI: pair.phase = waiting_s2
     UI-->>S2: Shows TrusteeInterface
 
@@ -440,7 +440,7 @@ sequenceDiagram
     Note over S1,DB: Phase: completed
 
     S1->>UI: Polls every 3s
-    UI->>DB: findSubjectPair()
+    UI->>DB: findParticipantPair()
     DB-->>UI: pair.phase = completed
     UI-->>S1: Shows ResultsDisplay
 ```
@@ -457,10 +457,10 @@ graph LR
     C --> D[ExperimentCard List]
 ```
 
-#### Pattern 2: Subject Views Assigned Sessions
+#### Pattern 2: Participant Views Assigned Sessions
 ```mermaid
 graph LR
-    A[SubjectDashboard] -->|subjectId| B[sessions store]
+    A[ParticipantDashboard] -->|participantId| B[sessions store]
     B -->|Scan all sessions| C[Filter pairs array]
     C -->|Match s1_id or s2_id| D[Assigned Sessions]
     D --> E[Session List UI]
@@ -558,8 +558,8 @@ stateDiagram-v2
 | Get experiment details | experiments | Get by key | Primary key | < 10ms |
 | List experiment sessions | sessions | Get all + filter | experimentId | < 50ms |
 | Get session details | sessions | Get by key | Primary key | < 10ms |
-| Find subject's pair | sessions | Get by key + scan | Primary key | < 30ms |
-| List subject sessions | sessions | Get all + scan | None | < 100ms |
+| Find participant's pair | sessions | Get by key + scan | Primary key | < 30ms |
+| List participant sessions | sessions | Get all + scan | None | < 100ms |
 | Get pair decisions | decisions | Get all + filter | pairId | < 50ms |
 
 ---
@@ -570,7 +570,7 @@ stateDiagram-v2
 |-----------|-------|------|-------------------|----------------|
 | Create account | user_accounts | Insert | None | < 20ms |
 | Create experiment | experiments | Insert | None | < 20ms |
-| Create session | sessions, subjects | Insert | Register subjects | < 50ms |
+| Create session | sessions, participants | Insert | Register participants | < 50ms |
 | Submit S1 decision | decisions, sessions | Insert + Update | Update pair in session | < 100ms |
 | Submit S2 decision | decisions, sessions | Insert + Update | Update pair + check session | < 150ms |
 
@@ -593,9 +593,9 @@ stateDiagram-v2
 
 | Rule | Validation | Error Message |
 |------|------------|---------------|
-| Subject count | even, ≥ 2 | "Must have even number of subjects (minimum 2)" |
-| Unique subjects | No duplicates | "Cannot assign same subject multiple times" |
-| Valid UUIDs | Regex match UUID | "Invalid subject ID format" |
+| Participant count | even, ≥ 2 | "Must have even number of participants (minimum 2)" |
+| Unique participants | No duplicates | "Cannot assign same participant multiple times" |
+| Valid UUIDs | Regex match UUID | "Invalid participant ID format" |
 
 ---
 
@@ -618,10 +618,10 @@ stateDiagram-v2
 | experiments.createdBy → user_accounts.accountAddress | Must exist | Client-side check |
 | sessions.experimentId → experiments.id | Must exist | Client-side check |
 | sessions.createdBy → user_accounts.accountAddress | Must exist | Client-side check |
-| sessions.pairs[].s1_id → subjects.id | Auto-create if missing | Auto-registration |
-| sessions.pairs[].s2_id → subjects.id | Auto-create if missing | Auto-registration |
+| sessions.pairs[].s1_id → participants.id | Auto-create if missing | Auto-registration |
+| sessions.pairs[].s2_id → participants.id | Auto-create if missing | Auto-registration |
 | decisions.sessionId → sessions.id | Must exist | Client-side check |
-| decisions.subjectId → subjects.id | Must exist | Client-side check |
+| decisions.participantId → participants.id | Must exist | Client-side check |
 
 ---
 
@@ -645,21 +645,21 @@ stateDiagram-v2
 | experiments | 300 bytes | Includes parameters object |
 | sessions | 500 bytes + (150 × pairs) | Grows with pair count |
 | decisions | 200 bytes | Simple decision record |
-| subjects | 150 bytes | Minimal subject info |
+| participants | 150 bytes | Minimal participant info |
 
 ---
 
 ### 10.2 Capacity Estimates
 
-**Scenario: 10 Experimenters, 100 Subjects, 50 Experiments, 200 Sessions**
+**Scenario: 10 Experimenters, 100 Participants, 50 Experiments, 200 Sessions**
 
 | Store | Record Count | Total Size | Notes |
 |-------|--------------|------------|-------|
-| user_accounts | 110 | 16.5 KB | 10 experimenters + 100 subjects |
+| user_accounts | 110 | 16.5 KB | 10 experimenters + 100 participants |
 | experiments | 50 | 15 KB | |
 | sessions | 200 | 700 KB | Avg 20 pairs/session = 4,000 pairs |
 | decisions | 8,000 | 1.6 MB | 2 decisions per pair |
-| subjects | 100 | 15 KB | Auto-registered |
+| participants | 100 | 15 KB | Auto-registered |
 | **TOTAL** | | **~2.35 MB** | Well within browser limits |
 
 **Browser IndexedDB Quota:** Typically 50% of available disk space, minimum ~10 MB
@@ -711,9 +711,9 @@ restoreDatabase(dbName: string, data: Blob): Promise<void>
 - `sessions.status` - Low selectivity, useful for filtering
 - `decisions.sessionId` - High selectivity, critical for analysis
 - `decisions.pairId` - High selectivity, critical for pair lookup
-- `decisions.subjectId` - High selectivity, useful for subject history
-- `subjects.createdAt` - Range queries for recent subjects
-- `subjects.lastParticipated` - Range queries for active subjects
+- `decisions.participantId` - High selectivity, useful for participant history
+- `participants.createdAt` - Range queries for recent participants
+- `participants.lastParticipated` - Range queries for active participants
 
 ---
 
@@ -726,7 +726,7 @@ restoreDatabase(dbName: string, data: Blob): Promise<void>
 - ✅ Cache frequently accessed data in component state
 
 **Avoid:**
-- ❌ Full table scans (e.g., finding subject sessions requires scan)
+- ❌ Full table scans (e.g., finding participant sessions requires scan)
 - ❌ Complex filtering on non-indexed fields
 - ❌ Frequent writes during reads (use batching)
 - ❌ Large embedded arrays (pairs array can grow)
@@ -742,7 +742,7 @@ restoreDatabase(dbName: string, data: Blob): Promise<void>
 **Potential Migrations:**
 - Add `experiment.tags` for categorization
 - Add `session.scheduledStart` for scheduling
-- Add `subjects.email` for notifications
+- Add `participants.email` for notifications
 - Normalize `sessions.pairs` into separate store for scalability
 - Add `treatments` table for treatment variations
 

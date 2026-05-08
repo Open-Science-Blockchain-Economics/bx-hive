@@ -45,7 +45,7 @@ A link to the [Lora block explorer](https://lora.algokit.io) is included next to
 The overview strip at the top of the page aggregates results across all variations:
 
 - **Total Matches** shows a circular progress bar indicating what percentage of matches are completed vs still in play.
-- **Subjects** shows how many are actively playing vs waiting for a match.
+- **Participants** shows how many are actively playing vs waiting for a match.
 
 This gives you a quick read on overall experiment progress without switching between variation tabs.
 
@@ -60,4 +60,4 @@ For completed matches, the payouts reflect the outcome of the trust game:
 
 All transactions are recorded on the Algorand blockchain. You can verify any match by clicking the Lora link on the variation config card, which opens the application's on-chain state in the block explorer.
 
-Addresses in the table are truncated for readability. Hover or click to see the full wallet address when you need to cross-reference with subject enrollment records.
+Addresses in the table are truncated for readability. Hover or click to see the full wallet address when you need to cross-reference with participant enrollment records.
