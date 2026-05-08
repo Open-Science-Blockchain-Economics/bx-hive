@@ -26,7 +26,7 @@ export default function VariationPanel({ variation, subjects, matches, config, o
 
   return (
     <Panel className="flex flex-col gap-6">
-      <VariationConfigCard config={config} appId={variation.appId} />
+      <VariationConfigCard config={config} appId={variation.appId} subjectCount={subjects.length} />
       <SubjectsTable subjects={subjects} />
       {config && config.status === STATUS_ACTIVE && (
         <CreateMatchForm appId={variation.appId} unassigned={unassigned} onCreateMatch={onCreateMatch} />
