@@ -22,6 +22,8 @@ interface OnChainMatchView {
 interface OnChainExperimentView {
   group: ExperimentGroup
   variations: VariationInfo[]
+  slots: VariationSlot[]
+  isFull: boolean
   enrolled: boolean
   hasMatch: boolean
 }
@@ -34,7 +36,7 @@ interface OnChainData {
 export default function SubjectDashboard() {
   const { activeAddress } = useAlgorand()
   const { listExperiments, listVariations } = useTrustExperiments()
-  const { getPlayerMatch, selfEnroll, getSubjectCount, isSubjectEnrolled } = useTrustVariation()
+  const { getPlayerMatch, selfEnroll, getSubjectCount, getConfig, isSubjectEnrolled } = useTrustVariation()
   const queryClient = useQueryClient()
 
   const { data: onChainData } = useQuery<OnChainData>({
@@ -71,7 +73,22 @@ export default function SubjectDashboard() {
           }
         }
 
-        expViews.push({ group, variations: vars, enrolled, hasMatch })
+        const slots: VariationSlot[] = await Promise.all(
+          vars.map(async (v) => {
+            const [count, config] = await Promise.all([
+              getSubjectCount(v.appId),
+              getConfig(v.appId),
+            ])
+            return {
+              appId: v.appId,
+              subjectCount: count,
+              maxSubjects: Number(config.maxSubjects),
+            }
+          }),
+        )
+        const isFull = pickVariationRoundRobin(slots) === null
+
+        expViews.push({ group, variations: vars, slots, isFull, enrolled, hasMatch })
       }
 
       return { matchViews, expViews }
@@ -91,13 +108,7 @@ export default function SubjectDashboard() {
   })
 
   const joinMutation = useMutation({
-    mutationFn: async ({ variations }: { expId: number; variations: VariationInfo[] }) => {
-      const slots: VariationSlot[] = await Promise.all(
-        variations.map(async (v) => {
-          const count = await getSubjectCount(v.appId)
-          return { appId: v.appId, subjectCount: count, maxSubjects: 0 }
-        }),
-      )
+    mutationFn: async ({ slots }: { expId: number; slots: VariationSlot[] }) => {
       const chosenAppId = pickVariationRoundRobin(slots)
       if (!chosenAppId) throw new Error('All variations are full')
       await selfEnroll(chosenAppId)
@@ -116,6 +127,7 @@ export default function SubjectDashboard() {
     const msg = joinMutation.error?.message ?? 'Failed to join experiment'
     if (msg.includes('Already enrolled')) return 'You are already enrolled in this experiment'
     if (msg.includes('User not found')) return 'Please register your account first (Sign Up page)'
+    if (msg.includes('Full')) return 'This experiment just filled up — please refresh.'
     return msg
   }
 
@@ -142,14 +154,15 @@ export default function SubjectDashboard() {
           <section>
             <Rule label="Trust Game — Available" className="mb-4" />
             <div className="grid gap-3">
-              {joinableExperiments.map(({ group, variations }) => (
+              {joinableExperiments.map(({ group, variations, slots, isFull }) => (
                 <JoinableExperimentCard
                   key={group.expId}
                   group={group}
                   variations={variations}
+                  isFull={isFull}
                   joining={joinMutation.isPending ? (joinMutation.variables?.expId ?? null) : null}
                   joinError={getJoinError(group.expId)}
-                  onJoin={(expId, vars) => joinMutation.mutate({ expId, variations: vars })}
+                  onJoin={(expId) => joinMutation.mutate({ expId, slots })}
                 />
               ))}
             </div>
