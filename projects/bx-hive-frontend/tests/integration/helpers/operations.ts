@@ -78,7 +78,11 @@ export async function setupExperiment(
 /**
  * Self-enrolls a participant into a TrustVariation, paying the per-participant box MBR.
  */
-export async function enrollParticipant(algorand: AlgorandClient, variationClient: TrustVariationClient, participant: Address): Promise<void> {
+export async function enrollParticipant(
+  algorand: AlgorandClient,
+  variationClient: TrustVariationClient,
+  participant: Address,
+): Promise<void> {
   const mbrPayment = await algorand.createTransaction.payment({
     sender: participant,
     receiver: getApplicationAddress(variationClient.appId),
