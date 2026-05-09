@@ -24,6 +24,7 @@ async function makeRegisteredAccount(algorand: AlgorandClient, role: number, nam
 }
 
 export const test = base.extend<Fixtures>({
+  // eslint-disable-next-line no-empty-pattern -- Playwright fixture API requires {} for fixtures with no upstream deps
   algorand: async ({}, use) => {
     // E2E tests always run against the local AlgoKit localnet — defaults match
     // localhost:4001 (algod), :8980 (indexer), :4002 (kmd) with standard tokens.
