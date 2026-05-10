@@ -42,6 +42,10 @@ jobs:
       - uses: ./.github/actions/setup-frontend
       - uses: ./.github/actions/setup-localnet
 
+      - name: Seed .env from template
+        working-directory: projects/bx-hive-frontend
+        run: cp .env.template .env
+
       - name: Install Playwright browsers
         working-directory: projects/bx-hive-frontend
         run: pnpm exec playwright install --with-deps chromium
