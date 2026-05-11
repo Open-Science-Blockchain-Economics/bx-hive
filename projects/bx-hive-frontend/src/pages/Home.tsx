@@ -35,8 +35,7 @@ export default function Home() {
             What is <span className="font-display italic font-normal text-primary">bxHive</span>?
           </h2>
           <p className="font-ui text-lg leading-[1.55] text-ink-2">
-            A platform for verifiable human experiments that uses Algorand smart contracts to automate research and transparently manage
-            payouts.
+            A platform for verifiable human experiments that uses smart contracts to automate research and transparently manage payouts.
           </p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-[1240px] mx-auto">
@@ -113,16 +112,13 @@ export default function Home() {
       {/* Final CTA */}
       <section className="px-6 md:px-12 lg:px-20 py-16 md:py-30 text-center">
         <h3 className="font-ui font-medium text-[40px] md:text-[64px] leading-none tracking-[-0.025em]">
-          Bring your hypothesis.
+          The lab is open.
           <br />
-          <span className="font-display italic font-normal text-primary">We'll handle the ledger.</span>
+          <span className="font-display italic font-normal text-primary">Take a seat.</span>
         </h3>
         <div className="mt-9 inline-flex flex-wrap justify-center gap-3">
-          <PillBtn to="/join?role=experimenter">
-            Join as Experimenter <ArrowRight className="size-4" />
-          </PillBtn>
-          <PillBtn kind="secondary" to="/join?role=participant">
-            Join as Participant <ArrowRight className="size-4" />
+          <PillBtn to="/join?role=participant">
+            Join <ArrowRight className="size-4" />
           </PillBtn>
         </div>
       </section>
