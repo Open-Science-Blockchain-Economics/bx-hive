@@ -7,10 +7,10 @@ interface RoleCardProps {
   body: string
   icon: 'about' | 'exp' | 'part'
   cta: string
-  href?: string
+  to?: string
 }
 
-export default function RoleCard({ title, body, icon, cta, href }: RoleCardProps) {
+export default function RoleCard({ title, body, icon, cta, to }: RoleCardProps) {
   const Icon = icon === 'about' ? Compass : icon === 'exp' ? FlaskConical : User
   return (
     <div className="bg-card border border-border rounded-2xl p-8 flex flex-col gap-3">
@@ -22,7 +22,7 @@ export default function RoleCard({ title, body, icon, cta, href }: RoleCardProps
       </div>
       <p className="font-ui text-[15px] leading-[1.5] text-ink-2 m-0">{body}</p>
       <div className="mt-2">
-        <PillBtn size="sm" kind="ghost" className="-ml-4" to={href}>
+        <PillBtn size="sm" kind="ghost" className="-ml-4" to={to}>
           {cta} <ArrowRight className="size-3.5" />
         </PillBtn>
       </div>
