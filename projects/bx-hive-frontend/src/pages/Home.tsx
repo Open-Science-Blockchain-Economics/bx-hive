@@ -10,20 +10,19 @@ export default function Home() {
       <section className="px-6 md:px-12 lg:px-20 pt-16 pb-14 md:pt-30 md:pb-24 border-b border-border">
         <div className="max-w-[1240px] mx-auto">
           <h1 className="font-ui font-medium text-[44px] md:text-[64px] lg:text-[88px] leading-none tracking-[-0.025em] max-w-[1180px]">
-            Run economic experiments
+            Join a study.
             <br />
-            <span className="font-display italic font-normal text-primary tracking-[-0.02em]">with verifiable</span> participants.
+            Get rewarded.
+            <br />
+            Advance <span className="font-display italic font-normal text-primary tracking-[-0.02em]">open science</span>.
           </h1>
           <p className="font-ui text-lg leading-[1.55] mt-7 max-w-[660px] text-ink-2">
-            bxHive is a research instrument for designing, deploying and analyzing incentivized economic games. Participants join with a
-            wallet, decisions are settled on-chain, and your dataset is reproducible by construction.
+            bxHive is a platform for verifiable behavioral research. Join incentivized studies, contribute to open science, get rewarded —
+            every decision lives on a public blockchain, so each study stays reproducible by construction.
           </p>
           <div className="mt-9 flex flex-wrap items-center gap-3">
-            <PillBtn to="/join?role=experimenter">
-              Join as Experimenter <ArrowRight className="size-4" />
-            </PillBtn>
-            <PillBtn kind="secondary" to="/join?role=participant">
-              Join as Participant <ArrowRight className="size-4" />
+            <PillBtn to="/join?role=participant">
+              Join <ArrowRight className="size-4" />
             </PillBtn>
           </div>
         </div>
