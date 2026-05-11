@@ -7,6 +7,7 @@ function RootErrorElement() {
   const error = useRouteError()
   return <RouteErrorFallback error={error} resetErrorBoundary={() => window.location.reload()} />
 }
+import About from './pages/About'
 import BatchDetails from './pages/BatchDetails'
 import CreateExperiment from './pages/CreateExperiment'
 import DesignSystemShowcase from './pages/DesignSystemShowcase'
@@ -62,6 +63,14 @@ export const router = createBrowserRouter([
         element: (
           <QueryBoundary>
             <Join />
+          </QueryBoundary>
+        ),
+      },
+      {
+        path: 'about',
+        element: (
+          <QueryBoundary>
+            <About />
           </QueryBoundary>
         ),
       },

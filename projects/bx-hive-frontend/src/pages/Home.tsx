@@ -1,7 +1,7 @@
 import { ArrowRight } from 'lucide-react'
 
+import ProtocolStages from '@/components/landing/ProtocolStages'
 import { PillBtn, RoleCard } from '@/components/ui'
-import { cn } from '@/lib/utils'
 
 export default function Home() {
   return (
@@ -44,6 +44,7 @@ export default function Home() {
             icon="about"
             body="What bxHive is and why it exists — open science, public blockchains, and the bigger picture."
             cta="Learn more"
+            to="/about"
           />
           <RoleCard
             title="Experimenters"
@@ -72,28 +73,7 @@ export default function Home() {
             </h2>
             <p className="font-ui text-[15px] text-muted-foreground mt-4">Four stages, fully reproducible from the on-chain manifest.</p>
           </div>
-          <ol className="list-none p-0 m-0">
-            {(
-              [
-                ['i.', 'Specify', 'Choose a template, fix base parameters, declare your variations.'],
-                ['ii.', 'Recruit', 'Participants join with an Algorand wallet; assignment is randomized and logged.'],
-                ['iii.', 'Run', 'Matches play to completion; every decision is timestamped on-chain.'],
-                ['iv.', 'Settle', 'Payouts execute automatically. Export the run as CSV or signed JSON.'],
-              ] as const
-            ).map(([n, h, d], i, arr) => (
-              <li
-                key={n}
-                className={cn(
-                  'grid grid-cols-1 md:grid-cols-[60px_240px_1fr] gap-1 md:gap-0 py-5 md:py-7 md:items-baseline border-t border-border',
-                  i === arr.length - 1 && 'border-b border-border',
-                )}
-              >
-                <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">{n}</span>
-                <span className="font-display italic font-normal text-2xl md:text-3xl tracking-[-0.015em] text-foreground">{h}</span>
-                <span className="font-ui text-[17px] leading-[1.55] text-ink-2">{d}</span>
-              </li>
-            ))}
-          </ol>
+          <ProtocolStages />
         </div>
       </section>
 

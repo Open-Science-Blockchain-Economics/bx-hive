@@ -7,7 +7,7 @@ import { ExperimentManagerProvider } from '../../hooks/useExperimentManager'
 import Footer from './Footer'
 import TopBar from './TopBar'
 
-const FULL_BLEED_PATHS = new Set(['/', '/for-participants'])
+const FULL_BLEED_PATHS = new Set(['/', '/for-participants', '/about'])
 
 export default function Layout() {
   const fullBleed = FULL_BLEED_PATHS.has(useLocation().pathname)
