@@ -7,12 +7,15 @@ function RootErrorElement() {
   const error = useRouteError()
   return <RouteErrorFallback error={error} resetErrorBoundary={() => window.location.reload()} />
 }
+import About from './pages/About'
 import BatchDetails from './pages/BatchDetails'
 import CreateExperiment from './pages/CreateExperiment'
 import DesignSystemShowcase from './pages/DesignSystemShowcase'
 import DevLocalnet from './pages/DevLocalnet'
 import ExperimentDetails from './pages/ExperimentDetails'
 import ExperimenterDashboard from './pages/ExperimenterDashboard'
+import ForExperimenters from './pages/ForExperimenters'
+import ForParticipants from './pages/ForParticipants'
 import Home from './pages/Home'
 import Join from './pages/Join'
 import PlayExperiment from './pages/PlayExperiment'
@@ -61,6 +64,30 @@ export const router = createBrowserRouter([
         element: (
           <QueryBoundary>
             <Join />
+          </QueryBoundary>
+        ),
+      },
+      {
+        path: 'about',
+        element: (
+          <QueryBoundary>
+            <About />
+          </QueryBoundary>
+        ),
+      },
+      {
+        path: 'for-participants',
+        element: (
+          <QueryBoundary>
+            <ForParticipants />
+          </QueryBoundary>
+        ),
+      },
+      {
+        path: 'for-experimenters',
+        element: (
+          <QueryBoundary>
+            <ForExperimenters />
           </QueryBoundary>
         ),
       },
