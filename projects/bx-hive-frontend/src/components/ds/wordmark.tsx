@@ -22,7 +22,7 @@ function Wordmark({ size = 18, className, ...props }: WordmarkProps) {
           lineHeight: 1,
         }}
       >
-        bx<span style={{ opacity: 0.5, padding: '0 1px' }}>·</span>hive
+        bxHive
       </span>
     </span>
   )

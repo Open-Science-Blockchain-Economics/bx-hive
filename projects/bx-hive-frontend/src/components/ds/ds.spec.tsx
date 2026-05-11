@@ -174,10 +174,9 @@ describe('Brand primitives', () => {
     expect(container.querySelector('[data-slot="hex-mark"]')).toBeInTheDocument()
   })
 
-  it('Wordmark renders bx·hive', () => {
+  it('Wordmark renders bxHive', () => {
     render(<Wordmark />)
-    expect(screen.getByText(/bx/)).toBeInTheDocument()
-    expect(screen.getByText(/hive/)).toBeInTheDocument()
+    expect(screen.getByText(/bxHive/)).toBeInTheDocument()
   })
 
   it('HexGrid renders a pattern svg', () => {
