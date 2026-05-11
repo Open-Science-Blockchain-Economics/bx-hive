@@ -6,7 +6,7 @@ import { Field } from '@/components/ds/field'
 import { cn } from '@/lib/utils'
 import { truncateAddress } from '../../../utils/address'
 
-interface SubjectEntry {
+interface ParticipantEntry {
   address: string
   enrolled: number
   assigned: number
@@ -14,7 +14,7 @@ interface SubjectEntry {
 
 interface CreateMatchFormProps {
   appId: bigint
-  unassigned: SubjectEntry[]
+  unassigned: ParticipantEntry[]
   onCreateMatch: (appId: bigint, investor: string, trustee: string) => Promise<void>
 }
 
@@ -49,7 +49,7 @@ export default function CreateMatchForm({ appId, unassigned, onCreateMatch }: Cr
     <div>
       <h3 className="t-h2 mb-3">Create Match</h3>
       {unassigned.length < 2 ? (
-        <p className="text-sm text-muted-foreground">Need at least 2 unassigned subjects to create a match.</p>
+        <p className="text-sm text-muted-foreground">Need at least 2 unassigned participants to create a match.</p>
       ) : (
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-3 items-end">
@@ -83,7 +83,7 @@ export default function CreateMatchForm({ appId, unassigned, onCreateMatch }: Cr
             </Btn>
           </div>
           {investor && trustee && investor === trustee && (
-            <p className="text-warn text-xs">Investor and trustee must be different subjects.</p>
+            <p className="text-warn text-xs">Investor and trustee must be different participants.</p>
           )}
           {error && <p className="text-neg text-xs">{error}</p>}
         </div>

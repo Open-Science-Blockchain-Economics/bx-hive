@@ -16,7 +16,7 @@ describe('queryKeys', () => {
 
   it('on-chain and local namespaces do not collide for the same identifier', () => {
     expect(queryKeys.onChainExperiments('ADDR')).not.toEqual(queryKeys.localExperiments('ADDR'))
-    expect(queryKeys.subjectOnChain('ADDR')).not.toEqual(queryKeys.subjectLocal('ADDR'))
+    expect(queryKeys.participantOnChain('ADDR')).not.toEqual(queryKeys.participantLocal('ADDR'))
   })
 
   it('localnetAccounts returns a singleton key (no parameters)', () => {

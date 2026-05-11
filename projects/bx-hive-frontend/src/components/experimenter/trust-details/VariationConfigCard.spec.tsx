@@ -18,30 +18,22 @@ function makeConfig(overrides: Partial<VariationConfig> = {}): VariationConfig {
     unit: 100_000n,
     assetId: 0n,
     status: 0,
-    maxSubjects: 0n,
+    maxParticipants: 0n,
     ...overrides,
   }
 }
 
 describe('VariationConfigCard', () => {
   it('renders only the Parameters label and Lora link when config is undefined', () => {
-    renderInProvider(
-      <VariationConfigCard config={undefined} appId={42n} subjectCount={0} />,
-    )
+    renderInProvider(<VariationConfigCard config={undefined} appId={42n} participantCount={0} />)
 
     expect(screen.getByRole('heading', { name: /Parameters/i })).toBeInTheDocument()
     expect(screen.queryByText(/Capacity/i)).not.toBeInTheDocument()
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
   })
 
-  it('renders the Capacity tile with X / ∞ and "unlimited" when maxSubjects is 0', () => {
-    renderInProvider(
-      <VariationConfigCard
-        config={makeConfig({ maxSubjects: 0n })}
-        appId={42n}
-        subjectCount={4}
-      />,
-    )
+  it('renders the Capacity tile with X / ∞ and "unlimited" when maxParticipants is 0', () => {
+    renderInProvider(<VariationConfigCard config={makeConfig({ maxParticipants: 0n })} appId={42n} participantCount={4} />)
 
     expect(screen.getByText('Capacity')).toBeInTheDocument()
     expect(screen.getByText('4 / ∞')).toBeInTheDocument()
@@ -49,14 +41,8 @@ describe('VariationConfigCard', () => {
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
   })
 
-  it('renders the Capacity tile with X / Y and a progress bar when maxSubjects > 0', () => {
-    renderInProvider(
-      <VariationConfigCard
-        config={makeConfig({ maxSubjects: 50n })}
-        appId={42n}
-        subjectCount={12}
-      />,
-    )
+  it('renders the Capacity tile with X / Y and a progress bar when maxParticipants > 0', () => {
+    renderInProvider(<VariationConfigCard config={makeConfig({ maxParticipants: 50n })} appId={42n} participantCount={12} />)
 
     expect(screen.getByText('12 / 50')).toBeInTheDocument()
     const bar = screen.getByRole('progressbar')
@@ -65,29 +51,17 @@ describe('VariationConfigCard', () => {
     expect(bar).toHaveAttribute('aria-valuemax', '100')
   })
 
-  it('clamps the progress bar to 100% when subjectCount exceeds maxSubjects', () => {
-    // add_subjects bypasses max_subjects by design — the value is shown
+  it('clamps the progress bar to 100% when participantCount exceeds maxParticipants', () => {
+    // add_participants bypasses max_participants by design — the value is shown
     // honestly but the bar is capped so it doesn't visually overflow.
-    renderInProvider(
-      <VariationConfigCard
-        config={makeConfig({ maxSubjects: 2n })}
-        appId={42n}
-        subjectCount={3}
-      />,
-    )
+    renderInProvider(<VariationConfigCard config={makeConfig({ maxParticipants: 2n })} appId={42n} participantCount={3} />)
 
     expect(screen.getByText('3 / 2')).toBeInTheDocument()
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
   })
 
   it('still renders the four base parameter tiles alongside Capacity', () => {
-    renderInProvider(
-      <VariationConfigCard
-        config={makeConfig({ multiplier: 3n })}
-        appId={42n}
-        subjectCount={0}
-      />,
-    )
+    renderInProvider(<VariationConfigCard config={makeConfig({ multiplier: 3n })} appId={42n} participantCount={0} />)
 
     expect(screen.getByText('E1 Endowment')).toBeInTheDocument()
     expect(screen.getByText('E2 Endowment')).toBeInTheDocument()

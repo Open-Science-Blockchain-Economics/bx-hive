@@ -2,7 +2,7 @@ import { TrustVariationClient } from '../../src/contracts/TrustVariation'
 import { ownerCreateMatch } from '../integration/helpers/operations'
 import { expect, test } from './fixtures'
 import { createExperimentAndVariation } from './stages/experimenter'
-import { enrollSubject, playInvestor, playTrustee } from './stages/subject'
+import { enrollParticipant, playInvestor, playTrustee } from './stages/participant'
 
 const E1_ALGO = 2
 const E2_ALGO = 0
@@ -13,12 +13,12 @@ const RETURN_ALGO = 2
 
 const PHASE_COMPLETED = 2
 
-test('full round-trip: experimenter creates variation, two subjects play, payouts match formula', async ({
+test('full round-trip: experimenter creates variation, two participants play, payouts match formula', async ({
   page,
   algorand,
   experimenter,
-  subject1,
-  subject2,
+  participant1,
+  participant2,
 }) => {
   const { expId, variationAppId } = await createExperimentAndVariation(page, algorand, experimenter.address, {
     name: `e2e-roundtrip-${Date.now()}`,
@@ -29,20 +29,20 @@ test('full round-trip: experimenter creates variation, two subjects play, payout
     maxMatchesPerVariation: 1,
   })
 
-  await enrollSubject(page, algorand, subject1, expId, variationAppId)
-  await enrollSubject(page, algorand, subject2, expId, variationAppId)
+  await enrollParticipant(page, algorand, participant1, expId, variationAppId)
+  await enrollParticipant(page, algorand, participant2, expId, variationAppId)
 
-  // Owner pairs the two subjects programmatically. Bypasses the
+  // Owner pairs the two participants programmatically. Bypasses the
   // ExperimentManager auto-match poll, which would require the experimenter's
-  // browser session to stay open in parallel with the subjects'.
+  // browser session to stay open in parallel with the participants'.
   const variationClient = algorand.client.getTypedAppClientById(TrustVariationClient, {
     appId: variationAppId,
     defaultSender: experimenter.address,
   })
-  const matchId = await ownerCreateMatch(algorand, variationClient, experimenter.address, subject1.address, subject2.address)
+  const matchId = await ownerCreateMatch(algorand, variationClient, experimenter.address, participant1.address, participant2.address)
 
-  await playInvestor(page, algorand, subject1, variationAppId, INVESTMENT_ALGO)
-  await playTrustee(page, algorand, subject2, variationAppId, RETURN_ALGO)
+  await playInvestor(page, algorand, participant1, variationAppId, INVESTMENT_ALGO)
+  await playTrustee(page, algorand, participant2, variationAppId, RETURN_ALGO)
 
   const finalMatch = (await variationClient.send.getMatch({ args: { matchId } })).return!
 

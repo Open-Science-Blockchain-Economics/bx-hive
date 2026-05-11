@@ -64,9 +64,9 @@ export async function createExperimentAndVariation(
     await page.getByLabel(/Step Size/i).fill(String(params.unitAlgo))
   }
 
-  // Field renamed from "Max matches per variation" to "Subjects target" (with
+  // Field renamed from "Max matches per variation" to "Participants target" (with
   // hint "max matches per variation"). Match against the hint text via getByLabel.
-  await page.getByLabel(/Subjects target/i).fill(String(params.maxMatchesPerVariation))
+  await page.getByLabel(/Participants target/i).fill(String(params.maxMatchesPerVariation))
 
   // Submit button label: "Deploy experiment" (single) or "Deploy with N variations" (batch).
   await page.getByRole('button', { name: /^Deploy/i }).click()

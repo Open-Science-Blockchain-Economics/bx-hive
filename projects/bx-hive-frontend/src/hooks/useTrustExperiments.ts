@@ -16,8 +16,8 @@ export interface VariationParams {
   unit: bigint
   /** Asset ID — 0 for ALGO */
   assetId: bigint
-  /** Max subjects per variation — 0 for unlimited */
-  maxSubjects?: bigint
+  /** Max participants per variation — 0 for unlimited */
+  maxParticipants?: bigint
   /** Pre-funded escrow in microAlgo to deposit at creation */
   escrowMicroAlgo: bigint
 }
@@ -65,7 +65,7 @@ export function useTrustExperiments() {
           multiplier: params.multiplier,
           unit: params.unit,
           assetId: params.assetId,
-          maxSubjects: params.maxSubjects ?? 0n,
+          maxParticipants: params.maxParticipants ?? 0n,
           escrowPayment,
         },
         coverAppCallInnerTransactionFees: true,
@@ -99,7 +99,7 @@ export function useTrustExperiments() {
           multiplier: params.multiplier,
           unit: params.unit,
           assetId: params.assetId,
-          maxSubjects: params.maxSubjects ?? 0n,
+          maxParticipants: params.maxParticipants ?? 0n,
           escrowPayment,
         },
         coverAppCallInnerTransactionFees: true,

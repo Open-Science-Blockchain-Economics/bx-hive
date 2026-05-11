@@ -2,17 +2,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Panel } from '@/components/ds/card'
 import { Rule } from '@/components/ds/separator'
 import { LoadingSpinner } from '../components/ui'
-import ActiveMatchCard from '../components/subject/ActiveMatchCard'
-import CompletedMatchCard from '../components/subject/CompletedMatchCard'
-import EnrolledWaitingCard from '../components/subject/EnrolledWaitingCard'
-import JoinableExperimentCard from '../components/subject/JoinableExperimentCard'
+import ActiveMatchCard from '../components/participant/ActiveMatchCard'
+import CompletedMatchCard from '../components/participant/CompletedMatchCard'
+import EnrolledWaitingCard from '../components/participant/EnrolledWaitingCard'
+import JoinableExperimentCard from '../components/participant/JoinableExperimentCard'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustVariation, PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '../hooks/useTrustVariation'
 import type { Match as OnChainMatch } from '../hooks/useTrustVariation'
 import { queryKeys } from '../lib/queryKeys'
-import { pickVariationRoundRobin, type VariationSlot } from '../utils/distributeSubjects'
+import { pickVariationRoundRobin, type VariationSlot } from '../utils/distributeParticipants'
 
 interface OnChainMatchView {
   appId: bigint
@@ -33,14 +33,14 @@ interface OnChainData {
   expViews: OnChainExperimentView[]
 }
 
-export default function SubjectDashboard() {
+export default function ParticipantDashboard() {
   const { activeAddress } = useAlgorand()
   const { listExperiments, listVariations } = useTrustExperiments()
-  const { getPlayerMatch, selfEnroll, getSubjectCount, getConfig, isSubjectEnrolled } = useTrustVariation()
+  const { getPlayerMatch, selfEnroll, getParticipantCount, getConfig, isParticipantEnrolled } = useTrustVariation()
   const queryClient = useQueryClient()
 
   const { data: onChainData } = useQuery<OnChainData>({
-    queryKey: queryKeys.subjectOnChain(activeAddress!),
+    queryKey: queryKeys.participantOnChain(activeAddress!),
     queryFn: async () => {
       const groups = await listExperiments()
       const matchViews: OnChainMatchView[] = []
@@ -63,7 +63,7 @@ export default function SubjectDashboard() {
         if (!enrolled) {
           for (const v of vars) {
             try {
-              if (await isSubjectEnrolled(v.appId, activeAddress!)) {
+              if (await isParticipantEnrolled(v.appId, activeAddress!)) {
                 enrolled = true
                 break
               }
@@ -75,14 +75,11 @@ export default function SubjectDashboard() {
 
         const slots: VariationSlot[] = await Promise.all(
           vars.map(async (v) => {
-            const [count, config] = await Promise.all([
-              getSubjectCount(v.appId),
-              getConfig(v.appId),
-            ])
+            const [count, config] = await Promise.all([getParticipantCount(v.appId), getConfig(v.appId)])
             return {
               appId: v.appId,
-              subjectCount: count,
-              maxSubjects: Number(config.maxSubjects),
+              participantCount: count,
+              maxParticipants: Number(config.maxParticipants),
             }
           }),
         )
@@ -114,7 +111,7 @@ export default function SubjectDashboard() {
       await selfEnroll(chosenAppId)
     },
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.subjectOnChain(activeAddress ?? '') })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.participantOnChain(activeAddress ?? '') })
     },
   })
 
@@ -145,7 +142,7 @@ export default function SubjectDashboard() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="t-h1">Subject Dashboard</h1>
+        <h1 className="t-h1">Participant Dashboard</h1>
         <p className="text-sm text-muted-foreground mt-1">View and participate in experiments</p>
       </div>
 

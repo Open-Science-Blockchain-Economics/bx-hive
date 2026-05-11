@@ -20,7 +20,7 @@ interface OnChainExperiment {
 
 interface OnChainData {
   onChainExps: OnChainExperiment[]
-  subjectCounts: Record<string, number>
+  participantCounts: Record<string, number>
   variationConfigs: Record<string, VariationConfig>
 }
 
@@ -30,7 +30,7 @@ export default function ExperimenterDashboard() {
   const navigate = useNavigate()
   const { activeAddress } = useAlgorand()
   const { listExperiments, listVariations } = useTrustExperiments()
-  const { getSubjectCount, getConfig } = useTrustVariation()
+  const { getParticipantCount, getConfig } = useTrustVariation()
   const [filter, setFilter] = useState<Filter>('all')
 
   const { data: onChainData } = useSuspenseQuery<OnChainData>({
@@ -60,7 +60,7 @@ export default function ExperimenterDashboard() {
           vars.map(async (v) => {
             const key = String(v.appId)
             try {
-              counts[key] = await getSubjectCount(v.appId)
+              counts[key] = await getParticipantCount(v.appId)
             } catch {
               counts[key] = 0
             }
@@ -73,13 +73,13 @@ export default function ExperimenterDashboard() {
         ),
       )
 
-      return { onChainExps, subjectCounts: counts, variationConfigs: configs }
+      return { onChainExps, participantCounts: counts, variationConfigs: configs }
     },
   })
 
   const aggregates = useMemo(() => {
     const exps = onChainData.onChainExps
-    let totalSubjects = 0
+    let totalParticipants = 0
     let totalVariations = 0
     let liveCount = 0
     let pausedCount = 0
@@ -88,7 +88,7 @@ export default function ExperimenterDashboard() {
     for (const e of exps) {
       totalVariations += e.variations.length
       for (const v of e.variations) {
-        totalSubjects += onChainData.subjectCounts[String(v.appId)] ?? 0
+        totalParticipants += onChainData.participantCounts[String(v.appId)] ?? 0
       }
       const configs = e.variations.map((v) => onChainData.variationConfigs[String(v.appId)]).filter((c): c is VariationConfig => Boolean(c))
       const status = deriveExperimentStatus(configs)
@@ -100,7 +100,7 @@ export default function ExperimenterDashboard() {
     return {
       totalExperiments: exps.length,
       totalVariations,
-      totalSubjects,
+      totalParticipants,
       liveCount,
       pausedCount,
       completeCount,
@@ -127,8 +127,9 @@ export default function ExperimenterDashboard() {
         <div>
           <h1 className="t-h1">Experimenter Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {aggregates.totalExperiments} experiment{aggregates.totalExperiments === 1 ? '' : 's'} · {aggregates.totalSubjects} subject
-            {aggregates.totalSubjects === 1 ? '' : 's'} enrolled
+            {aggregates.totalExperiments} experiment{aggregates.totalExperiments === 1 ? '' : 's'} · {aggregates.totalParticipants}{' '}
+            participant
+            {aggregates.totalParticipants === 1 ? '' : 's'} enrolled
           </p>
         </div>
         <Btn asChild variant="primary" size="sm">
@@ -159,8 +160,10 @@ export default function ExperimenterDashboard() {
             </div>
           </div>
           <div className="px-5 py-4">
-            <div className="t-micro mb-1.5">Subjects</div>
-            <div className="font-mono text-2xl font-medium leading-none tracking-[-0.01em] text-foreground">{aggregates.totalSubjects}</div>
+            <div className="t-micro mb-1.5">Participants</div>
+            <div className="font-mono text-2xl font-medium leading-none tracking-[-0.01em] text-foreground">
+              {aggregates.totalParticipants}
+            </div>
             <div className="text-xs text-muted-foreground mt-1.5">enrolled across all variations</div>
           </div>
         </div>
@@ -180,7 +183,7 @@ export default function ExperimenterDashboard() {
 
       <ExperimentListTab
         onChainExps={onChainData.onChainExps}
-        subjectCounts={onChainData.subjectCounts}
+        participantCounts={onChainData.participantCounts}
         variationConfigs={onChainData.variationConfigs}
         filter={filter}
         onCreateClick={() => navigate('/experimenter/create')}

@@ -21,7 +21,7 @@ function adaptWalletSigner(walletSigner: unknown): AlgokitSigner {
   }
 }
 
-const ROLE_REVERSE: Record<number, UserRole> = { 0: 'experimenter', 1: 'subject' }
+const ROLE_REVERSE: Record<number, UserRole> = { 0: 'experimenter', 1: 'participant' }
 
 interface ActiveUserContextType {
   activeUser: User | null
@@ -57,7 +57,7 @@ export function ActiveUserProvider({ children }: { children: ReactNode }) {
         return {
           id: activeAddress!,
           name: contractUser.name,
-          role: ROLE_REVERSE[contractUser.role] ?? 'subject',
+          role: ROLE_REVERSE[contractUser.role] ?? 'participant',
           createdAt: Number(contractUser.createdAt),
           userId: contractUser.userId,
         }

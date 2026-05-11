@@ -13,9 +13,7 @@ const group: ExperimentGroup = {
   variationCount: 1n,
 }
 
-const variations: VariationInfo[] = [
-  { varId: 0, appId: 1001n, label: 'Baseline', createdAt: 0n },
-]
+const variations: VariationInfo[] = [{ varId: 0, appId: 1001n, label: 'Baseline', createdAt: 0n }]
 
 const baseProps = {
   group,
@@ -68,14 +66,10 @@ describe('JoinableExperimentCard', () => {
   })
 
   it('surfaces joinError text only when not currently joining', () => {
-    const { rerender } = render(
-      <JoinableExperimentCard {...baseProps} joinError="Already enrolled" joining={null} isFull={false} />,
-    )
+    const { rerender } = render(<JoinableExperimentCard {...baseProps} joinError="Already enrolled" joining={null} isFull={false} />)
     expect(screen.getByText('Already enrolled')).toBeInTheDocument()
 
-    rerender(
-      <JoinableExperimentCard {...baseProps} joinError="Already enrolled" joining={0} isFull={false} />,
-    )
+    rerender(<JoinableExperimentCard {...baseProps} joinError="Already enrolled" joining={0} isFull={false} />)
     expect(screen.queryByText('Already enrolled')).not.toBeInTheDocument()
   })
 })

@@ -25,11 +25,11 @@ The My Experiments tab shows your experiments as cards, grouped by type:
 Each Trust Game experiment card displays:
 
 - **Experiment name**
-- **Variation count and total subjects** — e.g., "3 variation(s) - 12 subject(s)"
+- **Variation count and total participants** — e.g., "3 variation(s) - 12 participant(s)"
 - **Per-variation status** — A list of each variation with a colored status dot and label (Open, Closed, or Ended)
 - **TRUST badge** — Identifies the card as a Trust Game experiment
 
-Clicking a card navigates to the experiment's detail page where you can manage variations, subjects, and matches.
+Clicking a card navigates to the experiment's detail page where you can manage variations, participants, and matches.
 
 ### BRET batch cards
 
@@ -55,10 +55,10 @@ Experiments and variations use color-coded indicators throughout the dashboard a
 
 | Color | Meaning | When used |
 |-------|---------|-----------|
-| Green | Active / Open | Variation is accepting subjects |
-| Orange | Closed | Registration is closed, no new subjects |
+| Green | Active / Open | Variation is accepting participants |
+| Orange | Closed | Registration is closed, no new participants |
 | Red / Neutral | Completed / Ended | All matches finished |
 
 On experiment cards, each variation shows a small colored dot next to its status label, giving you an at-a-glance view of which treatment conditions are still running.
 
-Subject counts on cards aggregate across all variations, so you can see total enrollment without opening the detail page.
+Participant counts on cards aggregate across all variations, so you can see total enrollment without opening the detail page.

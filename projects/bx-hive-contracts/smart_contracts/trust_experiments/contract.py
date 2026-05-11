@@ -70,7 +70,7 @@ class TrustExperiments(ARC4Contract):
         multiplier: arc4.UInt64,
         unit: arc4.UInt64,
         asset_id: arc4.UInt64,
-        max_subjects: arc4.UInt64,
+        max_participants: arc4.UInt64,
         escrow_payment: gtxn.PaymentTransaction,
     ) -> arc4.UInt64:
         assert exp_id in self.experiments, "Experiment not found"
@@ -102,7 +102,7 @@ class TrustExperiments(ARC4Contract):
                 unit.bytes,
                 asset_id.bytes,
                 arc4.UInt64(self.registry_app.value).bytes,
-                max_subjects.bytes,
+                max_participants.bytes,
             ),
             fee=0,
         ).submit()
@@ -158,7 +158,7 @@ class TrustExperiments(ARC4Contract):
         multiplier: arc4.UInt64,
         unit: arc4.UInt64,
         asset_id: arc4.UInt64,
-        max_subjects: arc4.UInt64,
+        max_participants: arc4.UInt64,
         escrow_payment: gtxn.PaymentTransaction,
     ) -> tuple[arc4.UInt32, arc4.UInt64]:
         assert escrow_payment.receiver == Global.current_application_address, "Wrong escrow receiver"
@@ -199,7 +199,7 @@ class TrustExperiments(ARC4Contract):
                 unit.bytes,
                 asset_id.bytes,
                 arc4.UInt64(self.registry_app.value).bytes,
-                max_subjects.bytes,
+                max_participants.bytes,
             ),
             fee=0,
         ).submit()

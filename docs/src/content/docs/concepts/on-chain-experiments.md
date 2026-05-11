@@ -23,7 +23,7 @@ bx-hive uses a three-layer smart contract architecture:
 |-------|----------|------|
 | **Layer 1** | BxHiveRegistry | User registration and identity verification |
 | **Layer 2** | TrustExperiments | Experiment management — creates and tracks experiment groups and variations |
-| **Layer 3** | TrustVariation | Individual game instance — holds escrow, manages subjects, executes matches |
+| **Layer 3** | TrustVariation | Individual game instance — holds escrow, manages participants, executes matches |
 
 ### How escrow flows
 
@@ -35,7 +35,7 @@ bx-hive uses a three-layer smart contract architecture:
 
 4. **Withdrawal** — After all matches in a variation are completed and paid out, the experimenter can withdraw any remaining escrow (e.g., from matches where the full endowment was not distributed).
 
-Each variation is a separate smart contract with its own escrow balance, subjects, and matches. This isolation means one variation's funding does not affect another.
+Each variation is a separate smart contract with its own escrow balance, participants, and matches. This isolation means one variation's funding does not affect another.
 
 ## Funding Requirements
 
@@ -56,6 +56,6 @@ This is the worst-case funding needed if every Investor sends their full endowme
 Algorand smart contracts must maintain a minimum balance to cover on-chain storage. bx-hive requires MBR for:
 
 - **Match creation** — ~0.0883 ALGO per match, covering the box storage for match state and player lookups. This is paid by the experimenter when creating matches.
-- **Subject enrollment** — 0.0169 ALGO per subject, covering the box storage for their enrollment record. This is paid by the subject when they self-enroll.
+- **Participant enrollment** — 0.0169 ALGO per participant, covering the box storage for their enrollment record. This is paid by the participant when they self-enroll.
 
 For a detailed breakdown of costs per variation, see the funding summary table in [Creating Experiments](../../experimenters/creating-experiments/#funding-breakdown).

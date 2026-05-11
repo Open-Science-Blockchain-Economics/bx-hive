@@ -48,6 +48,6 @@ For worked examples with specific numbers, see [Payout Calculations](../../conce
 
 ## Returning to Dashboard
 
-After viewing your results, navigate back to the [Subject Dashboard](../dashboard/). Your completed match appears in the **Completed** section, showing your final payout in ALGO and a **View Results** button.
+After viewing your results, navigate back to the [Participant Dashboard](../dashboard/). Your completed match appears in the **Completed** section, showing your final payout in ALGO and a **View Results** button.
 
 Completed matches remain on your dashboard indefinitely, so you can revisit the results at any time.

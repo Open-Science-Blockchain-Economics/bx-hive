@@ -1,9 +1,9 @@
 ---
-title: Subject Dashboard
-description: Navigating the Subject dashboard — available, enrolled, active, and completed experiments.
+title: Participant Dashboard
+description: Navigating the Participant dashboard — available, enrolled, active, and completed experiments.
 ---
 
-The Subject Dashboard is your home page after logging in. It organizes experiments into sections based on where you are in the process — from finding new experiments to reviewing completed ones.
+The Participant Dashboard is your home page after logging in. It organizes experiments into sections based on where you are in the process — from finding new experiments to reviewing completed ones.
 
 ## Dashboard Sections
 
@@ -12,13 +12,13 @@ Experiments on your dashboard are grouped into four categories:
 | Section | Meaning |
 |---------|---------|
 | **Available** | Open experiments you can join |
-| **Enrolled — Waiting** | You have joined but have not been paired with another subject yet |
+| **Enrolled — Waiting** | You have joined but have not been paired with another participant yet |
 | **Active — In Progress** | You are in a match and the game is underway |
 | **Completed** | The match is finished and payouts have been distributed |
 
 Each section only appears if it has experiments to show.
 
-> **[Screenshot: Subject Dashboard showing experiments in different sections]**
+> **[Screenshot: Participant Dashboard showing experiments in different sections]**
 
 ## Available Experiments
 
@@ -28,9 +28,9 @@ Click **Join Experiment** to enroll. See [Joining Experiments](../joining-experi
 
 ## Enrolled — Waiting for Match
 
-After you join an experiment, your card moves to this section. It shows a **Waiting** badge to indicate that you are enrolled and waiting for the experimenter to pair you with another subject.
+After you join an experiment, your card moves to this section. It shows a **Waiting** badge to indicate that you are enrolled and waiting for the experimenter to pair you with another participant.
 
-There is nothing you need to do at this stage — the experimenter will create matches when enough subjects have enrolled. Once paired, your card will move to the Active section.
+There is nothing you need to do at this stage — the experimenter will create matches when enough participants have enrolled. Once paired, your card will move to the Active section.
 
 ## Active — In Progress
 

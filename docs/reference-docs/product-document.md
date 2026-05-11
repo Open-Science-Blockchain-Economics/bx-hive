@@ -8,17 +8,17 @@
 
 ## 1. Product Overview
 
-**bTree** is a web-based platform for conducting Computational Microeconomic Experiments (CME). It enables researchers to design, deploy, and run behavioral economics experiments with human subjects in a controlled digital environment.
+**bTree** is a web-based platform for conducting Computational Microeconomic Experiments (CME). It enables researchers to design, deploy, and run behavioral economics experiments with human participants in a controlled digital environment.
 
 ### Key Value Propositions
 
 **For Experimenters:**
 - Template-based experiment design (Trust Game, Dictator Game)
-- Simple session creation and subject assignment
+- Simple session creation and participant assignment
 - Real-time monitoring of experiment progress
 - Transparent data collection
 
-**For Subjects:**
+**For Participants:**
 - Clear, intuitive game interfaces
 - Immediate feedback and results
 - Transparent payout calculations
@@ -37,7 +37,7 @@
 **Name:** Dr. Sarah Chen
 **Role:** Behavioral Economics Researcher
 **Goals:**
-- Run Trust Game experiments with 20-40 subjects
+- Run Trust Game experiments with 20-40 participants
 - Test hypotheses about reciprocity and trust
 - Collect clean, reliable data
 - Complete experiments in single lab session
@@ -48,7 +48,7 @@
 - Difficulty monitoring live sessions
 - Time-consuming session setup
 
-### Persona 2: Experiment Subject
+### Persona 2: Experiment Participant
 **Name:** Alex Martinez
 **Role:** University Student / Study Participant
 **Goals:**
@@ -116,27 +116,27 @@ So that I can track my research projects and select which one to work on.
 
 ### Epic: Session Management
 
-**US-EXP-003: Create Session with Subject Assignment**
+**US-EXP-003: Create Session with Participant Assignment**
 ```
 As an Experimenter,
-I want to create a session and assign subjects to it,
+I want to create a session and assign participants to it,
 So that I can run the experiment with a specific group of participants.
 ```
 
 **Acceptance Criteria:**
 - Can input session name
-- Can add subjects via manual entry or bulk paste
-- System validates even number of subjects (minimum 2)
-- Subjects are auto-paired sequentially: [0,1], [2,3], [4,5]
-- Even index subjects are S1 (Investor), odd are S2 (Trustee)
-- All pairs initialize in "waiting_s1" phase
+- Can add participants via manual entry or bulk paste
+- System validates even number of participants (minimum 2)
+- Participants are auto-paired sequentially: [0,1], [2,3], [4,5]
+- Even index participants are P1 (Investor), odd are P2 (Trustee)
+- All pairs initialize in "waiting_p1" phase
 - Session appears immediately in session list
 
 **Priority:** P1 (Critical)
 
 **Related Files:**
 - [SessionCreator.tsx](frontend/src/components/session/SessionCreator.tsx)
-- [SubjectInput.tsx](frontend/src/components/session/SubjectInput.tsx)
+- [ParticipantInput.tsx](frontend/src/components/session/ParticipantInput.tsx)
 
 ---
 
@@ -144,18 +144,18 @@ So that I can run the experiment with a specific group of participants.
 ```
 As an Experimenter,
 I want to see real-time progress of all pairs in my session,
-So that I can monitor when subjects make decisions and when the session is complete.
+So that I can monitor when participants make decisions and when the session is complete.
 ```
 
 **Acceptance Criteria:**
 - Shows all pairs in the session
-- Displays S1 and S2 subject IDs for each pair
+- Displays P1 and P2 participant IDs for each pair
 - Shows current phase with color-coded badges:
-  - Yellow for "waiting_s1"
-  - Blue for "waiting_s2"
+  - Yellow for "waiting_p1"
+  - Blue for "waiting_p2"
   - Green for "completed"
-- Shows investment amount when S1 decides
-- Shows return amount and payouts when S2 decides
+- Shows investment amount when P1 decides
+- Shows return amount and payouts when P2 decides
 - Can refresh manually to see updates
 
 **Priority:** P1 (Critical)
@@ -204,19 +204,19 @@ So that I can verify my experiment design before running it.
 
 ---
 
-## 3.2 Subject User Stories
+## 3.2 Participant User Stories
 
 ### Epic: Account and Session Discovery
 
-**US-SUB-001: Create Subject Account**
+**US-PART-001: Create Participant Account**
 ```
-As a Subject,
+As a Participant,
 I want to create an account with a display name,
 So that I can participate in experiments.
 ```
 
 **Acceptance Criteria:**
-- Can select "Subject" role during signup
+- Can select "Participant" role during signup
 - Can optionally provide a display name/alias
 - Account is assigned a unique UUID
 - Account is stored locally in browser
@@ -229,15 +229,15 @@ So that I can participate in experiments.
 
 ---
 
-**US-SUB-002: View My Assigned Sessions**
+**US-PART-002: View My Assigned Sessions**
 ```
-As a Subject,
+As a Participant,
 I want to see which experimental sessions I'm assigned to,
 So that I know when I can participate.
 ```
 
 **Acceptance Criteria:**
-- Shows all sessions where my subject ID appears
+- Shows all sessions where my participant ID appears
 - Displays experiment name and session name
 - Shows current session status
 - "Play" button is visible when session is ready
@@ -246,15 +246,15 @@ So that I know when I can participate.
 **Priority:** P1 (Critical)
 
 **Related Files:**
-- [SubjectDashboard.tsx](frontend/src/pages/subject/SubjectDashboard.tsx)
+- [ParticipantDashboard.tsx](frontend/src/pages/participant/ParticipantDashboard.tsx)
 
 ---
 
 ### Epic: Trust Game Gameplay
 
-**US-SUB-003: Make Investment Decision as Investor (S1)**
+**US-PART-003: Make Investment Decision as Investor (P1)**
 ```
-As an Investor (S1) in a Trust Game,
+As an Investor (P1) in a Trust Game,
 I want to decide how much of my endowment to send to the Trustee,
 So that I can make a strategic decision based on trust and potential returns.
 ```
@@ -276,13 +276,13 @@ So that I can make a strategic decision based on trust and potential returns.
 **Priority:** P1 (Critical)
 
 **Related Files:**
-- [InvestorInterface.tsx](frontend/src/components/subject/InvestorInterface.tsx)
+- [InvestorInterface.tsx](frontend/src/components/participant/InvestorInterface.tsx)
 
 ---
 
-**US-SUB-004: Make Return Decision as Trustee (S2)**
+**US-PART-004: Make Return Decision as Trustee (P2)**
 ```
-As a Trustee (S2) in a Trust Game,
+As a Trustee (P2) in a Trust Game,
 I want to decide how much to return to the Investor after receiving the multiplied investment,
 So that I can make a reciprocal decision.
 ```
@@ -303,21 +303,21 @@ So that I can make a reciprocal decision.
 **Priority:** P1 (Critical)
 
 **Related Files:**
-- [TrusteeInterface.tsx](frontend/src/components/subject/TrusteeInterface.tsx)
+- [TrusteeInterface.tsx](frontend/src/components/participant/TrusteeInterface.tsx)
 
 ---
 
-**US-SUB-005: Wait for Partner's Decision**
+**US-PART-005: Wait for Partner's Decision**
 ```
-As a Subject,
+As a Participant,
 I want to see a clear waiting screen while my partner makes their decision,
 So that I know the experiment is progressing and I should wait.
 ```
 
 **Acceptance Criteria:**
 - Shows clear waiting message:
-  - S1 sees "Waiting for your partner (Trustee)..."
-  - S2 sees "Waiting for your partner (Investor)..."
+  - P1 sees "Waiting for your partner (Trustee)..."
+  - P2 sees "Waiting for your partner (Investor)..."
 - Polls for updates every 3 seconds
 - Automatically advances when partner decides
 - No action required from user
@@ -325,23 +325,23 @@ So that I know the experiment is progressing and I should wait.
 **Priority:** P1 (Critical)
 
 **Related Files:**
-- [WaitingRoom.tsx](frontend/src/components/subject/WaitingRoom.tsx)
+- [WaitingRoom.tsx](frontend/src/components/participant/WaitingRoom.tsx)
 
 ---
 
-**US-SUB-006: View Game Results and Payouts**
+**US-PART-006: View Game Results and Payouts**
 ```
-As a Subject,
+As a Participant,
 I want to see the final results of the game including both players' decisions and our payouts,
 So that I understand what happened and how much I earned.
 ```
 
 **Acceptance Criteria:**
-- **For Investor (S1):**
+- **For Investor (P1):**
   - Shows my investment amount
   - Shows partner's return amount
   - Shows my final payout with clear calculation
-- **For Trustee (S2):**
+- **For Trustee (P2):**
   - Shows partner's investment amount
   - Shows how much I received (s × m)
   - Shows my return amount
@@ -353,15 +353,15 @@ So that I understand what happened and how much I earned.
 **Priority:** P1 (Critical)
 
 **Related Files:**
-- [ResultsDisplay.tsx](frontend/src/components/subject/ResultsDisplay.tsx)
+- [ResultsDisplay.tsx](frontend/src/components/participant/ResultsDisplay.tsx)
 
 ---
 
 ### Epic: User Experience
 
-**US-SUB-007: Understand Game Rules Before Playing**
+**US-PART-007: Understand Game Rules Before Playing**
 ```
-As a Subject,
+As a Participant,
 I want to see clear instructions about the Trust Game rules,
 So that I understand how to play and how payouts work.
 ```
@@ -378,16 +378,16 @@ So that I understand how to play and how payouts work.
 
 ---
 
-**US-SUB-008: Switch Between Multiple Subject Accounts**
+**US-PART-008: Switch Between Multiple Participant Accounts**
 ```
-As a Subject with multiple accounts (e.g., for testing),
+As a Participant with multiple accounts (e.g., for testing),
 I want to switch between accounts easily,
 So that I can participate in experiments with different identities.
 ```
 
 **Acceptance Criteria:**
 - Can click "Sign In" button in header
-- Can see list of all Subject accounts
+- Can see list of all Participant accounts
 - Can select account to switch to
 - Dashboard updates to show selected account's sessions
 
@@ -409,7 +409,7 @@ So that I can monitor system usage and database health.
 ```
 
 **Acceptance Criteria:**
-- Shows count of experiments, sessions, subjects, decisions
+- Shows count of experiments, sessions, participants, decisions
 - Shows count of user accounts by type
 - Can view on admin dashboard
 
@@ -479,7 +479,7 @@ So that I can oversee platform usage and activity.
    ↓
 9. Enters session name
    ↓
-10. Adds subject IDs (even number, min 2)
+10. Adds participant IDs (even number, min 2)
     ↓
 11. Reviews pairing preview
     ↓
@@ -496,20 +496,20 @@ So that I can oversee platform usage and activity.
 
 ---
 
-### Workflow 2: Subject Participates in Trust Game (Investor)
+### Workflow 2: Participant Participates in Trust Game (Investor)
 
 ```
-1. Subject creates account with display name
+1. Participant creates account with display name
    ↓
-2. Experimenter adds subject ID to session
+2. Experimenter adds participant ID to session
    ↓
-3. Subject opens Subject Dashboard
+3. Participant opens Participant Dashboard
    ↓
 4. Sees assigned session in list
    ↓
 5. Clicks "Play" button
    ↓
-6. Views Investor Interface (role: S1, phase: waiting_s1)
+6. Views Investor Interface (role: P1, phase: waiting_p1)
    ↓
 7. Sees endowment (E1) and multiplier (m)
    ↓
@@ -536,20 +536,20 @@ So that I can oversee platform usage and activity.
 
 ---
 
-### Workflow 3: Subject Participates in Trust Game (Trustee)
+### Workflow 3: Participant Participates in Trust Game (Trustee)
 
 ```
-1. Subject opens Subject Dashboard
+1. Participant opens Participant Dashboard
    ↓
 2. Sees assigned session in list
    ↓
 3. Clicks "Play" button
    ↓
-4. Sees Waiting Room (role: S2, phase: waiting_s1)
+4. Sees Waiting Room (role: P2, phase: waiting_p1)
    ↓
 5. [System polls every 3 seconds]
    ↓
-6. Investor makes decision → phase changes to waiting_s2
+6. Investor makes decision → phase changes to waiting_p2
    ↓
 7. Automatically advances to Trustee Interface
    ↓
@@ -578,9 +578,9 @@ So that I can oversee platform usage and activity.
 - ✅ Account creation (all roles)
 - ✅ Experiment creation from Trust Game template
 - ✅ Experiment parameter configuration
-- ✅ Session creation with subject assignment
+- ✅ Session creation with participant assignment
 - ✅ Sequential pairing algorithm
-- ✅ Subject session discovery
+- ✅ Participant session discovery
 - ✅ Investor decision interface
 - ✅ Trustee decision interface
 - ✅ Waiting room
@@ -590,8 +590,8 @@ So that I can oversee platform usage and activity.
 ### P2: Important (Should Have)
 - ⏳ Experiment data export (CSV/JSON)
 - ⏳ Session scheduling
-- ⏳ Subject instructions/tutorial
-- ⏳ Email notifications for subjects
+- ⏳ Participant instructions/tutorial
+- ⏳ Email notifications for participants
 - ⏳ Experiment replication/cloning
 
 ### P3: Nice to Have (Could Have)
@@ -620,7 +620,7 @@ So that I can oversee platform usage and activity.
 ### User Experience Metrics
 - **Time to create experiment:** < 3 minutes
 - **Time to create session:** < 2 minutes
-- **Subject decision time:** 30-90 seconds per decision
+- **Participant decision time:** 30-90 seconds per decision
 - **System response time:** < 100ms for state updates
 
 ### Research Quality Metrics
@@ -631,9 +631,9 @@ So that I can oversee platform usage and activity.
 
 ### Usability Metrics
 - **Account creation success rate:** > 99%
-- **Subject confusion rate:** < 5% require experimenter help
+- **Participant confusion rate:** < 5% require experimenter help
 - **Experimenter satisfaction:** Target 4.5/5 stars
-- **Subject satisfaction:** Target 4.0/5 stars
+- **Participant satisfaction:** Target 4.0/5 stars
 
 ---
 
@@ -646,21 +646,21 @@ So that I can oversee platform usage and activity.
   - **Handling:** Validation prevents creation
 
 ### Session Creation
-- **Edge Case:** Odd number of subjects
+- **Edge Case:** Odd number of participants
   - **Handling:** Error message, cannot create session
-- **Edge Case:** Single subject
+- **Edge Case:** Single participant
   - **Handling:** Error message, minimum 2 required
-- **Edge Case:** Duplicate subject IDs
+- **Edge Case:** Duplicate participant IDs
   - **Handling:** Auto-deduplicate with warning
 
-### Subject Gameplay
-- **Edge Case:** Subject refreshes page during game
+### Participant Gameplay
+- **Edge Case:** Participant refreshes page during game
   - **Current:** May lose state
   - **Handling:** Should restore from IndexedDB (needs testing)
-- **Edge Case:** Both subjects in pair try to decide simultaneously
+- **Edge Case:** Both participants in pair try to decide simultaneously
   - **Current:** Race condition possible
   - **Handling:** Phase check prevents duplicate submissions
-- **Edge Case:** Subject closes browser before completion
+- **Edge Case:** Participant closes browser before completion
   - **Handling:** State preserved in IndexedDB, can resume
 
 ### Data Integrity
@@ -691,7 +691,7 @@ So that I can oversee platform usage and activity.
 - **Confirmation:** Required for destructive actions
 
 ### Real-Time Updates Pattern
-- **Polling interval:** 3 seconds for subject dashboard
+- **Polling interval:** 3 seconds for participant dashboard
 - **Auto-advance:** Automatic navigation when phase changes
 - **Manual refresh:** Available for experimenter views
 

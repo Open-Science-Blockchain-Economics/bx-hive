@@ -3,49 +3,49 @@ import type { Page } from '@playwright/test'
 import { TrustVariationClient } from '../../../src/contracts/TrustVariation'
 import type { KmdAccount } from '../fixtures/accounts'
 
-async function gotoSubjectDashboard(page: Page, subject: KmdAccount): Promise<void> {
-  await page.goto(`/?e2e-account=${subject.address}`)
+async function gotoParticipantDashboard(page: Page, participant: KmdAccount): Promise<void> {
+  await page.goto(`/?e2e-account=${participant.address}`)
   await page
     .getByRole('link', { name: /^Dashboard$/i })
     .first()
     .click()
-  await page.getByRole('heading', { name: /Subject Dashboard/i }).waitFor()
+  await page.getByRole('heading', { name: /Participant Dashboard/i }).waitFor()
 }
 
 /**
- * Drives the subject dashboard to enroll the subject in the variation
+ * Drives the participant dashboard to enroll the participant in the variation
  * belonging to `expId`. Polls the chain (via the variation app) until the
- * subject is recorded as enrolled, since the UI's React Query state can lag
+ * participant is recorded as enrolled, since the UI's React Query state can lag
  * behind the on-chain confirmation.
  */
-export async function enrollSubject(
+export async function enrollParticipant(
   page: Page,
   algorand: AlgorandClient,
-  subject: KmdAccount,
+  participant: KmdAccount,
   expId: number,
   variationAppId: bigint,
 ): Promise<void> {
-  await gotoSubjectDashboard(page, subject)
+  await gotoParticipantDashboard(page, participant)
 
   const card = page.locator('[data-slot="panel"]', { hasText: `Experiment ID: ${expId}` })
   await card.getByRole('button', { name: /Join experiment/i }).click()
 
   const variationClient = algorand.client.getTypedAppClientById(TrustVariationClient, {
     appId: variationAppId,
-    defaultSender: subject.address,
+    defaultSender: participant.address,
   })
 
   const deadline = Date.now() + 30_000
   while (Date.now() < deadline) {
     try {
-      const info = await variationClient.state.box.subjects.value(subject.address)
+      const info = await variationClient.state.box.participants.value(participant.address)
       if (info && info.enrolled === 1) return
     } catch {
       // Box doesn't exist yet (404 from algod) — txn hasn't confirmed; keep polling.
     }
     await new Promise((r) => setTimeout(r, 1_000))
   }
-  throw new Error(`Subject ${subject.address} did not appear as enrolled in app ${variationAppId} within 30s`)
+  throw new Error(`Participant ${participant.address} did not appear as enrolled in app ${variationAppId} within 30s`)
 }
 
 async function dismissInstructions(page: Page): Promise<void> {
@@ -61,18 +61,18 @@ async function selectAlgoButton(page: Page, amountAlgo: number): Promise<void> {
 async function waitForMatchPhase(
   algorand: AlgorandClient,
   variationAppId: bigint,
-  subjectAddress: string,
+  participantAddress: string,
   targetPhase: number,
   timeoutMs = 30_000,
 ): Promise<void> {
   const variationClient = algorand.client.getTypedAppClientById(TrustVariationClient, {
     appId: variationAppId,
-    defaultSender: subjectAddress,
+    defaultSender: participantAddress,
   })
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     try {
-      const matchIdResult = await variationClient.send.getPlayerMatch({ args: { addr: subjectAddress } })
+      const matchIdResult = await variationClient.send.getPlayerMatch({ args: { addr: participantAddress } })
       const matchId = matchIdResult.return
       if (matchId !== undefined) {
         const match = (await variationClient.send.getMatch({ args: { matchId } })).return
@@ -83,7 +83,7 @@ async function waitForMatchPhase(
     }
     await new Promise((r) => setTimeout(r, 1_000))
   }
-  throw new Error(`Match for ${subjectAddress} in app ${variationAppId} did not reach phase ${targetPhase} within ${timeoutMs}ms`)
+  throw new Error(`Match for ${participantAddress} in app ${variationAppId} did not reach phase ${targetPhase} within ${timeoutMs}ms`)
 }
 
 /**
@@ -95,16 +95,16 @@ async function waitForMatchPhase(
 export async function playInvestor(
   page: Page,
   algorand: AlgorandClient,
-  subject: KmdAccount,
+  participant: KmdAccount,
   variationAppId: bigint,
   investmentAlgo: number,
 ): Promise<void> {
-  await page.goto(`/play/${variationAppId}?e2e-account=${subject.address}`)
+  await page.goto(`/play/${variationAppId}?e2e-account=${participant.address}`)
   await dismissInstructions(page)
   await page.getByRole('heading', { name: /Investor Decision/i }).waitFor()
   await selectAlgoButton(page, investmentAlgo)
   await page.getByRole('button', { name: /Submit Investment Decision/i }).click()
-  await waitForMatchPhase(algorand, variationAppId, subject.address, 1) // PHASE_TRUSTEE_DECISION
+  await waitForMatchPhase(algorand, variationAppId, participant.address, 1) // PHASE_TRUSTEE_DECISION
 }
 
 /**
@@ -114,14 +114,14 @@ export async function playInvestor(
 export async function playTrustee(
   page: Page,
   algorand: AlgorandClient,
-  subject: KmdAccount,
+  participant: KmdAccount,
   variationAppId: bigint,
   returnAlgo: number,
 ): Promise<void> {
-  await page.goto(`/play/${variationAppId}?e2e-account=${subject.address}`)
+  await page.goto(`/play/${variationAppId}?e2e-account=${participant.address}`)
   await dismissInstructions(page)
   await page.getByRole('heading', { name: /Trustee Decision/i }).waitFor()
   await selectAlgoButton(page, returnAlgo)
   await page.getByRole('button', { name: /Submit Return Decision/i }).click()
-  await waitForMatchPhase(algorand, variationAppId, subject.address, 2) // PHASE_COMPLETED
+  await waitForMatchPhase(algorand, variationAppId, participant.address, 2) // PHASE_COMPLETED
 }

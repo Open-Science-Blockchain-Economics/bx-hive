@@ -1,22 +1,22 @@
 import { Chip } from '@/components/ds/badge'
 import { truncateAddress } from '../../../utils/address'
 
-interface SubjectEntry {
+interface ParticipantEntry {
   address: string
   enrolled: number
   assigned: number
 }
 
-interface SubjectsTableProps {
-  subjects: SubjectEntry[]
+interface ParticipantsTableProps {
+  participants: ParticipantEntry[]
 }
 
-export default function SubjectsTable({ subjects }: SubjectsTableProps) {
+export default function ParticipantsTable({ participants }: ParticipantsTableProps) {
   return (
     <div>
-      <h3 className="t-h2 mb-3">Subjects ({subjects.length})</h3>
-      {subjects.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No subjects enrolled yet.</p>
+      <h3 className="t-h2 mb-3">Participants ({participants.length})</h3>
+      {participants.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No participants enrolled yet.</p>
       ) : (
         <div className="overflow-x-auto rounded-sm border border-border">
           <table className="w-full text-sm">
@@ -27,7 +27,7 @@ export default function SubjectsTable({ subjects }: SubjectsTableProps) {
               </tr>
             </thead>
             <tbody>
-              {subjects.map((s) => (
+              {participants.map((s) => (
                 <tr key={s.address} className="border-b border-border last:border-b-0">
                   <td className="font-mono text-xs px-3 py-2 text-ink-2">{truncateAddress(s.address)}</td>
                   <td className="px-3 py-2">

@@ -5,15 +5,21 @@ on:
     paths:
       - 'projects/bx-hive-frontend/**'
       - 'projects/bx-hive-contracts/smart_contracts/artifacts/**'
+      - '.github/**'
   push:
     branches: [main, dev]
     paths:
       - 'projects/bx-hive-frontend/**'
       - 'projects/bx-hive-contracts/smart_contracts/artifacts/**'
+      - '.github/**'
 
 concurrency:
   group: frontend-ci-${{ github.ref }}
   cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: projects/bx-hive-frontend
 
 jobs:
   checks:
@@ -22,16 +28,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-frontend
-      - name: Lint, format, build, unit tests
-        working-directory: projects/bx-hive-frontend
-        run: |
-          pnpm run lint
-          pnpm run format:check
-          pnpm run build
-          pnpm run test:run
+      - name: Lint
+        run: pnpm run lint
+      - name: Format
+        run: pnpm run format:check
+      - name: Build
+        run: pnpm run build
+      - name: Unit tests
+        run: pnpm run test:run
 
-  e2e:
-    # Full integration + e2e suite — only on PRs to main/dev or push to main/dev.
+  integration:
+    # Integration suite — only on PRs to main/dev or push to main/dev.
     needs: checks
     runs-on: ubuntu-latest
     if: |
@@ -42,16 +49,31 @@ jobs:
       - uses: ./.github/actions/setup-frontend
       - uses: ./.github/actions/setup-localnet
 
-      - name: Install Playwright browsers
-        working-directory: projects/bx-hive-frontend
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Seed .env from template
+        run: cp .env.template .env
 
       - name: Integration tests
-        working-directory: projects/bx-hive-frontend
         run: pnpm run test:integration
 
+  e2e:
+    # E2E suite — only on PRs to main/dev or push to main/dev. Runs in parallel with integration.
+    needs: checks
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push'
+      || (github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'dev'))
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-frontend
+      - uses: ./.github/actions/setup-localnet
+
+      - name: Seed .env from template
+        run: cp .env.template .env
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
       - name: E2E tests
-        working-directory: projects/bx-hive-frontend
         run: pnpm run test:e2e
 
       - name: Upload Playwright report on failure
@@ -62,6 +84,10 @@ jobs:
           path: projects/bx-hive-frontend/playwright-report/
           retention-days: 7
 
-      - name: Stop LocalNet
-        if: always()
-        run: algokit localnet stop
+      - name: Upload Playwright test-results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: projects/bx-hive-frontend/test-results/
+          retention-days: 7

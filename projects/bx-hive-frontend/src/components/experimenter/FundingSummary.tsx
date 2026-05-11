@@ -70,7 +70,7 @@ export default function FundingSummary({
       </div>
       <p className="text-xs text-muted-foreground mt-2">
         Escrow funds payouts to players. Match MBR (0.0883 ALGO/match) covers on-chain storage and is paid when matches are created.
-        Subjects pay 0.0169 ALGO each on self-enrollment.
+        Participants pay 0.0169 ALGO each on self-enrollment.
       </p>
       <div
         role="alert"

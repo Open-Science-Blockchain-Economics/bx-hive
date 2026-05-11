@@ -383,7 +383,7 @@ create_variation:
     //         unit.bytes,
     //         asset_id.bytes,
     //         arc4.UInt64(self.registry_app.value).bytes,
-    //         max_subjects.bytes,
+    //         max_participants.bytes,
     //     ),
     //     fee=0,
     // ).submit()
@@ -481,7 +481,7 @@ create_variation:
     //         unit.bytes,
     //         asset_id.bytes,
     //         arc4.UInt64(self.registry_app.value).bytes,
-    //         max_subjects.bytes,
+    //         max_participants.bytes,
     //     ),
     //     fee=0,
     // ).submit()
@@ -879,7 +879,7 @@ create_experiment_with_variation:
     //         unit.bytes,
     //         asset_id.bytes,
     //         arc4.UInt64(self.registry_app.value).bytes,
-    //         max_subjects.bytes,
+    //         max_participants.bytes,
     //     ),
     //     fee=0,
     // ).submit()
@@ -976,7 +976,7 @@ create_experiment_with_variation:
     //         unit.bytes,
     //         asset_id.bytes,
     //         arc4.UInt64(self.registry_app.value).bytes,
-    //         max_subjects.bytes,
+    //         max_participants.bytes,
     //     ),
     //     fee=0,
     // ).submit()

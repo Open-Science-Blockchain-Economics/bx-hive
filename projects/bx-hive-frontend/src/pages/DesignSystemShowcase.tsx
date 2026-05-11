@@ -206,7 +206,7 @@ export default function DesignSystemShowcase() {
               <TabsList>
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="variations">Variations</TabsTrigger>
-                <TabsTrigger value="subjects">Subjects</TabsTrigger>
+                <TabsTrigger value="participants">Participants</TabsTrigger>
               </TabsList>
               <TabsContent value="overview">
                 <p className="t-small text-muted-foreground mt-4">Overview content.</p>
@@ -214,8 +214,8 @@ export default function DesignSystemShowcase() {
               <TabsContent value="variations">
                 <p className="t-small text-muted-foreground mt-4">Variation list.</p>
               </TabsContent>
-              <TabsContent value="subjects">
-                <p className="t-small text-muted-foreground mt-4">Enrolled subjects.</p>
+              <TabsContent value="participants">
+                <p className="t-small text-muted-foreground mt-4">Enrolled participants.</p>
               </TabsContent>
             </Tabs>
           </Section>
@@ -276,7 +276,7 @@ export default function DesignSystemShowcase() {
 
           <Section title="Stats">
             <Stat label="Active" value="6" />
-            <Stat label="Subjects" value="124" sub="across 4 experiments" />
+            <Stat label="Participants" value="124" sub="across 4 experiments" />
             <Stat label="Total payout" value="320" unit="ALGO" />
             <Stat label="Right aligned" value="42" align="right" />
           </Section>

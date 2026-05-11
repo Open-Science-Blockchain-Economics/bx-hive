@@ -4,10 +4,10 @@ import { STATUS_ACTIVE } from '../../../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../../../hooks/useTrustVariation'
 import CreateMatchForm from './CreateMatchForm'
 import MatchesTable from './MatchesTable'
-import SubjectsTable from './SubjectsTable'
+import ParticipantsTable from './ParticipantsTable'
 import VariationConfigCard from './VariationConfigCard'
 
-interface SubjectEntry {
+interface ParticipantEntry {
   address: string
   enrolled: number
   assigned: number
@@ -15,19 +15,19 @@ interface SubjectEntry {
 
 interface VariationPanelProps {
   variation: VariationInfo
-  subjects: SubjectEntry[]
+  participants: ParticipantEntry[]
   matches: Match[]
   config: VariationConfig | undefined
   onCreateMatch: (appId: bigint, investor: string, trustee: string) => Promise<void>
 }
 
-export default function VariationPanel({ variation, subjects, matches, config, onCreateMatch }: VariationPanelProps) {
-  const unassigned = subjects.filter((s) => s.assigned === 0)
+export default function VariationPanel({ variation, participants, matches, config, onCreateMatch }: VariationPanelProps) {
+  const unassigned = participants.filter((s) => s.assigned === 0)
 
   return (
     <Panel className="flex flex-col gap-6">
-      <VariationConfigCard config={config} appId={variation.appId} subjectCount={subjects.length} />
-      <SubjectsTable subjects={subjects} />
+      <VariationConfigCard config={config} appId={variation.appId} participantCount={participants.length} />
+      <ParticipantsTable participants={participants} />
       {config && config.status === STATUS_ACTIVE && (
         <CreateMatchForm appId={variation.appId} unassigned={unassigned} onCreateMatch={onCreateMatch} />
       )}

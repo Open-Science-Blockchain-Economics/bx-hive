@@ -5,9 +5,9 @@ import { queryKeys } from '../lib/queryKeys'
 import { TEST_WALLET_NAME } from '../lib/constants'
 import { useNetworkConfig, type NetworkConfig } from '../providers/NetworkProvider'
 
-const ROLE_MAP = { experimenter: 0, subject: 1 } as const
+const ROLE_MAP = { experimenter: 0, participant: 1 } as const
 
-export type LocalnetAccountRole = 'experimenter' | 'subject'
+export type LocalnetAccountRole = 'experimenter' | 'participant'
 
 export interface LocalnetAccount {
   name: string
@@ -86,7 +86,7 @@ async function fetchAccountRegistration(
     if (user) {
       return {
         registered: true,
-        role: (user.role === 0 ? 'experimenter' : 'subject') as LocalnetAccountRole,
+        role: (user.role === 0 ? 'experimenter' : 'participant') as LocalnetAccountRole,
         onChainName: user.name,
       }
     }

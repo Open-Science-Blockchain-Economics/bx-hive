@@ -67,9 +67,9 @@ For full details, see [Variations & Batches](../variations-and-batches/).
 
 ### Max matches per variation
 
-You must specify the maximum number of matches (pairs) per variation. Each match consists of one Investor and one Trustee, so the number of subjects needed is twice the number of matches.
+You must specify the maximum number of matches (pairs) per variation. Each match consists of one Investor and one Trustee, so the number of participants needed is twice the number of matches.
 
-For example, setting max matches to 10 means up to 20 subjects can enroll per variation.
+For example, setting max matches to 10 means up to 20 participants can enroll per variation.
 
 ### Funding breakdown
 
@@ -87,7 +87,7 @@ Escrow per variation = (E1 × m + E2) × number of pairs
 Match MBR = 0.0883 ALGO × number of pairs
 ```
 
-Additionally, each subject pays **0.0169 ALGO** when they self-enroll to cover their on-chain storage.
+Additionally, each participant pays **0.0169 ALGO** when they self-enroll to cover their on-chain storage.
 
 > **[Screenshot: Funding summary table showing escrow and MBR per variation]**
 
@@ -107,4 +107,4 @@ The application will:
 2. If in batch mode, deploy each additional variation
 3. Redirect you to the experiment details page on success
 
-Each variation is deployed as a separate smart contract that holds its own escrow funds and manages its own subjects and matches.
+Each variation is deployed as a separate smart contract that holds its own escrow funds and manages its own participants and matches.

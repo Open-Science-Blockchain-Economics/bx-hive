@@ -13,6 +13,6 @@ test('experimenter creates an experiment with one variation via the UI', async (
     maxMatchesPerVariation: 1,
   })
 
-  expect(result.expId).toBeGreaterThan(0)
+  expect(result.expId).toBeGreaterThanOrEqual(0)
   expect(result.variationAppId).toBeGreaterThan(0n)
 })

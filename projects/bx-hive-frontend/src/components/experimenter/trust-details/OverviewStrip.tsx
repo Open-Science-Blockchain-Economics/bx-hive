@@ -6,7 +6,7 @@ import { PHASE_COMPLETED, STATUS_ACTIVE, STATUS_CLOSED, STATUS_COMPLETED } from 
 import type { Match, VariationConfig } from '../../../hooks/useTrustVariation'
 import { microAlgoToAlgo } from '../../../utils/amount'
 
-interface SubjectEntry {
+interface ParticipantEntry {
   address: string
   enrolled: number
   assigned: number
@@ -14,7 +14,7 @@ interface SubjectEntry {
 
 interface OverviewStripProps {
   variations: VariationInfo[]
-  subjects: Record<string, SubjectEntry[]>
+  participants: Record<string, ParticipantEntry[]>
   matches: Record<string, Match[]>
   configs: Record<string, VariationConfig>
 }
@@ -25,12 +25,12 @@ function formatAlgo(algo: number): string {
   return algo.toFixed(2)
 }
 
-export default function OverviewStrip({ variations, subjects, matches, configs }: OverviewStripProps) {
-  const allSubjects = Object.values(subjects).flat()
+export default function OverviewStrip({ variations, participants, matches, configs }: OverviewStripProps) {
+  const allParticipants = Object.values(participants).flat()
   const allMatches = Object.values(matches).flat()
-  const totalEnrolled = allSubjects.length
-  const totalWaiting = allSubjects.filter((s) => s.assigned === 0).length
-  const totalAssigned = allSubjects.filter((s) => s.assigned === 1).length
+  const totalEnrolled = allParticipants.length
+  const totalWaiting = allParticipants.filter((s) => s.assigned === 0).length
+  const totalAssigned = allParticipants.filter((s) => s.assigned === 1).length
   const totalMatches = allMatches.length
   const matchesInPlay = allMatches.filter((m) => m.phase === 0 || m.phase === 1).length
   const completedMatches = allMatches.filter((m) => m.phase === PHASE_COMPLETED)
@@ -79,7 +79,7 @@ export default function OverviewStrip({ variations, subjects, matches, configs }
         }
       />
       <StatCard
-        title="Subjects"
+        title="Participants"
         value={totalEnrolled}
         desc={
           <>
@@ -97,7 +97,7 @@ export default function OverviewStrip({ variations, subjects, matches, configs }
             <span className="text-xs text-muted-foreground font-mono ml-1.5">ALGO</span>
           </>
         }
-        desc={totalCompleted > 0 ? <>μ = {meanPayoutAlgo.toFixed(2)} / subject</> : <>no completed matches yet</>}
+        desc={totalCompleted > 0 ? <>μ = {meanPayoutAlgo.toFixed(2)} / participant</> : <>no completed matches yet</>}
       />
     </div>
   )
