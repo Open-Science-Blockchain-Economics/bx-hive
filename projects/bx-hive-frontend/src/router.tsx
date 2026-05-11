@@ -14,6 +14,7 @@ import DesignSystemShowcase from './pages/DesignSystemShowcase'
 import DevLocalnet from './pages/DevLocalnet'
 import ExperimentDetails from './pages/ExperimentDetails'
 import ExperimenterDashboard from './pages/ExperimenterDashboard'
+import ForExperimenters from './pages/ForExperimenters'
 import ForParticipants from './pages/ForParticipants'
 import Home from './pages/Home'
 import Join from './pages/Join'
@@ -79,6 +80,14 @@ export const router = createBrowserRouter([
         element: (
           <QueryBoundary>
             <ForParticipants />
+          </QueryBoundary>
+        ),
+      },
+      {
+        path: 'for-experimenters',
+        element: (
+          <QueryBoundary>
+            <ForExperimenters />
           </QueryBoundary>
         ),
       },

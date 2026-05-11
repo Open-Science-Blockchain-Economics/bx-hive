@@ -51,6 +51,7 @@ export default function Home() {
             icon="exp"
             body="Design, fund, and manage verifiable experiments using canonical templates. Specify base parameters once; deploy variations atomically."
             cta="Learn more"
+            to="/for-experimenters"
           />
           <RoleCard
             title="Participants"

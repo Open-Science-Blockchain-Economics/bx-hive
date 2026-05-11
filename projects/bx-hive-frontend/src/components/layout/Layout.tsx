@@ -1,4 +1,4 @@
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, ScrollRestoration, useLocation } from 'react-router-dom'
 
 import { TooltipProvider } from '@/components/ds/tooltip'
 
@@ -7,7 +7,7 @@ import { ExperimentManagerProvider } from '../../hooks/useExperimentManager'
 import Footer from './Footer'
 import TopBar from './TopBar'
 
-const FULL_BLEED_PATHS = new Set(['/', '/for-participants', '/about'])
+const FULL_BLEED_PATHS = new Set(['/', '/for-participants', '/for-experimenters', '/about'])
 
 export default function Layout() {
   const fullBleed = FULL_BLEED_PATHS.has(useLocation().pathname)
@@ -15,6 +15,7 @@ export default function Layout() {
     <ActiveUserProvider>
       <ExperimentManagerProvider>
         <TooltipProvider>
+          <ScrollRestoration />
           <div className="min-h-screen flex flex-col bg-background text-foreground">
             <TopBar />
             <main className="flex-1">
