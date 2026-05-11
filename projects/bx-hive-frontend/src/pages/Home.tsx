@@ -56,6 +56,7 @@ export default function Home() {
             icon="part"
             body="Participate in active research and receive transparent, automated payouts. Settled on-chain after every round."
             cta="Learn more"
+            to="/for-participants"
           />
         </div>
       </section>

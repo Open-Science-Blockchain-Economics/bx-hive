@@ -7,8 +7,10 @@ import { ExperimentManagerProvider } from '../../hooks/useExperimentManager'
 import Footer from './Footer'
 import TopBar from './TopBar'
 
+const FULL_BLEED_PATHS = new Set(['/', '/for-participants'])
+
 export default function Layout() {
-  const fullBleed = useLocation().pathname === '/'
+  const fullBleed = FULL_BLEED_PATHS.has(useLocation().pathname)
   return (
     <ActiveUserProvider>
       <ExperimentManagerProvider>

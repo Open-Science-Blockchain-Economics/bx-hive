@@ -13,6 +13,7 @@ import DesignSystemShowcase from './pages/DesignSystemShowcase'
 import DevLocalnet from './pages/DevLocalnet'
 import ExperimentDetails from './pages/ExperimentDetails'
 import ExperimenterDashboard from './pages/ExperimenterDashboard'
+import ForParticipants from './pages/ForParticipants'
 import Home from './pages/Home'
 import Join from './pages/Join'
 import PlayExperiment from './pages/PlayExperiment'
@@ -61,6 +62,14 @@ export const router = createBrowserRouter([
         element: (
           <QueryBoundary>
             <Join />
+          </QueryBoundary>
+        ),
+      },
+      {
+        path: 'for-participants',
+        element: (
+          <QueryBoundary>
+            <ForParticipants />
           </QueryBoundary>
         ),
       },
