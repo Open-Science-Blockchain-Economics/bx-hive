@@ -1,17 +1,17 @@
-import { ArrowRight, FlaskConical, TriangleAlert, User } from 'lucide-react'
+import { ArrowRight, Compass, FlaskConical, User } from 'lucide-react'
 
 import PillBtn from './PillBtn'
 
 interface RoleCardProps {
   title: string
   body: string
-  icon: 'start' | 'exp' | 'part'
+  icon: 'about' | 'exp' | 'part'
   cta: string
   href?: string
 }
 
 export default function RoleCard({ title, body, icon, cta, href }: RoleCardProps) {
-  const Icon = icon === 'start' ? TriangleAlert : icon === 'exp' ? FlaskConical : User
+  const Icon = icon === 'about' ? Compass : icon === 'exp' ? FlaskConical : User
   return (
     <div className="bg-card border border-border rounded-2xl p-8 flex flex-col gap-3">
       <div className="size-9 rounded-sm bg-primary text-primary-foreground grid place-items-center mb-2">

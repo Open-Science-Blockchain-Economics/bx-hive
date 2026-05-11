@@ -40,22 +40,22 @@ export default function Home() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-[1240px] mx-auto">
           <RoleCard
-            title="Getting started"
-            icon="start"
-            body="Learn the fundamentals of bxHive and how to set up your account — wallet, identity, and the laboratory basics."
-            cta="Read the primer"
+            title="About bxHive"
+            icon="about"
+            body="What bxHive is and why it exists — open science, public blockchains, and the bigger picture."
+            cta="Learn more"
           />
           <RoleCard
             title="Experimenters"
             icon="exp"
             body="Design, fund, and manage verifiable experiments using canonical templates. Specify base parameters once; deploy variations atomically."
-            cta="For researchers"
+            cta="Learn more"
           />
           <RoleCard
             title="Participants"
             icon="part"
             body="Participate in active research and receive transparent, automated payouts. Settled on-chain after every round."
-            cta="For participants"
+            cta="Learn more"
           />
         </div>
       </section>
