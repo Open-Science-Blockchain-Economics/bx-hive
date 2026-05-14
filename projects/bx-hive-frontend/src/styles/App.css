@@ -1,3 +1,65 @@
 @import 'tailwindcss';
+@import './tokens.css';
+
 @plugin "@tailwindcss/typography";
-@plugin "daisyui";
+
+/* Bridge design tokens (tokens.css) into Tailwind v4 utilities so bg-, text-,
+   border-, font-, and rounded- utilities resolve to the active
+   [data-theme] / [data-accent] CSS variables at runtime.
+
+   Design source tokens (--ink, --surface, --rule, --brand, etc.) are exposed
+   under shadcn-convention names (--color-foreground, --color-card,
+   --color-border, --color-primary) so shadcn-generated components draw from
+   design tokens out-of-box. Design-specific tokens with no shadcn equivalent
+   (--color-pos, --color-rule-2, --color-bg-alt, etc.) keep design names. */
+@theme {
+  /* shadcn-convention surfaces and ink */
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-popover: var(--surface);
+  --color-popover-foreground: var(--ink);
+  --color-muted: var(--surface-2);
+  --color-muted-foreground: var(--muted-text);
+
+  /* shadcn-convention brand/action */
+  --color-primary: var(--brand);
+  --color-primary-foreground: var(--brand-ink);
+  --color-secondary: var(--surface-2);
+  --color-secondary-foreground: var(--ink);
+  --color-accent: var(--brand-soft);
+  --color-accent-foreground: var(--brand);
+  --color-destructive: var(--neg);
+  --color-destructive-foreground: #ffffff;
+  --color-border: var(--rule);
+  --color-input: var(--rule-2);
+  --color-ring: var(--brand);
+
+  /* design-specific (no shadcn equivalent) */
+  --color-bg-alt: var(--bg-alt);
+  --color-surface-2: var(--surface-2);
+  --color-ink-2: var(--ink-2);
+  --color-faint: var(--faint);
+  --color-rule-2: var(--rule-2);
+  --color-pos: var(--pos);
+  --color-pos-bg: var(--pos-bg);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --color-neg: var(--neg);
+  --color-neg-bg: var(--neg-bg);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-brand-2: var(--brand-2);
+
+  /* type stacks */
+  --font-display: var(--font-display);
+  --font-ui: var(--font-ui);
+  --font-mono: var(--font-mono);
+
+  /* radii */
+  --radius-hair: var(--r-1);
+  --radius-sm: var(--r-2);
+  --radius-md: var(--r-3);
+  --radius-pill: var(--r-pill);
+}

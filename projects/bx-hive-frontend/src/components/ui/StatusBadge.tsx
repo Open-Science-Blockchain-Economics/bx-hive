@@ -1,22 +1,25 @@
-type BadgeSize = 'sm' | 'md' | 'lg'
+import { Chip } from '@/components/ds/badge'
 
 interface StatusBadgeProps {
   status: string
-  size?: BadgeSize
+  size?: 'sm' | 'md' | 'lg'
   className?: string
 }
 
-const statusStyles: Record<string, string> = {
-  active: 'badge-success',
-  open: 'badge-info',
-  closed: 'badge-warning',
-  completed: 'badge-neutral',
-  ended: 'badge-error',
-  waiting: 'badge-ghost',
+const statusToTone: Record<string, 'pos' | 'info' | 'warn' | 'neutral' | 'neg' | 'accent'> = {
+  active: 'pos',
+  open: 'info',
+  closed: 'warn',
+  completed: 'neutral',
+  ended: 'neg',
+  waiting: 'neutral',
 }
 
-export default function StatusBadge({ status, size, className = '' }: StatusBadgeProps) {
-  const colorClass = statusStyles[status.toLowerCase()] ?? 'badge-ghost'
-  const sizeClass = size ? `badge-${size}` : ''
-  return <span className={`badge ${colorClass} ${sizeClass} ${className}`.trim()}>{status.charAt(0).toUpperCase() + status.slice(1)}</span>
+export default function StatusBadge({ status, className }: StatusBadgeProps) {
+  const tone = statusToTone[status.toLowerCase()] ?? 'neutral'
+  return (
+    <Chip tone={tone} className={className}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </Chip>
+  )
 }

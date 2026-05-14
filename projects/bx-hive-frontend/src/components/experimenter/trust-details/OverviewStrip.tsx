@@ -1,10 +1,12 @@
-import { FaPause, FaPlay } from 'react-icons/fa'
+import { Panel } from '@/components/ds/card'
+import { Gauge } from '@/components/ds/gauge'
+import { StatCard } from '../../ui'
 import type { VariationInfo } from '../../../hooks/useTrustExperiments'
 import { PHASE_COMPLETED, STATUS_ACTIVE, STATUS_CLOSED, STATUS_COMPLETED } from '../../../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../../../hooks/useTrustVariation'
-import { StatCard } from '../../ui'
+import { microAlgoToAlgo } from '../../../utils/amount'
 
-interface SubjectEntry {
+interface ParticipantEntry {
   address: string
   enrolled: number
   assigned: number
@@ -12,157 +14,91 @@ interface SubjectEntry {
 
 interface OverviewStripProps {
   variations: VariationInfo[]
-  subjects: Record<string, SubjectEntry[]>
+  participants: Record<string, ParticipantEntry[]>
   matches: Record<string, Match[]>
   configs: Record<string, VariationConfig>
-  autoRefresh: boolean
-  onToggleAutoRefresh: (val: boolean) => void
-  onRefresh: () => void
-  autoMatch: boolean
-  onToggleAutoMatch: (val: boolean) => void
-  autoMatchEligible: boolean
-  autoMatchDisabledReason?: string
 }
 
-export default function OverviewStrip({
-  variations,
-  subjects,
-  matches,
-  configs,
-  autoRefresh,
-  onToggleAutoRefresh,
-  onRefresh,
-  autoMatch,
-  onToggleAutoMatch,
-  autoMatchEligible,
-  autoMatchDisabledReason,
-}: OverviewStripProps) {
-  const allSubjects = Object.values(subjects).flat()
+function formatAlgo(algo: number): string {
+  if (algo >= 1_000_000) return `${(algo / 1_000_000).toFixed(1)}M`
+  if (algo >= 1_000) return `${(algo / 1_000).toFixed(1)}k`
+  return algo.toFixed(2)
+}
+
+export default function OverviewStrip({ variations, participants, matches, configs }: OverviewStripProps) {
+  const allParticipants = Object.values(participants).flat()
   const allMatches = Object.values(matches).flat()
-  const totalEnrolled = allSubjects.length
-  const totalWaiting = allSubjects.filter((s) => s.assigned === 0).length
-  const totalAssigned = allSubjects.filter((s) => s.assigned === 1).length
+  const totalEnrolled = allParticipants.length
+  const totalWaiting = allParticipants.filter((s) => s.assigned === 0).length
+  const totalAssigned = allParticipants.filter((s) => s.assigned === 1).length
   const totalMatches = allMatches.length
-  const matchesInvestorPhase = allMatches.filter((m) => m.phase === 0).length
-  const matchesTrusteePhase = allMatches.filter((m) => m.phase === 1).length
-  const totalCompleted = allMatches.filter((m) => m.phase === PHASE_COMPLETED).length
+  const matchesInPlay = allMatches.filter((m) => m.phase === 0 || m.phase === 1).length
+  const completedMatches = allMatches.filter((m) => m.phase === PHASE_COMPLETED)
+  const totalCompleted = completedMatches.length
   const allConfigs = Object.values(configs)
   const variationsActive = allConfigs.filter((c) => c.status === STATUS_ACTIVE).length
   const variationsClosed = allConfigs.filter((c) => c.status === STATUS_CLOSED).length
   const variationsEnded = allConfigs.filter((c) => c.status === STATUS_COMPLETED).length
   const progressPct = totalMatches > 0 ? Math.round((totalCompleted / totalMatches) * 100) : 0
 
+  const totalPayoutMicroAlgo = completedMatches.reduce((acc, m) => acc + m.investorPayout + m.trusteePayout, 0n)
+  const totalPayoutAlgo = microAlgoToAlgo(totalPayoutMicroAlgo)
+  const meanPayoutAlgo = totalCompleted > 0 ? totalPayoutAlgo / (totalCompleted * 2) : 0
+
   return (
-    <div className="bg-base-200 rounded-box p-4 mb-6">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-1 text-xs">
-          <h2 className="text-sm font-semibold text-base-content/60">Overview</h2>
-          {autoRefresh ? (
-            <>
-              <span className="tooltip tooltip-bottom" data-tip="Pause auto-refresh">
-                <button type="button" className="btn btn-ghost btn-xs btn-square" onClick={() => onToggleAutoRefresh(false)}>
-                  <FaPause className="w-3 h-3" />
-                </button>
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                <span className="text-success font-medium">Live</span>
-              </span>
-            </>
-          ) : (
-            <>
-              <span className="tooltip tooltip-bottom" data-tip="Start auto-refresh">
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-xs btn-square"
-                  onClick={() => {
-                    onToggleAutoRefresh(true)
-                    onRefresh()
-                  }}
-                >
-                  <FaPlay className="w-3 h-3" />
-                </button>
-              </span>
-              <button type="button" className="btn btn-ghost btn-xs" onClick={onRefresh}>
-                ↻ Refresh
-              </button>
-            </>
-          )}
-          <span
-            className="tooltip tooltip-bottom ml-2"
-            data-tip={
-              !autoMatchEligible
-                ? autoMatchDisabledReason ?? 'Auto Match unavailable'
-                : autoMatch
-                  ? 'Pause auto-matching'
-                  : 'Auto-match unassigned subjects across all active variations (FIFO)'
-            }
-          >
-            <button
-              type="button"
-              className="btn btn-ghost btn-xs gap-1"
-              disabled={!autoMatchEligible}
-              onClick={() => onToggleAutoMatch(!autoMatch)}
-            >
-              {autoMatch ? (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <Panel>
+        <div className="t-micro mb-1.5">Run status</div>
+        <div className="flex items-center gap-3">
+          <Gauge value={progressPct} size={48} />
+          <div>
+            <div className="font-mono text-2xl font-medium leading-none tracking-[-0.01em] text-foreground">
+              {totalCompleted} / {totalMatches}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1.5">
+              <span className="text-primary">{totalCompleted} completed</span>
+              {matchesInPlay > 0 && (
                 <>
-                  <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                  <FaPause className="w-3 h-3" /> Auto Match
-                </>
-              ) : (
-                <>
-                  <FaPlay className="w-3 h-3" /> Auto Match
+                  {' · '}
+                  <span>{matchesInPlay} in play</span>
                 </>
               )}
-            </button>
-          </span>
-        </div>
-        <span className="text-xs uppercase tracking-wide text-base-content/30">Trust Experiment</span>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <StatCard
-          title="Variations"
-          value={variations.length}
-          desc={
-            <>
-              {variationsActive > 0 && <span className="text-primary">{variationsActive} active </span>}
-              {variationsClosed > 0 && <span className="text-warning">{variationsClosed} closed </span>}
-              {variationsEnded > 0 && <span className="text-error">{variationsEnded} ended</span>}
-            </>
-          }
-        />
-        <StatCard
-          title="Subjects"
-          value={totalEnrolled}
-          desc={
-            <>
-              <span className="text-primary">{totalAssigned} playing</span>
-              {' \u00b7 '}
-              <span>{totalWaiting} waiting</span>
-            </>
-          }
-        />
-        <StatCard
-          title="Total Matches"
-          value={totalMatches}
-          figure={
-            <div
-              className={`radial-progress text-xs ${progressPct === 100 ? 'text-primary' : 'text-base-content'}`}
-              style={{ '--value': progressPct, '--size': '3rem', '--thickness': '4px' } as React.CSSProperties}
-              role="progressbar"
-            >
-              {progressPct}%
             </div>
-          }
-          desc={
-            <>
-              <span className="text-primary">{totalCompleted} completed</span>
-              {' \u00b7 '}
-              <span>{matchesInvestorPhase + matchesTrusteePhase} in play</span>
-            </>
-          }
-        />
-      </div>
+          </div>
+        </div>
+      </Panel>
+      <StatCard
+        title="Variations"
+        value={variations.length}
+        desc={
+          <>
+            {variationsActive > 0 && <span className="text-primary">{variationsActive} active </span>}
+            {variationsClosed > 0 && <span className="text-warn">{variationsClosed} closed </span>}
+            {variationsEnded > 0 && <span className="text-neg">{variationsEnded} ended</span>}
+          </>
+        }
+      />
+      <StatCard
+        title="Participants"
+        value={totalEnrolled}
+        desc={
+          <>
+            <span className="text-primary">{totalAssigned} playing</span>
+            {' · '}
+            <span>{totalWaiting} waiting</span>
+          </>
+        }
+      />
+      <StatCard
+        title="Total payout"
+        value={
+          <>
+            {formatAlgo(totalPayoutAlgo)}
+            <span className="text-xs text-muted-foreground font-mono ml-1.5">ALGO</span>
+          </>
+        }
+        desc={totalCompleted > 0 ? <>μ = {meanPayoutAlgo.toFixed(2)} / participant</> : <>no completed matches yet</>}
+      />
     </div>
   )
 }

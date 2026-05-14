@@ -1,4 +1,3 @@
-import { initializeBRETState } from '../experiment-logic/bret'
 import type { AssignmentStrategy, Experiment, ExperimentBatch, ExperimentStatus, ParameterVariation, TrustExperimentState } from '../types'
 import { executeReadArrayTransaction, executeReadTransaction, executeWriteTransaction, STORES } from './index'
 
@@ -186,7 +185,10 @@ export async function registerForBatch(batchId: string, userId: string, playerCo
 
   if (batch.assignmentStrategy === 'round_robin') {
     // Pick the experiment with the fewest players
-    selectedExperiment = availableExperiments.reduce((min, exp) => (exp.players.length < min.players.length ? exp : min), availableExperiments[0])
+    selectedExperiment = availableExperiments.reduce(
+      (min, exp) => (exp.players.length < min.players.length ? exp : min),
+      availableExperiments[0],
+    )
   } else {
     // fill_sequential: Pick the first available experiment (by variation index)
     selectedExperiment = availableExperiments[0]
@@ -266,16 +268,11 @@ export async function registerForExperiment(experimentId: string, userId: string
 
   // For 1-player experiments, create a match immediately
   if (playerCount === 1) {
-    // Initialize experiment-specific state for single-player experiments
-    const initialState =
-      experiment.templateId === 'bret' ? initializeBRETState(experiment.parameters.rows as number, experiment.parameters.cols as number) : undefined
-
     experiment.matches.push({
       id: crypto.randomUUID(),
       player1Id: userId,
       status: 'playing',
       createdAt: Date.now(),
-      state: initialState,
     })
   }
 
@@ -290,7 +287,8 @@ export async function registerForExperiment(experimentId: string, userId: string
       const partner = waitingPlayers.sort((a, b) => a.registeredAt - b.registeredAt)[0]
 
       // Initialize experiment-specific state for Trust Experiment
-      const initialState: TrustExperimentState | undefined = experiment.templateId === 'trust-game' ? { phase: 'investor_decision' } : undefined
+      const initialState: TrustExperimentState | undefined =
+        experiment.templateId === 'trust-game' ? { phase: 'investor_decision' } : undefined
 
       experiment.matches.push({
         id: crypto.randomUUID(),

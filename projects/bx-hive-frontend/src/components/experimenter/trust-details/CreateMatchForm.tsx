@@ -1,7 +1,12 @@
 import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
+
+import { Btn } from '@/components/ds/button'
+import { Field } from '@/components/ds/field'
+import { cn } from '@/lib/utils'
 import { truncateAddress } from '../../../utils/address'
 
-interface SubjectEntry {
+interface ParticipantEntry {
   address: string
   enrolled: number
   assigned: number
@@ -9,9 +14,15 @@ interface SubjectEntry {
 
 interface CreateMatchFormProps {
   appId: bigint
-  unassigned: SubjectEntry[]
+  unassigned: ParticipantEntry[]
   onCreateMatch: (appId: bigint, investor: string, trustee: string) => Promise<void>
 }
+
+const selectClass = cn(
+  'h-9 w-full min-w-0 rounded-sm border border-input bg-card px-2.5 text-[13px] text-foreground font-ui transition-colors outline-none',
+  'focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50',
+  'disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50',
+)
 
 export default function CreateMatchForm({ appId, unassigned, onCreateMatch }: CreateMatchFormProps) {
   const [investor, setInvestor] = useState('')
@@ -36,16 +47,14 @@ export default function CreateMatchForm({ appId, unassigned, onCreateMatch }: Cr
 
   return (
     <div>
-      <h3 className="font-semibold mb-3">Create Match</h3>
-
+      <h3 className="t-h2 mb-3">Create Match</h3>
       {unassigned.length < 2 ? (
-        <p className="text-sm text-base-content/50">Need at least 2 unassigned subjects to create a match.</p>
+        <p className="text-sm text-muted-foreground">Need at least 2 unassigned participants to create a match.</p>
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-3 items-end">
-            <div className="flex-1 min-w-0 sm:min-w-40">
-              <label className="label label-text text-xs pb-1">Investor</label>
-              <select className="select select-sm select-bordered w-full" value={investor} onChange={(e) => setInvestor(e.target.value)}>
+            <Field label="Investor" htmlFor="cm-investor" className="flex-1 min-w-40">
+              <select id="cm-investor" className={selectClass} value={investor} onChange={(e) => setInvestor(e.target.value)}>
                 <option value="">Select investor…</option>
                 {unassigned.map((s) => (
                   <option key={s.address} value={s.address}>
@@ -53,10 +62,9 @@ export default function CreateMatchForm({ appId, unassigned, onCreateMatch }: Cr
                   </option>
                 ))}
               </select>
-            </div>
-            <div className="flex-1 min-w-0 sm:min-w-40">
-              <label className="label label-text text-xs pb-1">Trustee</label>
-              <select className="select select-sm select-bordered w-full" value={trustee} onChange={(e) => setTrustee(e.target.value)}>
+            </Field>
+            <Field label="Trustee" htmlFor="cm-trustee" className="flex-1 min-w-40">
+              <select id="cm-trustee" className={selectClass} value={trustee} onChange={(e) => setTrustee(e.target.value)}>
                 <option value="">Select trustee…</option>
                 {unassigned.map((s) => (
                   <option key={s.address} value={s.address}>
@@ -64,20 +72,20 @@ export default function CreateMatchForm({ appId, unassigned, onCreateMatch }: Cr
                   </option>
                 ))}
               </select>
-            </div>
-            <button
-              type="button"
-              className="btn btn-sm btn-primary"
+            </Field>
+            <Btn
+              variant="primary"
+              size="sm"
               disabled={!investor || !trustee || investor === trustee || creating}
               onClick={() => void handleCreate()}
             >
-              {creating ? <span className="loading loading-spinner loading-xs" /> : 'Create Match'}
-            </button>
+              {creating ? <Loader2 className="size-3.5 animate-spin" /> : 'Create match'}
+            </Btn>
           </div>
           {investor && trustee && investor === trustee && (
-            <p className="text-warning text-xs">Investor and trustee must be different subjects.</p>
+            <p className="text-warn text-xs">Investor and trustee must be different participants.</p>
           )}
-          {error && <p className="text-error text-xs">{error}</p>}
+          {error && <p className="text-neg text-xs">{error}</p>}
         </div>
       )}
     </div>

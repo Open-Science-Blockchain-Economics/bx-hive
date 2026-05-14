@@ -1,3 +1,7 @@
+import { ExternalLink } from 'lucide-react'
+import type { ReactNode } from 'react'
+
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip'
 import type { VariationConfig } from '../../../hooks/useTrustVariation'
 import { microAlgoToAlgo } from '../../../utils/amount'
 import { loraApplicationUrl } from '../../../utils/lora'
@@ -5,73 +9,101 @@ import { loraApplicationUrl } from '../../../utils/lora'
 interface VariationConfigCardProps {
   config: VariationConfig | undefined
   appId: bigint
+  participantCount: number
 }
 
 function LoraLink({ appId }: { appId: bigint }) {
   return (
-    <a
-      href={loraApplicationUrl('localnet', appId)}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="tooltip tooltip-right"
-      data-tip={`View app #${String(appId)} on Lora`}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="w-4 h-4 text-base-content/50 hover:text-primary transition-colors"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        strokeWidth={2}
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-        />
-      </svg>
-    </a>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <a
+          href={loraApplicationUrl('localnet', appId)}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`View app #${String(appId)} on Lora`}
+          className="text-muted-foreground hover:text-primary transition-colors"
+        >
+          <ExternalLink className="size-4" />
+        </a>
+      </TooltipTrigger>
+      <TooltipContent side="right">View app #{String(appId)} on Lora</TooltipContent>
+    </Tooltip>
   )
 }
 
-export default function VariationConfigCard({ config, appId }: VariationConfigCardProps) {
+interface MetricProps {
+  label: string
+  value: string
+  unit: ReactNode
+}
+
+function Metric({ label, value, unit }: MetricProps) {
+  return (
+    <div className="px-3 py-1">
+      <div className="t-micro mb-1">{label}</div>
+      <div className="text-base font-semibold font-mono">{value}</div>
+      <div className="text-xs text-muted-foreground">{unit}</div>
+    </div>
+  )
+}
+
+function CapacityBar({ pct }: { pct: number }) {
+  const clamped = Math.max(0, Math.min(100, pct))
+  return (
+    <div
+      role="progressbar"
+      aria-valuenow={Math.round(clamped)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      className="mt-1 h-1 w-full rounded-full bg-(--rule) overflow-hidden"
+    >
+      <div className="h-full bg-(--brand) motion-safe:transition-[width] motion-safe:duration-250" style={{ width: `${clamped}%` }} />
+    </div>
+  )
+}
+
+function CapacityUnit({ participantCount, maxParticipants }: { participantCount: number; maxParticipants: bigint }) {
+  if (maxParticipants === 0n) return <>unlimited</>
+  const max = Number(maxParticipants)
+  const pct = max > 0 ? (participantCount / max) * 100 : 0
+  return (
+    <>
+      <span>{`${Math.round(pct)}%`}</span>
+      <CapacityBar pct={pct} />
+    </>
+  )
+}
+
+export default function VariationConfigCard({ config, appId, participantCount }: VariationConfigCardProps) {
   if (!config) {
     return (
       <div className="flex items-center gap-2">
-        <h3 className="text-xs font-semibold text-base-content/50">Parameters</h3>
+        <h3 className="t-micro">Parameters</h3>
         <LoraLink appId={appId} />
       </div>
     )
   }
 
+  const capacityValue =
+    config.maxParticipants === 0n ? `${participantCount} / ∞` : `${participantCount} / ${String(config.maxParticipants)}`
+
   return (
-    <div className="bg-base-200 rounded-box p-3">
+    <div className="bg-muted rounded-sm p-3">
       <div className="flex items-center gap-2 mb-2">
-        <h3 className="text-xs font-semibold text-base-content/50">Parameters</h3>
+        <h3 className="t-micro">Parameters</h3>
         <LoraLink appId={appId} />
       </div>
       <div className="overflow-x-auto">
-        <div className="stats stats-horizontal shadow-none bg-transparent text-sm w-full">
-          <div className="stat py-1 px-3">
-            <div className="stat-title text-xs">E1 Endowment</div>
-            <div className="stat-value text-base font-semibold">{microAlgoToAlgo(config.e1).toFixed(3)}</div>
-            <div className="stat-desc">ALGO</div>
-          </div>
-          <div className="stat py-1 px-3">
-            <div className="stat-title text-xs">E2 Endowment</div>
-            <div className="stat-value text-base font-semibold">{microAlgoToAlgo(config.e2).toFixed(3)}</div>
-            <div className="stat-desc">ALGO</div>
-          </div>
-          <div className="stat py-1 px-3">
-            <div className="stat-title text-xs">Multiplier</div>
-            <div className="stat-value text-base font-semibold">&times;{String(config.multiplier)}</div>
-            <div className="stat-desc">trust factor</div>
-          </div>
-          <div className="stat py-1 px-3">
-            <div className="stat-title text-xs">Unit Size</div>
-            <div className="stat-value text-base font-semibold">{microAlgoToAlgo(config.unit).toFixed(3)}</div>
-            <div className="stat-desc">ALGO</div>
-          </div>
+        <div className="flex divide-x divide-border w-full">
+          <Metric label="E1 Endowment" value={microAlgoToAlgo(config.e1).toFixed(3)} unit="ALGO" />
+          <Metric label="E2 Endowment" value={microAlgoToAlgo(config.e2).toFixed(3)} unit="ALGO" />
+          <Metric label="Multiplier" value={`×${String(config.multiplier)}`} unit="trust factor" />
+          <Metric label="Unit Size" value={microAlgoToAlgo(config.unit).toFixed(3)} unit="ALGO" />
+          <Metric
+            label="Capacity"
+            value={capacityValue}
+            unit={<CapacityUnit participantCount={participantCount} maxParticipants={config.maxParticipants} />}
+          />
         </div>
       </div>
     </div>

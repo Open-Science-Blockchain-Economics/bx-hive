@@ -12,8 +12,10 @@
 /build
 
 
-# dotenv environment variable files
+# dotenv environment variable files — only .env.template is committed.
 .env
+.env.*
+!.env.template
 env/
 
 # misc

@@ -1,6 +1,4 @@
-import { microAlgo } from '@algorandfoundation/algokit-utils'
-import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
-import algosdk from 'algosdk'
+import { AlgoAmount, getApplicationAddress, microAlgo } from '@algorandfoundation/algokit-utils'
 import { useCallback } from 'react'
 import type { ExperimentGroup, VariationInfo } from '../contracts/TrustExperiments'
 import { useAlgorand } from './useAlgorand'
@@ -18,8 +16,8 @@ export interface VariationParams {
   unit: bigint
   /** Asset ID — 0 for ALGO */
   assetId: bigint
-  /** Max subjects per variation — 0 for unlimited */
-  maxSubjects?: bigint
+  /** Max participants per variation — 0 for unlimited */
+  maxParticipants?: bigint
   /** Pre-funded escrow in microAlgo to deposit at creation */
   escrowMicroAlgo: bigint
 }
@@ -55,7 +53,7 @@ export function useTrustExperiments() {
       if (!trustExperimentsClient || !algorand || !activeAddress) throw new Error('Wallet not connected')
       const escrowPayment = await algorand.createTransaction.payment({
         sender: activeAddress,
-        receiver: algosdk.getApplicationAddress(trustExperimentsClient.appId),
+        receiver: getApplicationAddress(trustExperimentsClient.appId),
         amount: AlgoAmount.MicroAlgos(Number(params.escrowMicroAlgo)),
       })
       const result = await trustExperimentsClient.send.createExperimentWithVariation({
@@ -67,7 +65,7 @@ export function useTrustExperiments() {
           multiplier: params.multiplier,
           unit: params.unit,
           assetId: params.assetId,
-          maxSubjects: params.maxSubjects ?? 0n,
+          maxParticipants: params.maxParticipants ?? 0n,
           escrowPayment,
         },
         coverAppCallInnerTransactionFees: true,
@@ -89,7 +87,7 @@ export function useTrustExperiments() {
       if (!trustExperimentsClient || !algorand || !activeAddress) throw new Error('Wallet not connected')
       const escrowPayment = await algorand.createTransaction.payment({
         sender: activeAddress,
-        receiver: algosdk.getApplicationAddress(trustExperimentsClient.appId),
+        receiver: getApplicationAddress(trustExperimentsClient.appId),
         amount: AlgoAmount.MicroAlgos(Number(params.escrowMicroAlgo)),
       })
       const result = await trustExperimentsClient.send.createVariation({
@@ -101,7 +99,7 @@ export function useTrustExperiments() {
           multiplier: params.multiplier,
           unit: params.unit,
           assetId: params.assetId,
-          maxSubjects: params.maxSubjects ?? 0n,
+          maxParticipants: params.maxParticipants ?? 0n,
           escrowPayment,
         },
         coverAppCallInnerTransactionFees: true,
@@ -155,12 +153,8 @@ export function useTrustExperiments() {
   const listVariations = useCallback(
     async (expId: number, count: number): Promise<VariationInfo[]> => {
       if (!trustExperimentsClient) return []
-      const results = await Promise.allSettled(
-        Array.from({ length: count }, (_, i) => getVariation(expId, i)),
-      )
-      return results
-        .filter((r): r is PromiseFulfilledResult<VariationInfo> => r.status === 'fulfilled')
-        .map((r) => r.value)
+      const results = await Promise.allSettled(Array.from({ length: count }, (_, i) => getVariation(expId, i)))
+      return results.filter((r): r is PromiseFulfilledResult<VariationInfo> => r.status === 'fulfilled').map((r) => r.value)
     },
     [trustExperimentsClient, getVariation],
   )

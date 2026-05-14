@@ -1,5 +1,8 @@
 import Markdown from 'react-markdown'
 
+import { Btn } from '@/components/ds/button'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ds/dialog'
+
 interface InstructionsModalProps {
   isOpen: boolean
   onAcknowledge: () => void
@@ -8,24 +11,30 @@ interface InstructionsModalProps {
 }
 
 export default function InstructionsModal({ isOpen, onAcknowledge, title, markdownContent }: InstructionsModalProps) {
-  if (!isOpen) return null
-
   return (
-    <div className="modal modal-open">
-      <div className="modal-box max-w-3xl">
-        <h3 className="font-bold text-lg mb-4">{title}</h3>
-
-        <div className="max-h-[60vh] overflow-y-auto prose">
+    <Dialog
+      open={isOpen}
+      // Forced modal — only the acknowledge button dismisses, not ESC or outside click
+      onOpenChange={() => {}}
+    >
+      <DialogContent
+        className="max-w-3xl"
+        showCloseButton={false}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-y-auto prose prose-sm dark:prose-invert">
           <Markdown>{markdownContent}</Markdown>
         </div>
-
-        <div className="modal-action">
-          <button className="btn btn-primary" onClick={onAcknowledge}>
-            I Understand — Start Game
-          </button>
-        </div>
-      </div>
-      <div className="modal-backdrop" />
-    </div>
+        <DialogFooter>
+          <Btn variant="primary" onClick={onAcknowledge}>
+            I understand — start game
+          </Btn>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

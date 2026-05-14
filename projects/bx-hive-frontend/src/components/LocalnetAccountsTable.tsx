@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useWallet } from '@txnlab/use-wallet-react'
+
+import { Chip } from '@/components/ds/badge'
+import { Btn } from '@/components/ds/button'
+import { Panel } from '@/components/ds/card'
+import { Dot } from '@/components/ds/dot'
+import { Input } from '@/components/ds/input'
+import { cn } from '@/lib/utils'
 import { type LocalnetAccount, type LocalnetAccountRole, useLocalnetAccounts } from '../hooks/useLocalnetAccounts'
 import { truncateAddress } from '../utils/address'
 import { CopyButton } from './ui'
@@ -11,13 +18,14 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
   }, [onDismiss])
 
   return (
-    <div className="toast toast-end toast-bottom z-50">
-      <div className="alert alert-success text-sm">
-        <span>{message}</span>
-      </div>
+    <div role="status" className="fixed bottom-4 right-4 z-50 rounded-sm border border-pos/35 bg-pos-bg text-pos px-3 py-2.5 text-sm">
+      {message}
     </div>
   )
 }
+
+const selectClass =
+  'h-9 rounded-sm border border-input bg-card px-2.5 text-[13px] text-foreground font-ui transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50'
 
 function FundDropdown({ onFund, isPending }: { onFund: (address: string, amount: number) => Promise<void>; isPending: boolean }) {
   const [open, setOpen] = useState(false)
@@ -25,7 +33,19 @@ function FundDropdown({ onFund, isPending }: { onFund: (address: string, amount:
   const [amount, setAmount] = useState('10')
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
-  const detailsRef = useRef<HTMLDetailsElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
 
   async function handleFund() {
     setError(null)
@@ -45,7 +65,6 @@ function FundDropdown({ onFund, isPending }: { onFund: (address: string, amount:
       setAddress('')
       setAmount('10')
       setOpen(false)
-      if (detailsRef.current) detailsRef.current.open = false
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Funding failed')
     }
@@ -54,40 +73,42 @@ function FundDropdown({ onFund, isPending }: { onFund: (address: string, amount:
   return (
     <>
       {successMsg && <Toast message={successMsg} onDismiss={() => setSuccessMsg(null)} />}
-      <details ref={detailsRef} className="dropdown dropdown-end" onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
-        <summary className="btn btn-xs btn-ghost">Fund account</summary>
+      <div ref={wrapperRef} className="relative">
+        <Btn variant="ghost" size="sm" onClick={() => setOpen((v) => !v)}>
+          Fund account
+        </Btn>
         {open && (
-          <div className="dropdown-content z-10 bg-base-200 rounded-box shadow-lg p-4 w-80 mt-1">
+          <div className="absolute right-0 top-full mt-1 z-10 w-80 rounded-sm border border-border bg-popover p-3 shadow-lg">
             <div className="flex flex-col gap-2">
-              <input
+              <Input
                 type="text"
-                className="input input-sm input-bordered w-full font-mono text-xs"
+                mono
                 placeholder="Paste wallet address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 disabled={isPending}
               />
               <div className="flex items-center gap-2">
-                <input
+                <Input
                   type="number"
-                  className="input input-sm input-bordered w-24"
+                  mono
+                  className="w-24"
                   placeholder="ALGO"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  min="1"
+                  min={1}
                   disabled={isPending}
                 />
-                <span className="text-xs text-base-content/50">ALGO</span>
-                <button type="button" className="btn btn-sm btn-primary ml-auto" onClick={() => void handleFund()} disabled={isPending}>
-                  {isPending && <span className="loading loading-spinner loading-xs" />}
+                <span className="text-xs text-muted-foreground">ALGO</span>
+                <Btn variant="primary" size="sm" className="ml-auto" onClick={() => void handleFund()} disabled={isPending}>
                   Fund
-                </button>
+                </Btn>
               </div>
-              {error && <p className="text-error text-xs">{error}</p>}
+              {error && <p className="text-neg text-xs">{error}</p>}
             </div>
           </div>
         )}
-      </details>
+      </div>
     </>
   )
 }
@@ -108,7 +129,7 @@ function AccountRow({
   onConnect: (address: string) => Promise<void>
 }) {
   const [name, setName] = useState(account.name)
-  const [role, setRole] = useState<LocalnetAccountRole>('subject')
+  const [role, setRole] = useState<LocalnetAccountRole>('participant')
   const [registering, setRegistering] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -124,62 +145,65 @@ function AccountRow({
     }
   }
 
-  const roleBadgeClass = account.role === 'experimenter' ? 'badge badge-primary badge-sm' : 'badge badge-secondary badge-sm'
-
   return (
     <>
-      {/* Main row */}
       <tr
-        className={`cursor-pointer hover transition-colors ${isSelected && !account.registered ? 'bg-base-200' : ''}`}
+        className={cn(
+          'border-b border-border last:border-b-0 transition-colors',
+          !account.registered && 'cursor-pointer hover:bg-muted',
+          isSelected && !account.registered && 'bg-muted',
+        )}
         onClick={!account.registered ? onSelect : undefined}
         title={!account.registered ? 'Click to register' : undefined}
       >
-        <td className="text-base-content/50 text-sm w-10 hidden sm:table-cell">{account.name.replace('Account ', '')}</td>
-        <td>
+        <td className="text-muted-foreground text-xs px-3 py-2 hidden sm:table-cell w-12">{account.name.replace('Account ', '')}</td>
+        <td className="px-3 py-2">
           <span className="inline-flex items-center">
-            <code className="text-xs" title={account.address}>
+            <code className="font-mono text-xs text-ink-2" title={account.address}>
               {truncateAddress(account.address)}
             </code>
             <CopyButton text={account.address} />
           </span>
         </td>
-        <td>
+        <td className="px-3 py-2">
           {account.registered ? (
-            <span className={roleBadgeClass}>{account.role}</span>
+            <Chip tone={account.role === 'experimenter' ? 'accent' : 'neutral'}>{account.role}</Chip>
           ) : (
-            <span className="text-base-content/40 text-xs">—</span>
+            <span className="text-faint text-xs">—</span>
           )}
         </td>
-        <td className="text-right">
+        <td className="px-3 py-2 text-right">
           {account.registered ? (
             activeAddress === account.address ? (
-              <span className="text-success text-xs font-medium">● Active</span>
+              <span className="inline-flex items-center gap-1.5 text-pos text-xs font-medium">
+                <Dot tone="pos" size={6} /> Active
+              </span>
             ) : (
-              <button
-                type="button"
-                className="btn btn-xs btn-outline btn-success"
+              <Btn
+                variant="secondary"
+                size="sm"
                 onClick={(e) => {
                   e.stopPropagation()
                   void onConnect(account.address)
                 }}
               >
                 Connect
-              </button>
+              </Btn>
             )
           ) : (
-            <span className="text-base-content/40 text-xs">{isSelected ? '▲ close' : 'click to register'}</span>
+            <span className="text-faint text-xs">{isSelected ? '▲ close' : 'click to register'}</span>
           )}
         </td>
       </tr>
 
       {/* Expandable registration form — shown when row is selected and unregistered */}
       {isSelected && !account.registered && (
-        <tr className="bg-base-200">
-          <td colSpan={4} className="py-3 px-4">
+        <tr className="bg-muted">
+          <td colSpan={4} className="py-3 px-3">
             <div className="flex items-center gap-3 flex-wrap">
-              <input
+              <Input
                 type="text"
-                className="input input-sm input-bordered w-full sm:w-40"
+                className="w-full sm:w-40"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Display name"
@@ -187,20 +211,19 @@ function AccountRow({
                 autoFocus
               />
               <select
-                className="select select-sm select-bordered"
+                className={selectClass}
                 value={role}
                 onChange={(e) => setRole(e.target.value as LocalnetAccountRole)}
                 disabled={registering}
               >
-                <option value="subject">Subject</option>
+                <option value="participant">Participant</option>
                 <option value="experimenter">Experimenter</option>
               </select>
-              <button type="button" className="btn btn-sm btn-primary" onClick={() => void handleRegister()} disabled={registering}>
-                {registering && <span className="loading loading-spinner loading-xs" />}
+              <Btn variant="primary" size="sm" onClick={() => void handleRegister()} disabled={registering}>
                 Register
-              </button>
+              </Btn>
             </div>
-            {error && <p className="text-error text-xs mt-2">{error}</p>}
+            {error && <p className="text-neg text-xs mt-2">{error}</p>}
           </td>
         </tr>
       )}
@@ -228,64 +251,60 @@ export default function LocalnetAccountsTable() {
   const registeredCount = accounts.filter((a) => a.registered).length
 
   return (
-    <div className="card bg-base-100 shadow-xl border border-base-300">
-      <div className="card-body">
-        <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-          <div>
-            <h2 className="card-title">Test Accounts</h2>
-            {seeded && (
-              <p className="text-xs text-base-content/50 mt-0.5">
-                {registeredCount}/{accounts.length} registered — click an unregistered row to set up
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <FundDropdown onFund={fundAccount} isPending={fundingInProgress} />
-            <button type="button" className="btn btn-xs btn-ghost" onClick={() => void refresh()}>
-              Refresh
-            </button>
-          </div>
+    <Panel>
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-3">
+        <div>
+          <h2 className="t-h1">Test Accounts</h2>
+          {seeded && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {registeredCount}/{accounts.length} registered — click an unregistered row to set up
+            </p>
+          )}
         </div>
-
-        {!seeded && (
-          <div className="alert alert-warning text-sm">
-            <span>
-              No seeded accounts found. Run <code className="font-mono bg-base-300 px-1 rounded">pnpm seed:localnet</code> then refresh.
-            </span>
-          </div>
-        )}
-
-        {seeded && (
-          <div className="overflow-x-auto">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th className="hidden sm:table-cell">#</th>
-                  <th>Address</th>
-                  <th>Role</th>
-                  <th className="text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {accounts.map((account) => (
-                  <AccountRow
-                    key={account.address}
-                    account={account}
-                    isSelected={selectedAddress === account.address}
-                    activeAddress={activeAddress ?? null}
-                    onSelect={() => setSelectedAddress(selectedAddress === account.address ? null : account.address)}
-                    onRegister={async (address, name, role) => {
-                      await registerAccount(address, name, role)
-                      setSelectedAddress(null)
-                    }}
-                    onConnect={handleConnect}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          <FundDropdown onFund={fundAccount} isPending={fundingInProgress} />
+          <Btn variant="ghost" size="sm" onClick={() => void refresh()}>
+            Refresh
+          </Btn>
+        </div>
       </div>
-    </div>
+
+      {!seeded && (
+        <div role="alert" className="rounded-sm border border-warn/35 bg-warn-bg text-warn px-3 py-2.5 text-sm">
+          No seeded accounts found. Run <code className="font-mono px-1 rounded bg-bg-alt">pnpm seed:localnet</code> then refresh.
+        </div>
+      )}
+
+      {seeded && (
+        <div className="overflow-x-auto rounded-sm border border-border">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted">
+                <th className="text-left t-micro px-3 py-2 hidden sm:table-cell w-12">#</th>
+                <th className="text-left t-micro px-3 py-2">Address</th>
+                <th className="text-left t-micro px-3 py-2">Role</th>
+                <th className="text-right t-micro px-3 py-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {accounts.map((account) => (
+                <AccountRow
+                  key={account.address}
+                  account={account}
+                  isSelected={selectedAddress === account.address}
+                  activeAddress={activeAddress ?? null}
+                  onSelect={() => setSelectedAddress(selectedAddress === account.address ? null : account.address)}
+                  onRegister={async (address, name, role) => {
+                    await registerAccount(address, name, role)
+                    setSelectedAddress(null)
+                  }}
+                  onConnect={handleConnect}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
   )
 }

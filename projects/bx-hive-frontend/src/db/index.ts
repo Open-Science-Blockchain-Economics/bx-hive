@@ -1,4 +1,6 @@
-// Core database utilities and configuration
+/* eslint-disable no-console */
+// Core database utilities and configuration — console diagnostics are intentional
+// for IndexedDB lifecycle/migration tracing.
 
 const DB_NAME = 'bx_hive'
 const DB_VERSION = 2
@@ -198,7 +200,6 @@ export async function executeWriteTransaction<T = void>(
 }
 
 // Re-export all domain-specific operations
-export * from './bret'
 export * from './experiments'
 export * from './trustExperiment'
 export * from './users'

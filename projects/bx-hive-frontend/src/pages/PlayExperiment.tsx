@@ -1,25 +1,19 @@
 import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
-import BRETExperiment from '../components/experiment-types/bret/BRETExperiment'
+import { useQuery } from '@tanstack/react-query'
+
+import { Btn } from '@/components/ds/button'
+import { Panel } from '@/components/ds/card'
 import TrustExperiment from '../components/experiment-types/trust/TrustExperiment'
 import InstructionsModal from '../components/InstructionsModal'
-import { PageHeader } from '../components/ui'
-import { getExperimentById } from '../db'
-import { useActiveUser } from '../hooks/useActiveUser'
+import { LoadingSpinner, PageHeader } from '../components/ui'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustVariation } from '../hooks/useTrustVariation'
 import type { VariationConfig } from '../hooks/useTrustVariation'
 import { queryKeys } from '../lib/queryKeys'
-import type { Match as LocalMatch } from '../types'
 import investorInstructions from 'virtual:instructions/trust-variation/investor'
 import trusteeInstructions from 'virtual:instructions/trust-variation/trustee'
 import { renderInstructions, trustVariationTokens } from '../lib/renderInstructions'
-
-/** Returns true if the param looks like a numeric on-chain app ID */
-function isOnChainId(id: string): boolean {
-  return /^\d+$/.test(id)
-}
 
 // ── On-chain Trust Game view ─────────────────────────────────────────────────
 
@@ -43,32 +37,25 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
   })
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center py-12">
-        <span className="loading loading-spinner loading-lg"></span>
-      </div>
-    )
+    return <LoadingSpinner />
   }
 
   const error = queryError instanceof Error ? queryError.message : queryError ? 'Failed to load match data' : null
 
   if (error || !data) {
     return (
-      <div className="text-center py-12">
-        <p className="text-error">{error || 'Something went wrong'}</p>
-        <Link to="/dashboard/subject" className="btn btn-primary mt-4">
-          Back to Dashboard
-        </Link>
-      </div>
+      <Panel className="text-center py-10">
+        <p className="text-sm text-neg mb-4">{error || 'Something went wrong'}</p>
+        <Btn asChild variant="primary" size="sm">
+          <Link to="/dashboard/participant">Back to dashboard</Link>
+        </Btn>
+      </Panel>
     )
   }
 
   const isInvestor = data.match.investor === activeAddress
   const tokens = trustVariationTokens(data.config)
-  const instructionsMarkdown = renderInstructions(
-    isInvestor ? investorInstructions : trusteeInstructions,
-    tokens,
-  )
+  const instructionsMarkdown = renderInstructions(isInvestor ? investorInstructions : trusteeInstructions, tokens)
 
   return (
     <div>
@@ -78,42 +65,13 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
         title={isInvestor ? 'Investor Instructions' : 'Trustee Instructions'}
         markdownContent={instructionsMarkdown}
       />
-      <PageHeader
-        title="Trust Game"
-        backTo="/dashboard/subject"
-        backTooltip="Back to Subject Dashboard"
-      />
-      <TrustExperiment appId={appId} match={data.match} config={data.config} activeAddress={activeAddress} onRefresh={() => void refetch()} />
-    </div>
-  )
-}
-
-// ── Local (BRET) view ────────────────────────────────────────────────────────
-
-function LocalExperiment({ experimentId, activeUser }: { experimentId: string; activeUser: { id: string } }) {
-  const { data, refetch } = useSuspenseQuery({
-    queryKey: queryKeys.localExperiment(experimentId),
-    queryFn: async () => {
-      const experiment = await getExperimentById(experimentId)
-      if (!experiment) throw new Error('Experiment not found')
-      const match = experiment.matches.find((m) => m.player1Id === activeUser.id || m.player2Id === activeUser.id)
-      if (!match) throw new Error('You are not in a match for this experiment')
-      return { experiment, match } as { experiment: NonNullable<typeof experiment>; match: LocalMatch }
-    },
-  })
-
-  return (
-    <div>
-      <PageHeader
-        title={data.experiment.name}
-        backTo="/dashboard/subject"
-        backTooltip="Back to Subject Dashboard"
-      />
-      <BRETExperiment
-        experiment={data.experiment}
+      <PageHeader title="Trust Game" backTo="/dashboard/participant" backTooltip="Back to Participant Dashboard" />
+      <TrustExperiment
+        appId={appId}
         match={data.match}
-        activeUserId={activeUser.id}
-        onExperimentUpdate={() => void refetch()}
+        config={data.config}
+        activeAddress={activeAddress}
+        onRefresh={() => void refetch()}
       />
     </div>
   )
@@ -123,27 +81,26 @@ function LocalExperiment({ experimentId, activeUser }: { experimentId: string; a
 
 export default function PlayExperiment() {
   const { experimentId } = useParams<{ experimentId: string }>()
-  const { activeUser } = useActiveUser()
   const { activeAddress } = useAlgorand()
 
   if (!experimentId) {
-    return <div className="text-center py-12 text-error">Missing experiment ID</div>
-  }
-
-  if (!activeUser || !activeAddress) {
     return (
-      <div className="text-center py-12">
-        <p className="text-base-content/70">Connect your wallet to play.</p>
-        <Link to="/" className="btn btn-primary mt-4">
-          Go Home
-        </Link>
-      </div>
+      <Panel className="text-center py-10">
+        <p className="text-sm text-neg">Missing experiment ID</p>
+      </Panel>
     )
   }
 
-  if (isOnChainId(experimentId)) {
-    return <OnChainTrustGame appId={BigInt(experimentId)} activeAddress={activeAddress} />
+  if (!activeAddress) {
+    return (
+      <Panel className="text-center py-10">
+        <p className="text-sm text-muted-foreground mb-4">Connect your wallet to play.</p>
+        <Btn asChild variant="primary" size="sm">
+          <Link to="/">Go home</Link>
+        </Btn>
+      </Panel>
+    )
   }
 
-  return <LocalExperiment experimentId={experimentId} activeUser={activeUser} />
+  return <OnChainTrustGame appId={BigInt(experimentId)} activeAddress={activeAddress} />
 }

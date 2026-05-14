@@ -8,6 +8,7 @@ import {
 } from '../utils/network/getAlgoClientConfigs'
 import { resetAlgorandClient } from '../utils/algorand'
 import { TEST_WALLET_NAME } from '../lib/constants'
+import { E2EAutoConnect } from './E2EAutoConnect'
 
 const STORAGE_KEY = 'bx-hive-network-config'
 
@@ -115,6 +116,7 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
   return (
     <NetworkConfigContext.Provider value={{ networkConfig, configVersion, updateNetworkConfig, resetToDefaults, getDefaults }}>
       <WalletProvider key={configVersion} manager={walletManager}>
+        <E2EAutoConnect />
         {children}
       </WalletProvider>
     </NetworkConfigContext.Provider>

@@ -22,13 +22,13 @@ from smart_contracts.shared.types import (
     STATUS_CLOSED,
     STATUS_COMPLETED,
     Match,
-    SubjectInfo,
+    ParticipantInfo,
     VariationConfig,
 )
 
 # Box MBR constants (2,500 + 400 * (key_len + value_len))
-# Subject box: prefix "s_"(2) + Address(32) + SubjectInfo(2) = 16,900
-SUBJECT_MBR = 16_900
+# Participant box: prefix "p_"(2) + Address(32) + ParticipantInfo(2) = 16,900
+PARTICIPANT_MBR = 16_900
 # Match box: prefix "m_"(2) + UInt32(4) + Match(118) = 52,100
 # Player match box x2: prefix "pm_"(3) + Address(32) + UInt32(4) = 18,100 each
 MATCH_MBR = 88_300  # 52,100 + 2 * 18,100
@@ -51,9 +51,9 @@ class TrustVariation(ARC4Contract):
         self.escrow_deposited = GlobalState(UInt64(0))
         self.escrow_paid_out = GlobalState(UInt64(0))
         self.registry_app = GlobalState(UInt64(0))
-        self.subject_count = GlobalState(UInt64(0))
-        self.max_subjects = GlobalState(UInt64(0))
-        self.subjects = BoxMap(arc4.Address, SubjectInfo, key_prefix=b"s_")
+        self.participant_count = GlobalState(UInt64(0))
+        self.max_participants = GlobalState(UInt64(0))
+        self.participants = BoxMap(arc4.Address, ParticipantInfo, key_prefix=b"p_")
         self.matches = BoxMap(arc4.UInt32, Match, key_prefix=b"m_")
         self.player_match = BoxMap(arc4.Address, arc4.UInt32, key_prefix=b"pm_")
 
@@ -74,7 +74,7 @@ class TrustVariation(ARC4Contract):
         unit: arc4.UInt64,
         asset_id: arc4.UInt64,
         registry_app: arc4.UInt64,
-        max_subjects: arc4.UInt64,
+        max_participants: arc4.UInt64,
     ) -> None:
         assert unit.as_uint64() > UInt64(0), "Unit must be > 0"
         self.experiments_app.value = experiments_app.as_uint64()
@@ -92,8 +92,8 @@ class TrustVariation(ARC4Contract):
         self.escrow_deposited.value = UInt64(0)
         self.escrow_paid_out.value = UInt64(0)
         self.registry_app.value = registry_app.as_uint64()
-        self.subject_count.value = UInt64(0)
-        self.max_subjects.value = max_subjects.as_uint64()
+        self.participant_count.value = UInt64(0)
+        self.max_participants.value = max_participants.as_uint64()
 
     @arc4.abimethod
     def deposit_escrow(self, payment: gtxn.PaymentTransaction) -> None:
@@ -125,27 +125,27 @@ class TrustVariation(ARC4Contract):
         self.status.value = UInt64(STATUS_COMPLETED)
 
     @arc4.abimethod
-    def add_subjects(self, addresses: arc4.DynamicArray[arc4.Address], mbr_payment: gtxn.PaymentTransaction) -> None:
+    def add_participants(self, addresses: arc4.DynamicArray[arc4.Address], mbr_payment: gtxn.PaymentTransaction) -> None:
         assert Txn.sender == self.owner.value, "Not owner"
         assert self.status.value == UInt64(STATUS_ACTIVE), "Not active"
         assert mbr_payment.receiver == Global.current_application_address, "Wrong MBR receiver"
-        assert mbr_payment.amount >= UInt64(SUBJECT_MBR) * addresses.length, "Insufficient MBR"
+        assert mbr_payment.amount >= UInt64(PARTICIPANT_MBR) * addresses.length, "Insufficient MBR"
         for i in urange(addresses.length):
             addr = addresses[i].copy()
-            assert addr not in self.subjects, "Already enrolled"
-            self.subjects[addr] = SubjectInfo(
+            assert addr not in self.participants, "Already enrolled"
+            self.participants[addr] = ParticipantInfo(
                 enrolled=arc4.UInt8(1),
                 assigned=arc4.UInt8(0),
             )
-            self.subject_count.value += UInt64(1)
+            self.participant_count.value += UInt64(1)
 
     @arc4.abimethod
     def self_enroll(self, mbr_payment: gtxn.PaymentTransaction) -> None:
         assert self.status.value == UInt64(STATUS_ACTIVE), "Not active"
         addr = arc4.Address(Txn.sender)
-        assert addr not in self.subjects, "Already enrolled"
-        if self.max_subjects.value > UInt64(0):
-            assert self.subject_count.value < self.max_subjects.value, "Full"
+        assert addr not in self.participants, "Already enrolled"
+        if self.max_participants.value > UInt64(0):
+            assert self.participant_count.value < self.max_participants.value, "Full"
         assert mbr_payment.receiver == Global.current_application_address, "Wrong receiver"
         assert mbr_payment.amount >= UInt64(16_900), "Insufficient MBR"
         # Verify sender is registered in BxHiveRegistry
@@ -157,25 +157,25 @@ class TrustVariation(ARC4Contract):
             ),
             fee=0,
         ).submit()
-        self.subjects[addr] = SubjectInfo(
+        self.participants[addr] = ParticipantInfo(
             enrolled=arc4.UInt8(1),
             assigned=arc4.UInt8(0),
         )
-        self.subject_count.value += UInt64(1)
+        self.participant_count.value += UInt64(1)
 
     @arc4.abimethod
     def create_match(self, investor: arc4.Address, trustee: arc4.Address, mbr_payment: gtxn.PaymentTransaction) -> arc4.UInt32:
         assert Txn.sender == self.owner.value, "Not owner"
         assert mbr_payment.receiver == Global.current_application_address, "Wrong MBR receiver"
         assert mbr_payment.amount >= UInt64(MATCH_MBR), "Insufficient MBR"
-        assert investor in self.subjects, "Investor not enrolled"
-        assert trustee in self.subjects, "Trustee not enrolled"
+        assert investor in self.participants, "Investor not enrolled"
+        assert trustee in self.participants, "Trustee not enrolled"
 
-        investor_info = self.subjects[investor].copy()
+        investor_info = self.participants[investor].copy()
         assert investor_info.enrolled == arc4.UInt8(1), "Investor not active"
         assert investor_info.assigned == arc4.UInt8(0), "Investor already assigned"
 
-        trustee_info = self.subjects[trustee].copy()
+        trustee_info = self.participants[trustee].copy()
         assert trustee_info.enrolled == arc4.UInt8(1), "Trustee not active"
         assert trustee_info.assigned == arc4.UInt8(0), "Trustee already assigned"
 
@@ -198,8 +198,8 @@ class TrustVariation(ARC4Contract):
         self.player_match[investor] = match_id
         self.player_match[trustee] = match_id
 
-        self.subjects[investor] = SubjectInfo(enrolled=arc4.UInt8(1), assigned=arc4.UInt8(1))
-        self.subjects[trustee] = SubjectInfo(enrolled=arc4.UInt8(1), assigned=arc4.UInt8(1))
+        self.participants[investor] = ParticipantInfo(enrolled=arc4.UInt8(1), assigned=arc4.UInt8(1))
+        self.participants[trustee] = ParticipantInfo(enrolled=arc4.UInt8(1), assigned=arc4.UInt8(1))
 
         return match_id
 
@@ -303,6 +303,7 @@ class TrustVariation(ARC4Contract):
             unit=arc4.UInt64(self.unit.value),
             asset_id=arc4.UInt64(self.asset_id.value),
             status=arc4.UInt8(self.status.value),
+            max_participants=arc4.UInt64(self.max_participants.value),
         )
 
     @arc4.abimethod(readonly=True)
@@ -316,8 +317,8 @@ class TrustVariation(ARC4Contract):
         return self.player_match[addr]
 
     @arc4.abimethod(readonly=True)
-    def get_subject_count(self) -> arc4.UInt64:
-        return arc4.UInt64(self.subject_count.value)
+    def get_participant_count(self) -> arc4.UInt64:
+        return arc4.UInt64(self.participant_count.value)
 
     @arc4.abimethod(readonly=True)
     def get_escrow_balance(self) -> arc4.UInt64:

@@ -1,20 +1,17 @@
-import { useState } from 'react'
-import { useSuspenseQuery, useQueryClient } from '@tanstack/react-query'
-import { getBatchesByExperimenter, getExperimentsByBatchId, getExperimentsByExperimenter } from '../db'
-import { useActiveUser } from '../hooks/useActiveUser'
+import { useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { Plus } from 'lucide-react'
+
+import { Btn } from '@/components/ds/button'
+import { Panel } from '@/components/ds/card'
+import { cn } from '@/lib/utils'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments, type ExperimentGroup, type VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustVariation, type VariationConfig } from '../hooks/useTrustVariation'
 import { queryKeys } from '../lib/queryKeys'
-import type { Experiment, ExperimentBatch } from '../types'
-import CreateExperimentForm from '../components/experimenter/CreateExperimentForm'
 import ExperimentListTab from '../components/experimenter/ExperimentListTab'
-
-type TabType = 'experiments' | 'create'
-
-interface BatchWithExperiments extends ExperimentBatch {
-  experiments: Experiment[]
-}
+import { deriveExperimentStatus } from '../utils/variationStatus'
 
 interface OnChainExperiment {
   group: ExperimentGroup
@@ -23,29 +20,18 @@ interface OnChainExperiment {
 
 interface OnChainData {
   onChainExps: OnChainExperiment[]
-  subjectCounts: Record<string, number>
+  participantCounts: Record<string, number>
   variationConfigs: Record<string, VariationConfig>
 }
 
-interface LocalData {
-  localExperiments: Experiment[]
-  localBatches: BatchWithExperiments[]
-}
+type Filter = 'all' | 'live' | 'paused' | 'complete'
 
 export default function ExperimenterDashboard() {
-  const { activeUser } = useActiveUser()
-  const { algorand, activeAddress } = useAlgorand()
-  const { createExperimentWithVariation, createVariation, listExperiments, listVariations } = useTrustExperiments()
-  const { getSubjectCount, getConfig } = useTrustVariation()
-  const queryClient = useQueryClient()
-
-  const [activeTab, setActiveTab] = useState<TabType>('experiments')
-
-  const { data: walletBalanceAlgo } = useSuspenseQuery({
-    queryKey: queryKeys.walletBalance(activeAddress!),
-    queryFn: () =>
-      algorand!.account.getInformation(activeAddress!).then((info) => Number(info.balance.microAlgo) / 1_000_000),
-  })
+  const navigate = useNavigate()
+  const { activeAddress } = useAlgorand()
+  const { listExperiments, listVariations } = useTrustExperiments()
+  const { getParticipantCount, getConfig } = useTrustVariation()
+  const [filter, setFilter] = useState<Filter>('all')
 
   const { data: onChainData } = useSuspenseQuery<OnChainData>({
     queryKey: queryKeys.onChainExperiments(activeAddress!),
@@ -60,6 +46,7 @@ export default function ExperimenterDashboard() {
       )
       const onChainExps = withVariations.filter(({ group }) => {
         if (Number(group.variationCount) === 0) {
+          // eslint-disable-next-line no-console
           console.warn(`[bx-hive] Orphaned experiment exp_id=${group.expId} name="${group.name}" has 0 variations — hiding from UI`)
           return false
         }
@@ -73,7 +60,7 @@ export default function ExperimenterDashboard() {
           vars.map(async (v) => {
             const key = String(v.appId)
             try {
-              counts[key] = await getSubjectCount(v.appId)
+              counts[key] = await getParticipantCount(v.appId)
             } catch {
               counts[key] = 0
             }
@@ -86,68 +73,121 @@ export default function ExperimenterDashboard() {
         ),
       )
 
-      return { onChainExps, subjectCounts: counts, variationConfigs: configs }
+      return { onChainExps, participantCounts: counts, variationConfigs: configs }
     },
   })
 
-  const { data: localData } = useSuspenseQuery<LocalData>({
-    queryKey: queryKeys.localExperiments(activeUser!.id),
-    queryFn: async () => {
-      const allExps = await getExperimentsByExperimenter(activeUser!.id)
-      const localExperiments = allExps.filter((e) => e.templateId === 'bret' && !e.batchId)
+  const aggregates = useMemo(() => {
+    const exps = onChainData.onChainExps
+    let totalParticipants = 0
+    let totalVariations = 0
+    let liveCount = 0
+    let pausedCount = 0
+    let completeCount = 0
 
-      const allBatches = await getBatchesByExperimenter(activeUser!.id)
-      const bretBatches = allBatches.filter((b) => b.templateId === 'bret')
-      const localBatches = await Promise.all(
-        bretBatches.map(async (batch) => ({
-          ...batch,
-          experiments: await getExperimentsByBatchId(batch.id),
-        })),
-      )
+    for (const e of exps) {
+      totalVariations += e.variations.length
+      for (const v of e.variations) {
+        totalParticipants += onChainData.participantCounts[String(v.appId)] ?? 0
+      }
+      const configs = e.variations.map((v) => onChainData.variationConfigs[String(v.appId)]).filter((c): c is VariationConfig => Boolean(c))
+      const status = deriveExperimentStatus(configs)
+      if (status.label === 'Live') liveCount++
+      else if (status.label === 'Paused') pausedCount++
+      else if (status.label === 'Complete') completeCount++
+    }
 
-      return { localExperiments, localBatches }
-    },
-  })
+    return {
+      totalExperiments: exps.length,
+      totalVariations,
+      totalParticipants,
+      liveCount,
+      pausedCount,
+      completeCount,
+    }
+  }, [onChainData])
+
+  const filterChip = (key: Filter, label: string, count?: number) => (
+    <button
+      type="button"
+      onClick={() => setFilter(key)}
+      className={cn(
+        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-pill border text-xs font-semibold uppercase tracking-[0.04em] transition-colors',
+        filter === key ? 'border-primary/35 bg-accent text-accent-foreground' : 'border-border text-muted-foreground hover:text-foreground',
+      )}
+    >
+      {label}
+      {count !== undefined && <span className="font-mono normal-case">· {count}</span>}
+    </button>
+  )
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Experimenter Dashboard</h1>
-        <p className="text-base-content/70 mt-2">Create and manage experiments</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap mb-8">
+        <div>
+          <h1 className="t-h1">Experimenter Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {aggregates.totalExperiments} experiment{aggregates.totalExperiments === 1 ? '' : 's'} · {aggregates.totalParticipants}{' '}
+            participant
+            {aggregates.totalParticipants === 1 ? '' : 's'} enrolled
+          </p>
+        </div>
+        <Btn asChild variant="primary" size="sm">
+          <Link to="/experimenter/create">
+            <Plus className="size-3.5" /> New experiment
+          </Link>
+        </Btn>
       </div>
 
-      <div role="tablist" className="tabs tabs-boxed mb-6">
-        <a role="tab" className={`tab ${activeTab === 'experiments' ? 'tab-active' : ''}`} onClick={() => setActiveTab('experiments')}>
-          My Experiments
-        </a>
-        <a role="tab" className={`tab ${activeTab === 'create' ? 'tab-active' : ''}`} onClick={() => setActiveTab('create')}>
-          Create New
-        </a>
-      </div>
+      {/* Summary tiles */}
+      <Panel padded={false} className="mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3">
+          <div className="px-5 py-4 sm:border-r border-border border-b sm:border-b-0">
+            <div className="t-micro mb-1.5">Active</div>
+            <div className="font-mono text-2xl font-medium leading-none tracking-[-0.01em] text-foreground">{aggregates.liveCount}</div>
+            <div className="text-xs text-muted-foreground mt-1.5">
+              {aggregates.pausedCount > 0 && <>{aggregates.pausedCount} paused · </>}
+              {aggregates.completeCount} complete
+            </div>
+          </div>
+          <div className="px-5 py-4 sm:border-r border-border border-b sm:border-b-0">
+            <div className="t-micro mb-1.5">Variations</div>
+            <div className="font-mono text-2xl font-medium leading-none tracking-[-0.01em] text-foreground">
+              {aggregates.totalVariations}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1.5">
+              across {aggregates.totalExperiments} experiment{aggregates.totalExperiments === 1 ? '' : 's'}
+            </div>
+          </div>
+          <div className="px-5 py-4">
+            <div className="t-micro mb-1.5">Participants</div>
+            <div className="font-mono text-2xl font-medium leading-none tracking-[-0.01em] text-foreground">
+              {aggregates.totalParticipants}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1.5">enrolled across all variations</div>
+          </div>
+        </div>
+      </Panel>
 
-      {activeTab === 'experiments' && (
-        <ExperimentListTab
-          onChainExps={onChainData.onChainExps}
-          localBatches={localData.localBatches}
-          localExperiments={localData.localExperiments}
-          subjectCounts={onChainData.subjectCounts}
-          variationConfigs={onChainData.variationConfigs}
-          onCreateClick={() => setActiveTab('create')}
-        />
+      {/* Filter chips */}
+      {onChainData.onChainExps.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap mb-4">
+          <span className="t-micro mr-1">Filter</span>
+          {filterChip('all', 'All', aggregates.totalExperiments)}
+          {filterChip('live', 'Live', aggregates.liveCount)}
+          {filterChip('paused', 'Paused', aggregates.pausedCount)}
+          {filterChip('complete', 'Complete', aggregates.completeCount)}
+          <span className="ml-auto t-micro font-mono text-muted-foreground">Sort — Recent ↓</span>
+        </div>
       )}
 
-      {activeTab === 'create' && activeUser && (
-        <CreateExperimentForm
-          activeUserId={activeUser.id}
-          walletBalanceAlgo={walletBalanceAlgo}
-          createExperimentWithVariation={createExperimentWithVariation}
-          createVariation={createVariation}
-          onCreated={() => {
-            void queryClient.invalidateQueries({ queryKey: ['experiments'] })
-            setActiveTab('experiments')
-          }}
-        />
-      )}
+      <ExperimentListTab
+        onChainExps={onChainData.onChainExps}
+        participantCounts={onChainData.participantCounts}
+        variationConfigs={onChainData.variationConfigs}
+        filter={filter}
+        onCreateClick={() => navigate('/experimenter/create')}
+      />
     </div>
   )
 }

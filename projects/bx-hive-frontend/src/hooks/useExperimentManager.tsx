@@ -1,5 +1,4 @@
-import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
-import algosdk from 'algosdk'
+import { AlgoAmount, getApplicationAddress } from '@algorandfoundation/algokit-utils'
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { STATUS_ACTIVE } from './useTrustVariation'
 import { useAlgorand } from './useAlgorand'
@@ -65,19 +64,16 @@ export function ExperimentManagerProvider({ children }: { children: ReactNode })
     [expConfigs],
   )
 
-  const setExpConfig = useCallback(
-    (expId: number, patch: Partial<ExperimentConfig>) => {
-      setExpConfigs((prev) => {
-        const current = prev[expId] ?? { ...DEFAULT_EXP_CONFIG, autoMatch: readAutoMatchFromStorage(expId) }
-        const next = { ...current, ...patch }
-        if (patch.autoMatch !== undefined && patch.autoMatch !== current.autoMatch) {
-          writeAutoMatchToStorage(expId, patch.autoMatch)
-        }
-        return { ...prev, [expId]: next }
-      })
-    },
-    [],
-  )
+  const setExpConfig = useCallback((expId: number, patch: Partial<ExperimentConfig>) => {
+    setExpConfigs((prev) => {
+      const current = prev[expId] ?? { ...DEFAULT_EXP_CONFIG, autoMatch: readAutoMatchFromStorage(expId) }
+      const next = { ...current, ...patch }
+      if (patch.autoMatch !== undefined && patch.autoMatch !== current.autoMatch) {
+        writeAutoMatchToStorage(expId, patch.autoMatch)
+      }
+      return { ...prev, [expId]: next }
+    })
+  }, [])
 
   const registerExperimentVariations = useCallback((expId: number, variations: RegisteredVariation[]) => {
     setExpVariations((prev) => ({ ...prev, [expId]: variations }))
@@ -134,12 +130,12 @@ export function ExperimentManagerProvider({ children }: { children: ReactNode })
               const sender = activeAddressRef.current
               if (!client || !algo || !sender) return
 
-              const map = await client.state.box.subjects.getMap()
+              const map = await client.state.box.participants.getMap()
               const unassigned = Array.from(map.entries())
                 .filter(([, info]) => info.assigned === 0)
                 .map(([address]) => address)
 
-              const appAddress = algosdk.getApplicationAddress(appId)
+              const appAddress = getApplicationAddress(appId)
 
               while (unassigned.length >= 2) {
                 const investor = unassigned.shift()!
@@ -152,6 +148,7 @@ export function ExperimentManagerProvider({ children }: { children: ReactNode })
                 await client.send.createMatch({ args: { investor, trustee, mbrPayment } })
               }
             } catch (err) {
+              // eslint-disable-next-line no-console
               console.warn(`[AutoMatch] Error processing variation ${key}:`, err)
             } finally {
               processingRef.current.delete(key)

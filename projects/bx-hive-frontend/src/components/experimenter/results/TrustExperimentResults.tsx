@@ -1,8 +1,15 @@
+import { Chip } from '@/components/ds/badge'
+import { Rule } from '@/components/ds/separator'
 import type { Experiment, TrustExperimentState, User } from '../../../types'
 
 interface TrustExperimentResultsProps {
   experiment: Experiment
   users: User[]
+}
+
+const statusToTone: Record<string, 'pos' | 'warn' | 'neutral'> = {
+  completed: 'pos',
+  playing: 'warn',
 }
 
 export default function TrustExperimentResults({ experiment, users }: TrustExperimentResultsProps) {
@@ -11,47 +18,48 @@ export default function TrustExperimentResults({ experiment, users }: TrustExper
   }
 
   return (
-    <div className="mt-4 space-y-3">
-      <div className="divider my-0"></div>
-      <h4 className="font-semibold">Match Details</h4>
-      <div className="overflow-x-auto">
-        <table className="table table-sm">
+    <div className="mt-4 flex flex-col gap-3">
+      <Rule />
+      <h4 className="t-h2">Match Details</h4>
+      <div className="overflow-x-auto rounded-sm border border-border">
+        <table className="w-full text-sm">
           <thead>
-            <tr>
-              <th>Investor</th>
-              <th>Trustee</th>
-              <th>Status</th>
-              <th>Invested</th>
-              <th>Returned</th>
-              <th>Inv. Payout</th>
-              <th>Tru. Payout</th>
+            <tr className="border-b border-border bg-muted">
+              <th className="text-left t-micro px-3 py-2">Investor</th>
+              <th className="text-left t-micro px-3 py-2">Trustee</th>
+              <th className="text-left t-micro px-3 py-2">Status</th>
+              <th className="text-right t-micro px-3 py-2">Invested</th>
+              <th className="text-right t-micro px-3 py-2">Returned</th>
+              <th className="text-right t-micro px-3 py-2">Inv. Payout</th>
+              <th className="text-right t-micro px-3 py-2">Tru. Payout</th>
             </tr>
           </thead>
           <tbody>
             {experiment.matches.map((match) => {
               const state = match.state as TrustExperimentState | undefined
+              const tone = statusToTone[match.status] ?? 'neutral'
+              const label =
+                state?.phase === 'investor_decision'
+                  ? 'Waiting: Investor'
+                  : state?.phase === 'trustee_decision'
+                    ? 'Waiting: Trustee'
+                    : match.status
 
               return (
-                <tr key={match.id}>
-                  <td>{getUserName(match.player1Id)}</td>
-                  <td>{match.player2Id ? getUserName(match.player2Id) : '-'}</td>
-                  <td>
-                    <span
-                      className={`badge badge-sm ${
-                        match.status === 'completed' ? 'badge-success' : match.status === 'playing' ? 'badge-warning' : 'badge-neutral'
-                      }`}
-                    >
-                      {state?.phase === 'investor_decision'
-                        ? 'Waiting: Investor'
-                        : state?.phase === 'trustee_decision'
-                          ? 'Waiting: Trustee'
-                          : match.status}
-                    </span>
+                <tr key={match.id} className="border-b border-border last:border-b-0">
+                  <td className="px-3 py-2">{getUserName(match.player1Id)}</td>
+                  <td className="px-3 py-2">{match.player2Id ? getUserName(match.player2Id) : '—'}</td>
+                  <td className="px-3 py-2">
+                    <Chip tone={tone}>{label}</Chip>
                   </td>
-                  <td>{state?.investorDecision ?? '-'}</td>
-                  <td>{state?.trusteeDecision ?? '-'}</td>
-                  <td className={state?.investorPayout !== undefined ? 'text-success font-medium' : ''}>{state?.investorPayout ?? '-'}</td>
-                  <td className={state?.trusteePayout !== undefined ? 'text-success font-medium' : ''}>{state?.trusteePayout ?? '-'}</td>
+                  <td className="px-3 py-2 text-right font-mono">{state?.investorDecision ?? '—'}</td>
+                  <td className="px-3 py-2 text-right font-mono">{state?.trusteeDecision ?? '—'}</td>
+                  <td className={`px-3 py-2 text-right font-mono ${state?.investorPayout !== undefined ? 'text-pos font-medium' : ''}`}>
+                    {state?.investorPayout ?? '—'}
+                  </td>
+                  <td className={`px-3 py-2 text-right font-mono ${state?.trusteePayout !== undefined ? 'text-pos font-medium' : ''}`}>
+                    {state?.trusteePayout ?? '—'}
+                  </td>
                 </tr>
               )
             })}

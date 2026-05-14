@@ -18,7 +18,8 @@ export default function CopyButton({ text }: CopyButtonProps) {
   return (
     <button
       type="button"
-      className="btn btn-ghost btn-sm btn-square ml-1 text-base opacity-40 hover:opacity-100"
+      aria-label="Copy address"
+      className="ml-1 inline-flex items-center justify-center w-6 h-6 rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
       onClick={handleCopy}
       title="Copy address"
     >

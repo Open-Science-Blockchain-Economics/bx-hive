@@ -1,7 +1,21 @@
-import { STATUS_CLOSED, STATUS_COMPLETED } from '../hooks/useTrustVariation'
+import { STATUS_ACTIVE, STATUS_CLOSED, STATUS_COMPLETED } from '../hooks/useTrustVariation'
 import type { VariationConfig } from '../hooks/useTrustVariation'
 import type { VariationInfo } from '../hooks/useTrustExperiments'
 import { microAlgoToAlgo } from './amount'
+
+export type ExperimentStatusTone = 'pos' | 'warn' | 'neutral'
+
+export function deriveExperimentStatus(configs: VariationConfig[]): {
+  tone: ExperimentStatusTone
+  label: 'Live' | 'Paused' | 'Complete' | 'Unknown'
+} {
+  if (configs.length === 0) return { tone: 'neutral', label: 'Unknown' }
+  const hasActive = configs.some((c) => c.status === STATUS_ACTIVE)
+  if (hasActive) return { tone: 'pos', label: 'Live' }
+  const allComplete = configs.every((c) => c.status === STATUS_COMPLETED)
+  if (allComplete) return { tone: 'neutral', label: 'Complete' }
+  return { tone: 'warn', label: 'Paused' }
+}
 
 export function statusLabel(config: VariationConfig | undefined): string {
   if (!config) return '\u2014'

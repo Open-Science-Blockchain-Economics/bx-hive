@@ -5,6 +5,7 @@ export type InstructionTokens = Record<string, string>
 export function renderInstructions(template: string, tokens: InstructionTokens): string {
   return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, token: string) => {
     if (token in tokens) return tokens[token]
+    // eslint-disable-next-line no-console
     console.warn(`[instructions] unknown token: ${token}`)
     return match
   })
@@ -15,6 +16,7 @@ export function trustVariationTokens(config: VariationConfig): InstructionTokens
   const fmt = isAlgo
     ? (micro: bigint) => `${formatMicro(micro, 6)} ALGO`
     : (micro: bigint) => {
+        // eslint-disable-next-line no-console
         console.warn(`[instructions] non-ALGO asset ${config.assetId} — rendering raw micro-units`)
         return `${micro.toString()} units`
       }

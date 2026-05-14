@@ -1,4 +1,10 @@
 import { useState } from 'react'
+import { Check, Info, Loader2 } from 'lucide-react'
+
+import { Btn } from '@/components/ds/button'
+import { Panel } from '@/components/ds/card'
+import { Rule } from '@/components/ds/separator'
+import { cn } from '@/lib/utils'
 import { useTrustVariation } from '../../../hooks/useTrustVariation'
 import { calculateTrusteeReceived } from '../../../experiment-logic/trustExperiment'
 import { algoToMicroAlgo } from '../../../utils/amount'
@@ -12,6 +18,31 @@ interface TrusteeInterfaceProps {
   UNIT: number
   investorDecision: number
   onDecisionMade: () => void
+}
+
+interface StageProps {
+  num: string
+  label: string
+  state: 'done' | 'active' | 'pending'
+}
+
+function Stage({ num, label, state }: StageProps) {
+  return (
+    <div className="flex flex-col items-start gap-1 px-3 py-2 border-l-2 border-border first:border-l-0 first:pl-0">
+      <div className="flex items-center gap-1.5">
+        <span className="font-mono text-[11px] text-muted-foreground">{num}</span>
+        {state === 'done' && <Check className="size-3 text-pos" />}
+      </div>
+      <span
+        className={cn(
+          'text-xs font-medium',
+          state === 'active' ? 'text-foreground' : state === 'done' ? 'text-ink-2' : 'text-muted-foreground',
+        )}
+      >
+        {label}
+      </span>
+    </div>
+  )
 }
 
 export default function TrusteeInterface({ appId, matchId, E1, E2, m, UNIT, investorDecision, onDecisionMade }: TrusteeInterfaceProps) {
@@ -37,150 +68,138 @@ export default function TrusteeInterface({ appId, matchId, E1, E2, m, UNIT, inve
     }
   }
 
-  // Generate return options in ALGO using UNIT step size
   const options: number[] = []
   for (let i = 0; i <= received; i += UNIT) {
     options.push(Math.round(i * 1000) / 1000)
   }
 
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body">
-        <h2 className="card-title">Trustee Decision</h2>
+    <Panel>
+      <h2 className="t-h1 mb-4">Trustee Decision</h2>
 
-        <div className="alert alert-info">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-6 h-6">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            ></path>
-          </svg>
-          <div>
-            <p className="font-medium">You are the Trustee</p>
-            <p className="text-sm">
-              The Investor sent you {investorDecision.toLocaleString()}. After multiplication (x{m}), you received{' '}
-              {received.toLocaleString()}.
-            </p>
-          </div>
+      <div role="alert" className="flex items-start gap-2.5 rounded-sm border border-info/35 bg-info-bg px-3 py-2.5 text-sm text-info mb-5">
+        <Info className="size-4 shrink-0 mt-0.5" />
+        <div>
+          <p className="font-medium">You are the Trustee</p>
+          <p className="text-sm">
+            The Investor sent you {investorDecision.toLocaleString()}. After multiplication (x{m}), you received {received.toLocaleString()}
+            .
+          </p>
         </div>
+      </div>
 
-        <div className="space-y-4">
-          <div className="stats stats-vertical lg:stats-horizontal shadow w-full">
-            <div className="stat">
-              <div className="stat-title">Your Endowment</div>
-              <div className="stat-value text-primary">{E2.toLocaleString()}</div>
-              <div className="stat-desc">initial tokens</div>
-            </div>
+      <div className="flex border-y border-border my-5 overflow-x-auto">
+        <Stage num="01" label="Investor sends" state="done" />
+        <Stage num="02" label={`Multiplier ×${m}`} state="done" />
+        <Stage num="03" label="Receive" state="done" />
+        <Stage num="04" label="Return" state="active" />
+      </div>
 
-            <div className="stat">
-              <div className="stat-title">You Received</div>
-              <div className="stat-value text-secondary">{received.toLocaleString()}</div>
-              <div className="stat-desc">From investor (x{m})</div>
-            </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+        <Panel padded={false} className="p-4">
+          <div className="t-micro mb-1">Your Endowment</div>
+          <div className="font-mono text-3xl font-medium leading-none tracking-[-0.01em] text-foreground">{E2.toLocaleString()}</div>
+          <div className="text-xs text-muted-foreground mt-1.5">initial tokens</div>
+        </Panel>
+        <Panel padded={false} className="p-4 border-primary/35 bg-accent">
+          <div className="t-micro mb-1">You Received</div>
+          <div className="font-mono text-3xl font-medium leading-none tracking-[-0.01em] text-primary">{received.toLocaleString()}</div>
+          <div className="text-xs text-muted-foreground mt-1.5">From investor (x{m})</div>
+        </Panel>
+      </div>
+
+      <div className="bg-muted rounded-sm p-4 mb-5">
+        <h3 className="t-micro mb-2">What Happened</h3>
+        <div className="flex flex-col gap-1 text-sm">
+          <div className="flex justify-between">
+            <span>Investor sent:</span>
+            <span className="font-medium font-mono">{investorDecision.toLocaleString()}</span>
           </div>
-
-          <div className="bg-base-200 p-4 rounded-lg">
-            <h3 className="font-semibold text-sm mb-2">What Happened:</h3>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span>Investor sent:</span>
-                <span className="font-medium">{investorDecision.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Multiplied by {m}:</span>
-                <span className="font-medium">{received.toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="divider">Make Your Decision</div>
-
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text font-medium">How much do you want to return to the Investor?</span>
-            </label>
-
-            {options.length <= 10 ? (
-              // Show as buttons if few options
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {options.map((amount) => (
-                  <button
-                    key={amount}
-                    className={`btn ${returnAmount === amount ? 'btn-primary' : 'btn-outline'}`}
-                    onClick={() => setReturnAmount(amount)}
-                    disabled={submitting}
-                  >
-                    {amount.toLocaleString()}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              // Show as range slider if many options
-              <div className="space-y-2">
-                <input
-                  type="range"
-                  min={0}
-                  max={received}
-                  step={UNIT}
-                  value={returnAmount}
-                  onChange={(e) => setReturnAmount(Number(e.target.value))}
-                  className="range range-primary w-full"
-                  disabled={submitting}
-                />
-                <div className="flex justify-between text-xs text-base-content/60">
-                  <span>0</span>
-                  <span className="font-bold text-base text-primary">{returnAmount.toLocaleString()}</span>
-                  <span>{received.toLocaleString()}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-base-200 p-4 rounded-lg space-y-2">
-            <h3 className="font-semibold text-sm">Preview:</h3>
-            <div className="space-y-1 text-sm">
-              <div className="flex justify-between">
-                <span>You return to Investor:</span>
-                <span className="font-medium">{returnAmount.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>You keep from received:</span>
-                <span className="font-medium">{trusteeKeeps.toLocaleString()}</span>
-              </div>
-              <div className="divider my-1"></div>
-              <div className="flex justify-between font-semibold">
-                <span>Your total payout:</span>
-                <span className="text-success">{(E2 + trusteeKeeps).toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between text-base-content/60">
-                <span>Investor's total payout:</span>
-                <span>{(E1 - investorDecision + returnAmount).toLocaleString()}</span>
-              </div>
-            </div>
-          </div>
-
-          {error && (
-            <div className="alert alert-error">
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="card-actions justify-end">
-            <button className="btn btn-primary btn-lg" onClick={() => void handleSubmit()} disabled={submitting}>
-              {submitting ? (
-                <>
-                  <span className="loading loading-spinner loading-sm"></span>
-                  Submitting...
-                </>
-              ) : (
-                'Submit Return Decision'
-              )}
-            </button>
+          <div className="flex justify-between">
+            <span>Multiplied by {m}:</span>
+            <span className="font-medium font-mono">{received.toLocaleString()}</span>
           </div>
         </div>
       </div>
-    </div>
+
+      <Rule label="Make Your Decision" className="mb-4" />
+
+      <div className="mb-5">
+        <p className="text-sm font-medium mb-3">How much do you want to return to the Investor?</p>
+        {options.length <= 10 ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {options.map((amount) => (
+              <Btn
+                key={amount}
+                variant={returnAmount === amount ? 'primary' : 'secondary'}
+                onClick={() => setReturnAmount(amount)}
+                disabled={submitting}
+              >
+                {amount.toLocaleString()}
+              </Btn>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <input
+              type="range"
+              min={0}
+              max={received}
+              step={UNIT}
+              value={returnAmount}
+              onChange={(e) => setReturnAmount(Number(e.target.value))}
+              disabled={submitting}
+              className="w-full accent-primary"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground font-mono">
+              <span>0</span>
+              <span className="font-bold text-base text-primary">{returnAmount.toLocaleString()}</span>
+              <span>{received.toLocaleString()}</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-muted rounded-sm p-4 flex flex-col gap-2 mb-5">
+        <h3 className="t-micro">Preview</h3>
+        <div className="flex flex-col gap-1 text-sm">
+          <div className="flex justify-between">
+            <span>You return to Investor:</span>
+            <span className="font-medium font-mono">{returnAmount.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>You keep from received:</span>
+            <span className="font-medium font-mono">{trusteeKeeps.toLocaleString()}</span>
+          </div>
+          <Rule className="my-1" />
+          <div className="flex justify-between font-semibold">
+            <span>Your total payout:</span>
+            <span className="font-mono text-pos">{(E2 + trusteeKeeps).toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between text-muted-foreground">
+            <span>Investor's total payout:</span>
+            <span className="font-mono">{(E1 - investorDecision + returnAmount).toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+
+      {error && (
+        <div role="alert" className="rounded-sm border border-neg/35 bg-neg-bg text-neg px-3 py-2.5 text-sm mb-5">
+          {error}
+        </div>
+      )}
+
+      <div className="flex justify-end">
+        <Btn variant="primary" size="lg" onClick={() => void handleSubmit()} disabled={submitting}>
+          {submitting ? (
+            <>
+              <Loader2 className="size-4 animate-spin" /> Submitting…
+            </>
+          ) : (
+            'Submit Return Decision'
+          )}
+        </Btn>
+      </div>
+    </Panel>
   )
 }

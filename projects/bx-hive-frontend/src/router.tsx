@@ -7,27 +7,106 @@ function RootErrorElement() {
   const error = useRouteError()
   return <RouteErrorFallback error={error} resetErrorBoundary={() => window.location.reload()} />
 }
+import About from './pages/About'
 import BatchDetails from './pages/BatchDetails'
+import CreateExperiment from './pages/CreateExperiment'
+import DesignSystemShowcase from './pages/DesignSystemShowcase'
+import DevLocalnet from './pages/DevLocalnet'
 import ExperimentDetails from './pages/ExperimentDetails'
 import ExperimenterDashboard from './pages/ExperimenterDashboard'
+import ForExperimenters from './pages/ForExperimenters'
+import ForParticipants from './pages/ForParticipants'
 import Home from './pages/Home'
+import Join from './pages/Join'
 import PlayExperiment from './pages/PlayExperiment'
-import SubjectDashboard from './pages/SubjectDashboard'
+import ParticipantDashboard from './pages/ParticipantDashboard'
 import TrustExperimentDetails from './pages/TrustExperimentDetails'
 
+const isLocalEnv = import.meta.env.VITE_ENVIRONMENT === 'local'
+
+// /dev/ds stays outside Layout — design system showcase wants a clean canvas.
+const devTopLevelRoutes = isLocalEnv
+  ? [
+      {
+        path: '/dev/ds',
+        element: <DesignSystemShowcase />,
+      },
+    ]
+  : []
+
+const devLayoutRoutes = isLocalEnv
+  ? [
+      {
+        path: 'dev/localnet',
+        element: <DevLocalnet />,
+      },
+    ]
+  : []
+
 export const router = createBrowserRouter([
+  ...devTopLevelRoutes,
   {
     path: '/',
     element: <Layout />,
     errorElement: <RootErrorElement />,
     children: [
-      { index: true, element: <QueryBoundary><Home /></QueryBoundary> },
+      ...devLayoutRoutes,
+      {
+        index: true,
+        element: (
+          <QueryBoundary>
+            <Home />
+          </QueryBoundary>
+        ),
+      },
+      {
+        path: 'join',
+        element: (
+          <QueryBoundary>
+            <Join />
+          </QueryBoundary>
+        ),
+      },
+      {
+        path: 'about',
+        element: (
+          <QueryBoundary>
+            <About />
+          </QueryBoundary>
+        ),
+      },
+      {
+        path: 'for-participants',
+        element: (
+          <QueryBoundary>
+            <ForParticipants />
+          </QueryBoundary>
+        ),
+      },
+      {
+        path: 'for-experimenters',
+        element: (
+          <QueryBoundary>
+            <ForExperimenters />
+          </QueryBoundary>
+        ),
+      },
       {
         path: 'dashboard/experimenter',
         element: (
           <ProtectedRoute requiredRole="experimenter">
             <QueryBoundary>
               <ExperimenterDashboard />
+            </QueryBoundary>
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'experimenter/create',
+        element: (
+          <ProtectedRoute requiredRole="experimenter">
+            <QueryBoundary>
+              <CreateExperiment />
             </QueryBoundary>
           </ProtectedRoute>
         ),
@@ -53,11 +132,11 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'dashboard/subject',
+        path: 'dashboard/participant',
         element: (
-          <ProtectedRoute requiredRole="subject">
+          <ProtectedRoute requiredRole="participant">
             <QueryBoundary>
-              <SubjectDashboard />
+              <ParticipantDashboard />
             </QueryBoundary>
           </ProtectedRoute>
         ),
@@ -75,7 +154,7 @@ export const router = createBrowserRouter([
       {
         path: 'play/:experimentId',
         element: (
-          <ProtectedRoute requiredRole="subject">
+          <ProtectedRoute requiredRole="participant">
             <QueryBoundary>
               <PlayExperiment />
             </QueryBoundary>

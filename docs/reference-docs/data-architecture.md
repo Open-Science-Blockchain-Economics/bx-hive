@@ -11,7 +11,7 @@
 The bTree platform uses **IndexedDB** for client-side data persistence. The architecture consists of two separate databases with distinct purposes:
 
 1. **`btree_accounts`** - User account management
-2. **`btree_experiments`** - Experimental data (experiments, sessions, decisions, subjects)
+2. **`btree_experiments`** - Experimental data (experiments, sessions, decisions, participants)
 
 ---
 
@@ -28,7 +28,7 @@ graph TB
             EXP[experiments Store]
             SESS[sessions Store]
             DEC[decisions Store]
-            SUB[subjects Store]
+            PART[participants Store]
         end
 
         SS[sessionStorage<br/>Active Account]
@@ -38,10 +38,10 @@ graph TB
     EXP -->|createdBy| UA
     SESS -->|experimentId| EXP
     SESS -->|createdBy| UA
-    SESS -->|pairs[].s1_id| SUB
-    SESS -->|pairs[].s2_id| SUB
+    SESS -->|pairs[].p1_id| PART
+    SESS -->|pairs[].p2_id| PART
     DEC -->|sessionId| SESS
-    DEC -->|subjectId| SUB
+    DEC -->|participantId| PART
 
     style DB1 fill:#e1f5ff
     style DB2 fill:#fff4e1
@@ -63,7 +63,7 @@ graph TB
 | Field | Type | Key | Required | Description |
 |-------|------|-----|----------|-------------|
 | accountAddress | string | PRIMARY | ✓ | UUID, unique identifier |
-| userType | enum | - | ✓ | 'subject' \| 'experimenter' \| 'admin' |
+| userType | enum | - | ✓ | 'participant' \| 'experimenter' \| 'admin' |
 | createdAt | number | - | ✓ | Unix timestamp (ms) |
 | lastLogin | number | - | ✓ | Unix timestamp (ms) |
 | displayName | string | - | - | Optional alias/name |
@@ -85,7 +85,7 @@ graph TB
 
 ### 3.2 Database: `btree_experiments`
 
-**Purpose:** Store all experimental data including experiments, sessions, decisions, and subjects.
+**Purpose:** Store all experimental data including experiments, sessions, decisions, and participants.
 
 **Version:** 1
 
@@ -106,8 +106,8 @@ graph TB
 **Parameters Object (Trust Game):**
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| E1 | number | ✓ | S1 endowment (µALGO) |
-| E2 | number | ✓ | S2 endowment (µALGO) |
+| E1 | number | ✓ | P1 endowment (µALGO) |
+| E2 | number | ✓ | P2 endowment (µALGO) |
 | m | number | ✓ | Multiplier |
 | UNIT | number | ✓ | Step size (µALGO) |
 
@@ -154,13 +154,13 @@ graph TB
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | pairId | string | ✓ | UUID |
-| s1_id | string | ✓ | Investor subject ID |
-| s2_id | string | ✓ | Trustee subject ID |
-| phase | enum | ✓ | 'waiting_s1' \| 'waiting_s2' \| 'completed' |
+| p1_id | string | ✓ | Investor participant ID |
+| p2_id | string | ✓ | Trustee participant ID |
+| phase | enum | ✓ | 'waiting_p1' \| 'waiting_p2' \| 'completed' |
 | s_invested | number \| null | ✓ | Investment amount (µALGO) |
 | r_returned | number \| null | ✓ | Return amount (µALGO) |
-| s1_payout | number \| null | ✓ | S1 final payout (µALGO) |
-| s2_payout | number \| null | ✓ | S2 final payout (µALGO) |
+| p1_payout | number \| null | ✓ | P1 final payout (µALGO) |
+| p2_payout | number \| null | ✓ | P2 final payout (µALGO) |
 | completedAt | number \| null | ✓ | Unix timestamp (ms) |
 
 **Indexes:**
@@ -180,24 +180,24 @@ graph TB
   "pairs": [
     {
       "pairId": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
-      "s1_id": "subject-uuid-001",
-      "s2_id": "subject-uuid-002",
-      "phase": "waiting_s2",
+      "p1_id": "participant-uuid-001",
+      "p2_id": "participant-uuid-002",
+      "phase": "waiting_p2",
       "s_invested": 500000,
       "r_returned": null,
-      "s1_payout": null,
-      "s2_payout": null,
+      "p1_payout": null,
+      "p2_payout": null,
       "completedAt": null
     },
     {
       "pairId": "a9b8c7d6-e5f4-3210-9876-543210fedcba",
-      "s1_id": "subject-uuid-003",
-      "s2_id": "subject-uuid-004",
+      "p1_id": "participant-uuid-003",
+      "p2_id": "participant-uuid-004",
       "phase": "completed",
       "s_invested": 700000,
       "r_returned": 1200000,
-      "s1_payout": 1500000,
-      "s2_payout": 1800000,
+      "p1_payout": 1500000,
+      "p2_payout": 1800000,
       "completedAt": 1699651500000
     }
   ]
@@ -213,7 +213,7 @@ graph TB
 | id | string | PRIMARY | - | ✓ | UUID |
 | sessionId | string | - | ✓ | ✓ | FK to sessions.id |
 | pairId | string | - | ✓ | ✓ | FK to sessions.pairs[].pairId |
-| subjectId | string | - | ✓ | ✓ | FK to subjects.id |
+| participantId | string | - | ✓ | ✓ | FK to participants.id |
 | role | enum | - | - | ✓ | 's1' \| 's2' |
 | decision | number | - | - | ✓ | Amount (µALGO) |
 | timestamp | number | - | - | ✓ | Unix timestamp (ms) |
@@ -221,7 +221,7 @@ graph TB
 **Indexes:**
 - `sessionId` (decisions by session)
 - `pairId` (decisions by pair)
-- `subjectId` (decisions by subject)
+- `participantId` (decisions by participant)
 
 **Example Record:**
 ```json
@@ -229,7 +229,7 @@ graph TB
   "id": "dec12345-6789-abcd-ef01-234567890abc",
   "sessionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "pairId": "f1e2d3c4-b5a6-7890-1234-567890abcdef",
-  "subjectId": "subject-uuid-001",
+  "participantId": "participant-uuid-001",
   "role": "s1",
   "decision": 500000,
   "timestamp": 1699651230000
@@ -238,7 +238,7 @@ graph TB
 
 ---
 
-#### Store: `subjects`
+#### Store: `participants`
 
 | Field | Type | Key | Indexed | Required | Description |
 |-------|------|-----|---------|----------|-------------|
@@ -256,8 +256,8 @@ graph TB
 **Example Record:**
 ```json
 {
-  "id": "subject-uuid-001",
-  "account": "subject-uuid-001",
+  "id": "participant-uuid-001",
+  "account": "participant-uuid-001",
   "alias": "Alex Martinez",
   "createdAt": 1699564800000,
   "lastParticipated": 1699651230000
@@ -272,17 +272,17 @@ graph TB
 erDiagram
     USER_ACCOUNTS ||--o{ EXPERIMENTS : "creates"
     USER_ACCOUNTS ||--o{ SESSIONS : "creates"
-    USER_ACCOUNTS ||--o{ SUBJECTS : "registers as"
+    USER_ACCOUNTS ||--o{ PARTICIPANTS : "registers as"
 
     EXPERIMENTS ||--o{ SESSIONS : "contains"
 
     SESSIONS ||--o{ SESSION_PAIRS : "contains"
     SESSIONS ||--o{ DECISIONS : "records"
 
-    SESSION_PAIRS }o--|| SUBJECTS : "s1_id"
-    SESSION_PAIRS }o--|| SUBJECTS : "s2_id"
+    SESSION_PAIRS }o--|| PARTICIPANTS : "p1_id"
+    SESSION_PAIRS }o--|| PARTICIPANTS : "p2_id"
 
-    SUBJECTS ||--o{ DECISIONS : "makes"
+    PARTICIPANTS ||--o{ DECISIONS : "makes"
 
     USER_ACCOUNTS {
         string accountAddress PK
@@ -316,13 +316,13 @@ erDiagram
 
     SESSION_PAIRS {
         string pairId PK
-        string s1_id FK
-        string s2_id FK
+        string p1_id FK
+        string p2_id FK
         enum phase
         number s_invested
         number r_returned
-        number s1_payout
-        number s2_payout
+        number p1_payout
+        number p2_payout
         number completedAt
     }
 
@@ -330,13 +330,13 @@ erDiagram
         string id PK
         string sessionId FK
         string pairId FK
-        string subjectId FK
+        string participantId FK
         enum role
         number decision
         number timestamp
     }
 
-    SUBJECTS {
+    PARTICIPANTS {
         string id PK
         string account
         string alias
@@ -377,18 +377,18 @@ sequenceDiagram
 sequenceDiagram
     actor E as Experimenter
     participant UI as SessionCreator
-    participant DB as IndexedDB (sessions, subjects)
+    participant DB as IndexedDB (sessions, participants)
 
     E->>UI: Enters session name
-    E->>UI: Adds subject IDs (bulk or manual)
+    E->>UI: Adds participant IDs (bulk or manual)
     UI->>UI: Validates even count (≥2)
     UI->>UI: Creates sequential pairs
     Note over UI: [0,1], [2,3], [4,5]...
     UI->>UI: Generates UUIDs (session, pairs)
     E->>UI: Clicks "Create Session"
 
-    loop For each subject
-        UI->>DB: registerSubject(id, alias)
+    loop For each participant
+        UI->>DB: registerParticipant(id, alias)
         Note over DB: Auto-register if not exists
     end
 
@@ -399,50 +399,50 @@ sequenceDiagram
 
 ---
 
-### 5.3 Subject Gameplay Flow
+### 5.3 Participant Gameplay Flow
 
 ```mermaid
 sequenceDiagram
-    actor S1 as Investor (S1)
-    actor S2 as Trustee (S2)
+    actor P1 as Investor (P1)
+    actor P2 as Trustee (P2)
     participant UI as Game Interface
     participant DB as IndexedDB
 
-    Note over S1,DB: Phase: waiting_s1
+    Note over P1,DB: Phase: waiting_p1
 
-    S1->>UI: Opens InvestorInterface
-    S1->>UI: Selects investment (s)
-    S1->>UI: Clicks "Submit Investment"
+    P1->>UI: Opens InvestorInterface
+    P1->>UI: Selects investment (s)
+    P1->>UI: Clicks "Submit Investment"
     UI->>DB: submitInvestorDecision(s)
     DB->>DB: Create decision record
-    DB->>DB: Update pair: s_invested, phase=waiting_s2
+    DB->>DB: Update pair: s_invested, phase=waiting_p2
     DB-->>UI: Success
-    UI-->>S1: Shows WaitingRoom
+    UI-->>P1: Shows WaitingRoom
 
-    Note over S1,DB: Phase: waiting_s2
+    Note over P1,DB: Phase: waiting_p2
 
-    S2->>UI: Polls every 3s
-    UI->>DB: findSubjectPair()
-    DB-->>UI: pair.phase = waiting_s2
-    UI-->>S2: Shows TrusteeInterface
+    P2->>UI: Polls every 3s
+    UI->>DB: findParticipantPair()
+    DB-->>UI: pair.phase = waiting_p2
+    UI-->>P2: Shows TrusteeInterface
 
-    S2->>UI: Sees investment (s)
-    S2->>UI: Selects return (r)
-    S2->>UI: Clicks "Submit Return"
+    P2->>UI: Sees investment (s)
+    P2->>UI: Selects return (r)
+    P2->>UI: Clicks "Submit Return"
     UI->>DB: submitTrusteeDecision(r)
     DB->>DB: Create decision record
     DB->>DB: Calculate payouts
     DB->>DB: Update pair: r_returned, payouts, phase=completed
     DB->>DB: Check if all pairs done → session.status=completed
     DB-->>UI: Success
-    UI-->>S2: Shows ResultsDisplay
+    UI-->>P2: Shows ResultsDisplay
 
-    Note over S1,DB: Phase: completed
+    Note over P1,DB: Phase: completed
 
-    S1->>UI: Polls every 3s
-    UI->>DB: findSubjectPair()
+    P1->>UI: Polls every 3s
+    UI->>DB: findParticipantPair()
     DB-->>UI: pair.phase = completed
-    UI-->>S1: Shows ResultsDisplay
+    UI-->>P1: Shows ResultsDisplay
 ```
 
 ---
@@ -457,12 +457,12 @@ graph LR
     C --> D[ExperimentCard List]
 ```
 
-#### Pattern 2: Subject Views Assigned Sessions
+#### Pattern 2: Participant Views Assigned Sessions
 ```mermaid
 graph LR
-    A[SubjectDashboard] -->|subjectId| B[sessions store]
+    A[ParticipantDashboard] -->|participantId| B[sessions store]
     B -->|Scan all sessions| C[Filter pairs array]
-    C -->|Match s1_id or s2_id| D[Assigned Sessions]
+    C -->|Match p1_id or p2_id| D[Assigned Sessions]
     D --> E[Session List UI]
 ```
 
@@ -526,16 +526,16 @@ stateDiagram-v2
 
 ```mermaid
 stateDiagram-v2
-    [*] --> waiting_s1: Session created
-    waiting_s1 --> waiting_s2: S1 submits investment
-    waiting_s2 --> completed: S2 submits return
+    [*] --> waiting_p1: Session created
+    waiting_p1 --> waiting_p2: P1 submits investment
+    waiting_p2 --> completed: P2 submits return
     completed --> [*]
 
-    note right of waiting_s1
+    note right of waiting_p1
         Investment decision pending
     end note
 
-    note right of waiting_s2
+    note right of waiting_p2
         Return decision pending
     end note
 
@@ -558,8 +558,8 @@ stateDiagram-v2
 | Get experiment details | experiments | Get by key | Primary key | < 10ms |
 | List experiment sessions | sessions | Get all + filter | experimentId | < 50ms |
 | Get session details | sessions | Get by key | Primary key | < 10ms |
-| Find subject's pair | sessions | Get by key + scan | Primary key | < 30ms |
-| List subject sessions | sessions | Get all + scan | None | < 100ms |
+| Find participant's pair | sessions | Get by key + scan | Primary key | < 30ms |
+| List participant sessions | sessions | Get all + scan | None | < 100ms |
 | Get pair decisions | decisions | Get all + filter | pairId | < 50ms |
 
 ---
@@ -570,9 +570,9 @@ stateDiagram-v2
 |-----------|-------|------|-------------------|----------------|
 | Create account | user_accounts | Insert | None | < 20ms |
 | Create experiment | experiments | Insert | None | < 20ms |
-| Create session | sessions, subjects | Insert | Register subjects | < 50ms |
-| Submit S1 decision | decisions, sessions | Insert + Update | Update pair in session | < 100ms |
-| Submit S2 decision | decisions, sessions | Insert + Update | Update pair + check session | < 150ms |
+| Create session | sessions, participants | Insert | Register participants | < 50ms |
+| Submit P1 decision | decisions, sessions | Insert + Update | Update pair in session | < 100ms |
+| Submit P2 decision | decisions, sessions | Insert + Update | Update pair + check session | < 150ms |
 
 ---
 
@@ -593,9 +593,9 @@ stateDiagram-v2
 
 | Rule | Validation | Error Message |
 |------|------------|---------------|
-| Subject count | even, ≥ 2 | "Must have even number of subjects (minimum 2)" |
-| Unique subjects | No duplicates | "Cannot assign same subject multiple times" |
-| Valid UUIDs | Regex match UUID | "Invalid subject ID format" |
+| Participant count | even, ≥ 2 | "Must have even number of participants (minimum 2)" |
+| Unique participants | No duplicates | "Cannot assign same participant multiple times" |
+| Valid UUIDs | Regex match UUID | "Invalid participant ID format" |
 
 ---
 
@@ -618,10 +618,10 @@ stateDiagram-v2
 | experiments.createdBy → user_accounts.accountAddress | Must exist | Client-side check |
 | sessions.experimentId → experiments.id | Must exist | Client-side check |
 | sessions.createdBy → user_accounts.accountAddress | Must exist | Client-side check |
-| sessions.pairs[].s1_id → subjects.id | Auto-create if missing | Auto-registration |
-| sessions.pairs[].s2_id → subjects.id | Auto-create if missing | Auto-registration |
+| sessions.pairs[].p1_id → participants.id | Auto-create if missing | Auto-registration |
+| sessions.pairs[].p2_id → participants.id | Auto-create if missing | Auto-registration |
 | decisions.sessionId → sessions.id | Must exist | Client-side check |
-| decisions.subjectId → subjects.id | Must exist | Client-side check |
+| decisions.participantId → participants.id | Must exist | Client-side check |
 
 ---
 
@@ -629,9 +629,9 @@ stateDiagram-v2
 
 | Event | Trigger | Update |
 |-------|---------|--------|
-| S1 submits decision | submitInvestorDecision() | decisions store + sessions.pairs[] |
-| S2 submits decision | submitTrusteeDecision() | decisions store + sessions.pairs[] + session.status |
-| All pairs complete | Last S2 decision | session.status → 'completed' |
+| P1 submits decision | submitInvestorDecision() | decisions store + sessions.pairs[] |
+| P2 submits decision | submitTrusteeDecision() | decisions store + sessions.pairs[] + session.status |
+| All pairs complete | Last P2 decision | session.status → 'completed' |
 
 ---
 
@@ -645,21 +645,21 @@ stateDiagram-v2
 | experiments | 300 bytes | Includes parameters object |
 | sessions | 500 bytes + (150 × pairs) | Grows with pair count |
 | decisions | 200 bytes | Simple decision record |
-| subjects | 150 bytes | Minimal subject info |
+| participants | 150 bytes | Minimal participant info |
 
 ---
 
 ### 10.2 Capacity Estimates
 
-**Scenario: 10 Experimenters, 100 Subjects, 50 Experiments, 200 Sessions**
+**Scenario: 10 Experimenters, 100 Participants, 50 Experiments, 200 Sessions**
 
 | Store | Record Count | Total Size | Notes |
 |-------|--------------|------------|-------|
-| user_accounts | 110 | 16.5 KB | 10 experimenters + 100 subjects |
+| user_accounts | 110 | 16.5 KB | 10 experimenters + 100 participants |
 | experiments | 50 | 15 KB | |
 | sessions | 200 | 700 KB | Avg 20 pairs/session = 4,000 pairs |
 | decisions | 8,000 | 1.6 MB | 2 decisions per pair |
-| subjects | 100 | 15 KB | Auto-registered |
+| participants | 100 | 15 KB | Auto-registered |
 | **TOTAL** | | **~2.35 MB** | Well within browser limits |
 
 **Browser IndexedDB Quota:** Typically 50% of available disk space, minimum ~10 MB
@@ -711,9 +711,9 @@ restoreDatabase(dbName: string, data: Blob): Promise<void>
 - `sessions.status` - Low selectivity, useful for filtering
 - `decisions.sessionId` - High selectivity, critical for analysis
 - `decisions.pairId` - High selectivity, critical for pair lookup
-- `decisions.subjectId` - High selectivity, useful for subject history
-- `subjects.createdAt` - Range queries for recent subjects
-- `subjects.lastParticipated` - Range queries for active subjects
+- `decisions.participantId` - High selectivity, useful for participant history
+- `participants.createdAt` - Range queries for recent participants
+- `participants.lastParticipated` - Range queries for active participants
 
 ---
 
@@ -726,7 +726,7 @@ restoreDatabase(dbName: string, data: Blob): Promise<void>
 - ✅ Cache frequently accessed data in component state
 
 **Avoid:**
-- ❌ Full table scans (e.g., finding subject sessions requires scan)
+- ❌ Full table scans (e.g., finding participant sessions requires scan)
 - ❌ Complex filtering on non-indexed fields
 - ❌ Frequent writes during reads (use batching)
 - ❌ Large embedded arrays (pairs array can grow)
@@ -742,7 +742,7 @@ restoreDatabase(dbName: string, data: Blob): Promise<void>
 **Potential Migrations:**
 - Add `experiment.tags` for categorization
 - Add `session.scheduledStart` for scheduling
-- Add `subjects.email` for notifications
+- Add `participants.email` for notifications
 - Normalize `sessions.pairs` into separate store for scalability
 - Add `treatments` table for treatment variations
 

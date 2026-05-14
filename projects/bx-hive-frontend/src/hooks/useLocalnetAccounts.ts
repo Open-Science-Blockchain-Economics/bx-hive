@@ -1,4 +1,3 @@
-import algosdk from 'algosdk'
 import { AlgorandClient, algo } from '@algorandfoundation/algokit-utils'
 import { useSuspenseQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import { getRegistryClient } from '../utils/algorand'
@@ -6,9 +5,9 @@ import { queryKeys } from '../lib/queryKeys'
 import { TEST_WALLET_NAME } from '../lib/constants'
 import { useNetworkConfig, type NetworkConfig } from '../providers/NetworkProvider'
 
-const ROLE_MAP = { experimenter: 0, subject: 1 } as const
+const ROLE_MAP = { experimenter: 0, participant: 1 } as const
 
-export type LocalnetAccountRole = 'experimenter' | 'subject'
+export type LocalnetAccountRole = 'experimenter' | 'participant'
 
 export interface LocalnetAccount {
   name: string
@@ -28,13 +27,29 @@ interface KmdAccountsData {
   seeded: boolean
 }
 
+function getAlgorandWithKmd(config: NetworkConfig): AlgorandClient {
+  return AlgorandClient.fromConfig({
+    algodConfig: {
+      server: config.algod.server,
+      port: config.algod.port ? Number(config.algod.port) : '',
+      token: config.algod.token as string,
+    },
+    kmdConfig: {
+      server: config.kmd.server,
+      port: config.kmd.port ? Number(config.kmd.port) : '',
+      token: config.kmd.token as string,
+    },
+  })
+}
+
 async function fetchKmdAccounts(config: NetworkConfig): Promise<KmdAccountsData> {
-  const kmd = new algosdk.Kmd(config.kmd.token as string, config.kmd.server, config.kmd.port ? Number(config.kmd.port) : '')
+  const algorand = getAlgorandWithKmd(config)
+  const kmd = algorand.client.kmd
 
   let wallets: Array<{ id: string; name: string }>
   try {
     const res = await kmd.listWallets()
-    wallets = res.wallets as Array<{ id: string; name: string }>
+    wallets = (res.wallets ?? []) as Array<{ id: string; name: string }>
   } catch {
     return { accounts: [], seeded: false }
   }
@@ -42,16 +57,16 @@ async function fetchKmdAccounts(config: NetworkConfig): Promise<KmdAccountsData>
   const wallet = wallets.find((w) => w.name === TEST_WALLET_NAME)
   if (!wallet) return { accounts: [], seeded: false }
 
-  const { wallet_handle_token: handle } = await kmd.initWalletHandle(wallet.id, '')
-  const { addresses } = (await kmd.listKeys(handle)) as { addresses: string[] }
-  await kmd.releaseWalletHandle(handle)
+  const { walletHandleToken } = await kmd.initWalletHandle({ walletId: wallet.id, walletPassword: '' })
+  const { addresses } = await kmd.listKeysInWallet({ walletHandleToken })
+  await kmd.releaseWalletHandleToken({ walletHandleToken })
 
-  if (addresses.length === 0) return { accounts: [], seeded: false }
+  if (!addresses || addresses.length === 0) return { accounts: [], seeded: false }
 
   return {
     accounts: addresses.map((address, index) => ({
       name: `Account ${index + 1}`,
-      address,
+      address: address.toString(),
     })),
     seeded: true,
   }
@@ -62,13 +77,7 @@ async function fetchAccountRegistration(
   address: string,
   senderAddress: string,
 ): Promise<{ registered: boolean; role?: LocalnetAccountRole; onChainName?: string }> {
-  const algorand = AlgorandClient.fromConfig({
-    algodConfig: {
-      server: config.algod.server,
-      port: config.algod.port ? Number(config.algod.port) : '',
-      token: config.algod.token as string,
-    },
-  })
+  const algorand = getAlgorandWithKmd(config)
   const registryClient = getRegistryClient(algorand, senderAddress)
 
   try {
@@ -77,7 +86,7 @@ async function fetchAccountRegistration(
     if (user) {
       return {
         registered: true,
-        role: (user.role === 0 ? 'experimenter' : 'subject') as LocalnetAccountRole,
+        role: (user.role === 0 ? 'experimenter' : 'participant') as LocalnetAccountRole,
         onChainName: user.name,
       }
     }
@@ -90,46 +99,12 @@ async function fetchAccountRegistration(
   return { registered: false }
 }
 
-/** Resolves the LocalNet dispenser account from KMD and returns an AlgorandClient with it registered. */
+/** Resolves the LocalNet dispenser via v10 KmdAccountManager and registers it as a signer. */
 async function getDispenserClient(config: NetworkConfig) {
-  const kmd = new algosdk.Kmd(
-    config.kmd.token as string,
-    config.kmd.server,
-    config.kmd.port ? Number(config.kmd.port) : '',
-  )
-  const algodClient = new algosdk.Algodv2(
-    config.algod.token as string,
-    config.algod.server,
-    config.algod.port ? Number(config.algod.port) : '',
-  )
-
-  const { wallets } = await kmd.listWallets()
-  const allWallets = wallets as Array<{ id: string; name: string }>
-  const defaultWallet = allWallets.find((w) => w.name === 'unencrypted-default-wallet')
-  if (!defaultWallet) throw new Error('Default KMD wallet not found')
-
-  const { wallet_handle_token: handle } = await kmd.initWalletHandle(defaultWallet.id, '')
-  const { addresses } = (await kmd.listKeys(handle)) as { addresses: string[] }
-  const accountInfos = await Promise.all(addresses.map((a) => algodClient.accountInformation(a).do()))
-  const dispenserIdx = accountInfos.findIndex((info) => info['status'] !== 'Offline' && info['amount'] > 1_000_000_000)
-  if (dispenserIdx === -1) throw new Error('Dispenser account not found in default wallet')
-
-  const dispenserKeyRes = await kmd.exportKey(handle, '', addresses[dispenserIdx])
-  await kmd.releaseWalletHandle(handle)
-
-  const algorand = AlgorandClient.fromConfig({
-    algodConfig: {
-      server: config.algod.server,
-      port: config.algod.port ? Number(config.algod.port) : '',
-      token: config.algod.token as string,
-    },
-  })
-
-  const dispenserMnemonic = algosdk.secretKeyToMnemonic(dispenserKeyRes.private_key as Uint8Array)
-  const dispenserAccount = algorand.account.fromMnemonic(dispenserMnemonic)
+  const algorand = getAlgorandWithKmd(config)
+  const dispenserAccount = await algorand.account.kmd.getLocalNetDispenserAccount()
   algorand.setSignerFromAccount(dispenserAccount)
-
-  return { algorand, kmd, allWallets, dispenserAccount }
+  return { algorand, dispenserAccount }
 }
 
 export function useLocalnetAccounts() {
@@ -164,17 +139,12 @@ export function useLocalnetAccounts() {
 
   const registerMutation = useMutation({
     mutationFn: async ({ address, name, role }: { address: string; name: string; role: LocalnetAccountRole }) => {
-      const { algorand, kmd, allWallets, dispenserAccount } = await getDispenserClient(networkConfig)
+      const { algorand, dispenserAccount } = await getDispenserClient(networkConfig)
 
-      // Get target account key from test wallet
-      const testWallet = allWallets.find((w) => w.name === TEST_WALLET_NAME)
-      if (!testWallet) throw new Error(`KMD wallet "${TEST_WALLET_NAME}" not found. Did you run pnpm seed:localnet?`)
-      const { wallet_handle_token: testHandle } = await kmd.initWalletHandle(testWallet.id, '')
-      const targetKeyRes = await kmd.exportKey(testHandle, '', address)
-      await kmd.releaseWalletHandle(testHandle)
-
-      const targetMnemonic = algosdk.secretKeyToMnemonic(targetKeyRes.private_key as Uint8Array)
-      const targetAccount = algorand.account.fromMnemonic(targetMnemonic)
+      // Load the target account's signer from the test wallet by matching address.
+      const targetAccount = await algorand.account.kmd.getWalletAccount(TEST_WALLET_NAME, (a) => a.address.toString() === address)
+      if (!targetAccount)
+        throw new Error(`KMD account "${address}" not found in wallet "${TEST_WALLET_NAME}". Did you run pnpm seed:localnet?`)
       algorand.setSignerFromAccount(targetAccount)
 
       await algorand.account.ensureFunded(address, dispenserAccount.addr, algo(5))
@@ -198,15 +168,14 @@ export function useLocalnetAccounts() {
         receiver: address,
         amount: algo(amount),
       })
-
-      return { address }
     },
   })
 
   return {
     accounts,
     seeded: kmdData.seeded,
-    registerAccount: (address: string, name: string, role: LocalnetAccountRole) => registerMutation.mutateAsync({ address, name, role }),
+    registerAccount: (address: string, name: string, role: LocalnetAccountRole) =>
+      registerMutation.mutateAsync({ address, name, role }).then(() => undefined),
     fundAccount: (address: string, amount: number) => fundMutation.mutateAsync({ address, amount }),
     fundingInProgress: fundMutation.isPending,
     refresh: refetch,

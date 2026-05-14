@@ -1,4 +1,11 @@
 import { useState } from 'react'
+import { Plus, X } from 'lucide-react'
+
+import { Chip } from '@/components/ds/badge'
+import { Btn } from '@/components/ds/button'
+import { Panel } from '@/components/ds/card'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ds/dropdown-menu'
+import { Input } from '@/components/ds/input'
 import type { ParameterSchema, ParameterVariation } from '../../types'
 
 interface VariationBuilderProps {
@@ -11,20 +18,16 @@ interface VariationBuilderProps {
 export function VariationBuilder({ parameterSchema, baseParameters, variations, onVariationsChange }: VariationBuilderProps) {
   const [newValueInputs, setNewValueInputs] = useState<Record<string, string>>({})
 
-  // Get parameters that haven't been added as variations yet
   const availableParams = parameterSchema.filter((param) => !variations.some((v) => v.parameterName === param.name))
 
   function handleAddParameter(paramName: string) {
     const param = parameterSchema.find((p) => p.name === paramName)
     if (!param) return
-
-    // Start with the base parameter value as the first variation value
     const baseValue = baseParameters[paramName]
     const newVariation: ParameterVariation = {
       parameterName: paramName,
       values: baseValue !== undefined ? [baseValue] : [],
     }
-
     onVariationsChange([...variations, newVariation])
   }
 
@@ -35,60 +38,37 @@ export function VariationBuilder({ parameterSchema, baseParameters, variations, 
   function handleAddValue(paramName: string) {
     const inputValue = newValueInputs[paramName]
     if (!inputValue) return
-
     const param = parameterSchema.find((p) => p.name === paramName)
     if (!param) return
-
     const parsedValue = param.type === 'number' ? Number(inputValue) : inputValue
-
-    // Don't add duplicate values
     const variation = variations.find((v) => v.parameterName === paramName)
     if (variation?.values.includes(parsedValue)) return
-
-    const updated = variations.map((v) => {
-      if (v.parameterName === paramName) {
-        return { ...v, values: [...v.values, parsedValue] }
-      }
-      return v
-    })
-
+    const updated = variations.map((v) => (v.parameterName === paramName ? { ...v, values: [...v.values, parsedValue] } : v))
     onVariationsChange(updated)
     setNewValueInputs((prev) => ({ ...prev, [paramName]: '' }))
   }
 
   function handleRemoveValue(paramName: string, value: number | string) {
-    const updated = variations.map((v) => {
-      if (v.parameterName === paramName) {
-        return { ...v, values: v.values.filter((val) => val !== value) }
-      }
-      return v
-    })
-
-    // Remove the parameter entirely if no values left
-    const filteredVariation = updated.find((v) => v.parameterName === paramName)
-    if (filteredVariation && filteredVariation.values.length === 0) {
+    const updated = variations.map((v) => (v.parameterName === paramName ? { ...v, values: v.values.filter((val) => val !== value) } : v))
+    const filtered = updated.find((v) => v.parameterName === paramName)
+    if (filtered && filtered.values.length === 0) {
       onVariationsChange(updated.filter((v) => v.parameterName !== paramName))
     } else {
       onVariationsChange(updated)
     }
   }
 
-  // Calculate total variations (cartesian product)
   const totalVariations = variations.length > 0 ? variations.reduce((acc, v) => acc * v.values.length, 1) : 0
 
-  // Generate preview of all combinations
   function generateCombinations(): Record<string, number | string>[] {
     if (variations.length === 0) return []
-
     let combinations: Record<string, number | string>[] = [{}]
     for (const variation of variations) {
-      const newCombinations: Record<string, number | string>[] = []
+      const next: Record<string, number | string>[] = []
       for (const combo of combinations) {
-        for (const value of variation.values) {
-          newCombinations.push({ ...combo, [variation.parameterName]: value })
-        }
+        for (const value of variation.values) next.push({ ...combo, [variation.parameterName]: value })
       }
-      combinations = newCombinations
+      combinations = next
     }
     return combinations
   }
@@ -96,40 +76,38 @@ export function VariationBuilder({ parameterSchema, baseParameters, variations, 
   const combinations = generateCombinations()
 
   return (
-    <div className="space-y-4">
-      {/* Existing variations */}
+    <div className="flex flex-col gap-4">
       {variations.map((variation) => {
         const param = parameterSchema.find((p) => p.name === variation.parameterName)
         if (!param) return null
-
         return (
-          <div key={variation.parameterName} className="border border-base-300 rounded-lg p-4">
+          <Panel key={variation.parameterName}>
             <div className="flex justify-between items-center mb-3">
-              <span className="font-medium">{param.label}</span>
-              <button className="btn btn-ghost btn-xs text-error" onClick={() => handleRemoveParameter(variation.parameterName)}>
+              <span className="font-medium text-sm">{param.label}</span>
+              <Btn variant="ghost" size="sm" onClick={() => handleRemoveParameter(variation.parameterName)} className="text-neg">
                 Remove
-              </button>
+              </Btn>
             </div>
-
-            <div className="flex flex-wrap gap-2 mb-3">
+            <div className="flex flex-wrap gap-1.5 mb-3">
               {variation.values.map((value, idx) => (
-                <div key={idx} className="badge badge-lg gap-2">
-                  {value}
+                <Chip key={idx} className="gap-1.5">
+                  <span className="font-mono">{value}</span>
                   <button
-                    className="btn btn-ghost btn-xs p-0 min-h-0 h-auto"
+                    type="button"
+                    aria-label={`Remove ${value}`}
                     onClick={() => handleRemoveValue(variation.parameterName, value)}
+                    className="inline-flex items-center justify-center hover:text-foreground"
                   >
-                    ×
+                    <X className="size-2.5" />
                   </button>
-                </div>
+                </Chip>
               ))}
             </div>
-
             <div className="flex gap-2">
-              <input
+              <Input
+                mono
                 type={param.type === 'number' ? 'number' : 'text'}
-                className="input input-bordered input-sm flex-1"
-                placeholder="Add value..."
+                placeholder="Add value…"
                 value={newValueInputs[variation.parameterName] || ''}
                 onChange={(e) => setNewValueInputs((prev) => ({ ...prev, [variation.parameterName]: e.target.value }))}
                 onKeyDown={(e) => {
@@ -141,49 +119,47 @@ export function VariationBuilder({ parameterSchema, baseParameters, variations, 
                 min={param.min}
                 max={param.max}
               />
-              <button className="btn btn-sm btn-outline" onClick={() => handleAddValue(variation.parameterName)}>
-                + Add Value
-              </button>
+              <Btn variant="secondary" size="sm" onClick={() => handleAddValue(variation.parameterName)}>
+                <Plus className="size-3.5" /> Add value
+              </Btn>
             </div>
-          </div>
+          </Panel>
         )
       })}
 
-      {/* Add parameter dropdown */}
       {availableParams.length > 0 && (
-        <div className="dropdown">
-          <label tabIndex={0} className="btn btn-outline btn-sm">
-            + Add Parameter
-          </label>
-          <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Btn variant="secondary" size="sm">
+              <Plus className="size-3.5" /> Add parameter
+            </Btn>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
             {availableParams.map((param) => (
-              <li key={param.name}>
-                <a onClick={() => handleAddParameter(param.name)}>{param.label}</a>
-              </li>
+              <DropdownMenuItem key={param.name} onSelect={() => handleAddParameter(param.name)}>
+                {param.label}
+              </DropdownMenuItem>
             ))}
-          </ul>
-        </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
 
-      {/* Summary */}
       {variations.length > 0 && variations.every((v) => v.values.length > 0) && (
-        <div className="bg-base-200 rounded-lg p-4">
-          <div>
-            <div className="font-semibold">
-              {variations.length > 1 ? `Factorial Design: ${variations.map((v) => v.values.length).join(' × ')} = ` : ''}
-              {totalVariations} variation{totalVariations !== 1 ? 's' : ''}
-            </div>
-            {totalVariations <= 10 && (
-              <div className="text-sm mt-2 space-y-1">
-                {combinations.map((combo, idx) => (
-                  <div key={idx}>
-                    Variation {idx + 1}: {variations.map((v) => `${v.parameterName}=${combo[v.parameterName]}`).join(', ')}
-                  </div>
-                ))}
-              </div>
-            )}
+        <Panel className="bg-muted">
+          <div className="font-semibold text-sm">
+            {variations.length > 1 ? `Factorial Design: ${variations.map((v) => v.values.length).join(' × ')} = ` : ''}
+            {totalVariations} variation{totalVariations !== 1 ? 's' : ''}
           </div>
-        </div>
+          {totalVariations <= 10 && (
+            <div className="text-xs text-muted-foreground mt-2 flex flex-col gap-1 font-mono">
+              {combinations.map((combo, idx) => (
+                <div key={idx}>
+                  Variation {idx + 1}: {variations.map((v) => `${v.parameterName}=${combo[v.parameterName]}`).join(', ')}
+                </div>
+              ))}
+            </div>
+          )}
+        </Panel>
       )}
     </div>
   )

@@ -1,15 +1,17 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
+import { ArrowLeft, Check, Loader2 } from 'lucide-react'
 
-const DOCS_BASE_URL = 'https://open-science-blockchain-economics.github.io/bx-hive'
-
-const DOCS_LINKS = {
-  participants: `${DOCS_BASE_URL}/subjects/joining-experiments/#auto-assignment-to-variations`,
-  maxPayout: `${DOCS_BASE_URL}/concepts/payout-calculations/`,
-} as const
-import { createExperiment as dbCreateExperiment, createExperimentBatch, getVariationLabel } from '../../db'
+import { Btn } from '@/components/ds/button'
+import { Field } from '@/components/ds/field'
+import { Input } from '@/components/ds/input'
+import { Switch } from '@/components/ds/switch'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip'
+import { cn } from '@/lib/utils'
+import { getVariationLabel } from '../../db'
 import { experimentTemplates, getTemplateById } from '../../experiment-logic/templates'
-import type { AssignmentStrategy, ParameterVariation } from '../../types'
+import type { ParameterVariation } from '../../types'
 import { computeEscrowAlgo, generateVariationCombinations, toVariationParams } from '../../utils/trustGameCalc'
 import InfoAlert from '../ui/InfoAlert'
 import FundingSummary from './FundingSummary'
@@ -17,8 +19,81 @@ import TemplateSelector from './TemplateSelector'
 import TrustGameParameters from './TrustGameParameters'
 import { VariationBuilder } from './VariationBuilder'
 
+const DOCS_BASE_URL = 'https://open-science-blockchain-economics.github.io/bx-hive'
+
+const DOCS_LINKS = {
+  participants: `${DOCS_BASE_URL}/participants/joining-experiments/#auto-assignment-to-variations`,
+  maxPayout: `${DOCS_BASE_URL}/concepts/payout-calculations/`,
+} as const
+
+type StepState = 'done' | 'active' | 'pending'
+
+interface StepProps {
+  n: number
+  title: string
+  state: StepState
+  isLast?: boolean
+  children: ReactNode
+}
+
+function Step({ n, title, state, isLast = false, children }: StepProps) {
+  return (
+    <div className="grid grid-cols-[40px_1fr] sm:grid-cols-[60px_1fr] gap-4 sm:gap-6">
+      <div className="flex flex-col items-center">
+        <div
+          className={cn(
+            'size-8 rounded-pill grid place-items-center font-mono text-xs font-semibold border shrink-0',
+            state === 'done' && 'border-primary bg-primary text-primary-foreground',
+            state === 'active' && 'border-primary text-primary',
+            state === 'pending' && 'border-rule-2 text-muted-foreground',
+          )}
+        >
+          {state === 'done' ? <Check className="size-4" /> : n}
+        </div>
+        {!isLast && <div className="flex-1 w-px bg-border mt-2" />}
+      </div>
+      <div className={cn('pb-9', isLast && 'pb-0')}>
+        <h3
+          className={cn(
+            'font-display text-2xl font-normal leading-tight',
+            state === 'pending' ? 'text-muted-foreground' : 'text-foreground',
+          )}
+        >
+          {title}
+        </h3>
+        <div className="mt-4">{children}</div>
+      </div>
+    </div>
+  )
+}
+
+function PayoffPreview({ e1, m }: { e1: number; m: number }) {
+  const sent = e1 || 0
+  const multiplied = sent * (m || 1)
+  return (
+    <div className="rounded-sm border border-dashed border-rule-2 bg-muted px-4 py-3">
+      <div className="t-micro mb-2">Payoff preview · max send</div>
+      <div className="flex items-center gap-2 flex-wrap font-mono text-xs sm:text-sm text-ink-2">
+        <span>Investor sends</span>
+        <span className="text-primary font-medium">{sent}</span>
+        <span className="text-faint">→</span>
+        <span>Multiplied ×{m || 1}</span>
+        <span className="text-faint">→</span>
+        <span className="text-primary font-medium">{multiplied}</span>
+        <span className="text-faint">→</span>
+        <span>Trustee returns r</span>
+        <span className="text-faint">→</span>
+        <span>
+          Investor: <span className="text-foreground">r</span>
+          {' · '}
+          Trustee: <span className="text-foreground">{multiplied}−r</span>
+        </span>
+      </div>
+    </div>
+  )
+}
+
 interface CreateExperimentFormProps {
-  activeUserId: string
   walletBalanceAlgo: number | null
   createExperimentWithVariation: (name: string, params: ReturnType<typeof toVariationParams>) => Promise<{ expId: number }>
   createVariation: (expId: number, params: ReturnType<typeof toVariationParams>) => Promise<bigint>
@@ -26,7 +101,6 @@ interface CreateExperimentFormProps {
 }
 
 export default function CreateExperimentForm({
-  activeUserId,
   walletBalanceAlgo,
   createExperimentWithVariation,
   createVariation,
@@ -35,10 +109,8 @@ export default function CreateExperimentForm({
   const [selectedTemplateId, setSelectedTemplateId] = useState(experimentTemplates[0]?.id || '')
   const [experimentName, setExperimentName] = useState('')
   const [parameters, setParameters] = useState<Record<string, number | string>>({})
-
   const [batchModeEnabled, setBatchModeEnabled] = useState(false)
   const [variations, setVariations] = useState<ParameterVariation[]>([])
-  const [assignmentStrategy, setAssignmentStrategy] = useState<AssignmentStrategy>('round_robin')
   const [maxPerVariation, setMaxPerVariation] = useState<string>('')
 
   const selectedTemplate = getTemplateById(selectedTemplateId)
@@ -56,10 +128,7 @@ export default function CreateExperimentForm({
   }, [selectedTemplate])
 
   function handleParameterChange(name: string, value: string, type: 'number' | 'string') {
-    setParameters((prev) => ({
-      ...prev,
-      [name]: type === 'number' ? Number(value) : value,
-    }))
+    setParameters((prev) => ({ ...prev, [name]: type === 'number' ? Number(value) : value }))
   }
 
   function resetForm() {
@@ -97,59 +166,29 @@ export default function CreateExperimentForm({
     },
   })
 
-  const bretMutation = useMutation({
-    mutationFn: async () => {
-      if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
-        await createExperimentBatch(
-          selectedTemplateId,
-          activeUserId,
-          experimentName.trim(),
-          parameters,
-          variations,
-          assignmentStrategy,
-          maxPerVariation ? Number(maxPerVariation) : undefined,
-        )
-      } else {
-        await dbCreateExperiment(selectedTemplateId, activeUserId, experimentName.trim(), parameters)
-      }
-    },
-    onSuccess: () => {
-      resetForm()
-      onCreated()
-    },
-  })
+  const creating = trustMutation.isPending
+  const error = trustMutation.error?.message ?? null
 
-  const creating = trustMutation.isPending || bretMutation.isPending
-  const error = (trustMutation.error ?? bretMutation.error)?.message ?? null
-
-  function handleCreateExperiment() {
+  function handleCreate() {
     if (!experimentName.trim()) {
       trustMutation.reset()
-      bretMutation.reset()
       return
     }
-    if (selectedTemplateId === 'trust-game' && (!maxPerVariation || Number(maxPerVariation) < 1)) return
+    if (!maxPerVariation || Number(maxPerVariation) < 1) return
     if (!selectedTemplate) return
-
-    if (selectedTemplateId === 'trust-game') {
-      trustMutation.mutate()
-    } else {
-      bretMutation.mutate()
-    }
+    trustMutation.mutate()
   }
 
-  // Validation errors shown inline (not from mutation)
   const validationError = !experimentName.trim()
     ? 'Experiment name is required'
-    : selectedTemplateId === 'trust-game' && (!maxPerVariation || Number(maxPerVariation) < 1)
-      ? 'Max matches per variation must be at least 1 for trust game experiments'
+    : !maxPerVariation || Number(maxPerVariation) < 1
+      ? 'Max matches per variation must be at least 1'
       : null
 
-  const maxPayout =
-    selectedTemplateId === 'trust-game' ? (Number(parameters.E1) || 0) * (Number(parameters.m) || 1) + (Number(parameters.E2) || 0) : null
+  const maxPayout = (Number(parameters.E1) || 0) * (Number(parameters.m) || 1) + (Number(parameters.E2) || 0)
 
   const totalEscrowAlgo = (() => {
-    if (selectedTemplateId !== 'trust-game' || !maxPerVariation || Number(maxPerVariation) < 1) return 0
+    if (!maxPerVariation || Number(maxPerVariation) < 1) return 0
     const maxSub = Number(maxPerVariation) * 2
     const combos =
       batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
@@ -158,206 +197,146 @@ export default function CreateExperimentForm({
     return combos.reduce((sum, combo) => sum + computeEscrowAlgo(combo, maxSub), 0)
   })()
 
-  const insufficientBalance =
-    selectedTemplateId === 'trust-game' && walletBalanceAlgo !== null && totalEscrowAlgo > 0 && totalEscrowAlgo > walletBalanceAlgo
+  const insufficientBalance = walletBalanceAlgo !== null && totalEscrowAlgo > 0 && totalEscrowAlgo > walletBalanceAlgo
+  const hasBatch = batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
+  const variationCount = hasBatch ? variations.reduce((acc, v) => acc * v.values.length, 1) : 1
+  const submitLabel = hasBatch ? `Deploy with ${variationCount} variations` : 'Deploy experiment'
+
+  // Step state machine
+  const step1Done = !!selectedTemplate && !selectedTemplate.disabled
+  const step2Done = !!experimentName.trim()
+  const step3Done = step2Done && !!maxPerVariation && Number(maxPerVariation) >= 1
+  const step4Done = step3Done && (!batchModeEnabled || hasBatch)
+  const stepsDone = [step1Done, step2Done, step3Done, step4Done]
+  const activeIdx = stepsDone.findIndex((d) => !d)
+  const stateForStep = (idx: number): StepState => {
+    if (stepsDone[idx]) return 'done'
+    if (activeIdx === idx) return 'active'
+    return 'pending'
+  }
+  const reviewState: StepState = step4Done ? 'active' : 'pending'
 
   return (
-    <div className="card bg-base-100 shadow-xl">
-      <div className="card-body">
-        <h2 className="card-title text-2xl mb-4">Create New Experiment</h2>
-
-        <div className="space-y-3">
-          {/* Step 1: Template Selection */}
-          <div>
-            <h3 className="font-semibold text-lg mb-2">1. Select Template</h3>
-            <TemplateSelector templates={experimentTemplates} selectedTemplateId={selectedTemplateId} onSelect={setSelectedTemplateId} />
-          </div>
-
-          {/* Step 2: Name */}
-          <div className="divider"></div>
-          <div>
-            <h3 className="font-semibold text-lg mb-4">2. Experiment Details</h3>
-            <fieldset className="fieldset">
-              <legend className="fieldset-legend">Experiment Name</legend>
-              <input
-                type="text"
-                className="input input-bordered w-full"
-                value={experimentName}
-                onChange={(e) => setExperimentName(e.target.value)}
-                placeholder="e.g., Trust Experiment – Spring 2025"
-              />
-            </fieldset>
-          </div>
-
-          {/* Step 3: Parameters */}
-          {selectedTemplate && (
-            <>
-              <div className="divider"></div>
-              <div>
-                <h3 className="font-semibold text-lg mb-2">3. Configure Base Parameters</h3>
-                {selectedTemplateId === 'trust-game' ? (
-                  <TrustGameParameters parameters={parameters} onChange={handleParameterChange} />
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedTemplate.parameterSchema.map((param) => (
-                      <fieldset key={param.name} className="fieldset">
-                        <legend className="fieldset-legend">{param.label}</legend>
-                        <input
-                          type={param.type === 'number' ? 'number' : 'text'}
-                          className="input input-bordered w-full"
-                          value={parameters[param.name] ?? ''}
-                          onChange={(e) => handleParameterChange(param.name, e.target.value, param.type)}
-                          min={param.min}
-                          max={param.max}
-                        />
-                        {param.description && (
-                          <p className="fieldset-label text-base-content/60">{param.description}</p>
-                        )}
-                      </fieldset>
-                    ))}
-                  </div>
-                )}
-
-                {maxPayout !== null && !batchModeEnabled && (
-                  <InfoAlert learnMoreHref={DOCS_LINKS.maxPayout} className="mt-4">
-                    Max Payout Per Pair: <strong>{maxPayout} ALGO</strong>
-                  </InfoAlert>
-                )}
-              </div>
-
-              {/* Step 4: Parameter Variations */}
-              <div className="divider"></div>
-              <div>
-                <h3 className="font-semibold text-lg mb-4">4. Parameter Variations (Optional)</h3>
-                <label className="label cursor-pointer justify-start gap-3">
-                  <input
-                    type="checkbox"
-                    className="checkbox checkbox-primary"
-                    checked={batchModeEnabled}
-                    onChange={(e) => {
-                      setBatchModeEnabled(e.target.checked)
-                      if (!e.target.checked) setVariations([])
-                    }}
-                  />
-                  <span className="label-text">Enable batch mode – create multiple variations</span>
-                </label>
-
-                {batchModeEnabled && (
-                  <div className="mt-4">
-                    <VariationBuilder
-                      parameterSchema={selectedTemplate.parameterSchema}
-                      baseParameters={parameters}
-                      variations={variations}
-                      onVariationsChange={setVariations}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Step 5: Participants */}
-              {(selectedTemplateId === 'trust-game' ||
-                (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0))) && (
-                <>
-                  <div className="divider"></div>
-                  <div>
-                    <h3 className="font-semibold text-lg mb-4">5. Participants</h3>
-
-                    {/* Assignment strategy radios — BRET only */}
-                    {selectedTemplateId === 'bret' && batchModeEnabled && (
-                      <div className="space-y-3 mb-4">
-                        <label className="flex items-start gap-3 cursor-pointer p-3 border border-base-300 rounded-lg hover:bg-base-200">
-                          <input
-                            type="radio"
-                            name="assignmentStrategy"
-                            className="radio radio-primary mt-1"
-                            checked={assignmentStrategy === 'round_robin'}
-                            onChange={() => setAssignmentStrategy('round_robin')}
-                          />
-                          <div>
-                            <div className="font-medium">Round Robin (Recommended)</div>
-                            <div className="text-sm text-base-content/70">Distribute participants evenly across all variations</div>
-                          </div>
-                        </label>
-                        <label className="flex items-start gap-3 cursor-pointer p-3 border border-base-300 rounded-lg hover:bg-base-200">
-                          <input
-                            type="radio"
-                            name="assignmentStrategy"
-                            className="radio radio-primary mt-1"
-                            checked={assignmentStrategy === 'fill_sequential'}
-                            onChange={() => setAssignmentStrategy('fill_sequential')}
-                          />
-                          <div>
-                            <div className="font-medium">Fill Sequential</div>
-                            <div className="text-sm text-base-content/70">Fill each variation to capacity before moving to the next.</div>
-                          </div>
-                        </label>
-                      </div>
-                    )}
-
-                    {/* Trust Game info */}
-                    {selectedTemplateId === 'trust-game' && (
-                      <InfoAlert learnMoreHref={DOCS_LINKS.participants} className="mb-4">
-                        Subjects self-enroll and are distributed across variations using round robin
-                      </InfoAlert>
-                    )}
-
-                    <fieldset className="fieldset">
-                      <legend className="fieldset-legend">
-                        Max matches per variation
-                        {selectedTemplateId === 'trust-game' ? ' (required)' : ' (optional)'}
-                      </legend>
-                      <input
-                        type="number"
-                        className="input input-bordered w-full sm:w-48"
-                        placeholder={selectedTemplateId === 'trust-game' ? 'e.g. 10' : 'No limit'}
-                        min={selectedTemplateId === 'trust-game' ? 1 : 1}
-                        value={maxPerVariation}
-                        onChange={(e) => setMaxPerVariation(e.target.value)}
-                      />
-                    </fieldset>
-
-                    {/* Funding Summary — trust-game only */}
-                    {selectedTemplateId === 'trust-game' && (
-                      <FundingSummary
-                        parameters={parameters}
-                        variations={variations}
-                        batchModeEnabled={batchModeEnabled}
-                        maxPerVariation={maxPerVariation}
-                        walletBalanceAlgo={walletBalanceAlgo}
-                      />
-                    )}
-                  </div>
-                </>
-              )}
-            </>
-          )}
+    <div>
+      <div className="mb-9">
+        <div className="flex items-center gap-3 mb-1.5">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                to="/dashboard/experimenter"
+                aria-label="Back to Experimenter Dashboard"
+                className="inline-flex items-center justify-center size-8 rounded-sm border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <ArrowLeft className="size-4" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right">Back to Experimenter Dashboard</TooltipContent>
+          </Tooltip>
+          <h1 className="t-h1">Specify a new experiment</h1>
         </div>
-
-        {(error ?? validationError) && (
-          <div className="alert alert-error mt-4">
-            <span>{error ?? validationError}</span>
-          </div>
-        )}
-
-        <div className="card-actions justify-end mt-6">
-          <button
-            className="btn btn-primary"
-            onClick={handleCreateExperiment}
-            disabled={creating || !experimentName.trim() || insufficientBalance}
-          >
-            {creating ? (
-              <>
-                <span className="loading loading-spinner loading-sm"></span>
-                Creating...
-              </>
-            ) : batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0) ? (
-              `Create with ${variations.reduce((acc, v) => acc * v.values.length, 1)} Variations`
-            ) : (
-              'Create Experiment'
-            )}
-          </button>
-        </div>
+        <p className="text-sm text-muted-foreground ml-11">Pin parameters now; you can add variations once the base case is locked.</p>
       </div>
+
+      <Step n={1} title="Choose a template" state={stateForStep(0)}>
+        <TemplateSelector templates={experimentTemplates} selectedTemplateId={selectedTemplateId} onSelect={setSelectedTemplateId} />
+      </Step>
+
+      <Step n={2} title="Identify the experiment" state={stateForStep(1)}>
+        <div className="max-w-xl">
+          <Field label="Experiment Name" htmlFor="experiment-name" required>
+            <Input
+              id="experiment-name"
+              type="text"
+              value={experimentName}
+              onChange={(e) => setExperimentName(e.target.value)}
+              placeholder="e.g., Trust Experiment – Spring 2025"
+            />
+          </Field>
+        </div>
+      </Step>
+
+      {selectedTemplate && (
+        <>
+          <Step n={3} title="Configure base parameters" state={stateForStep(2)}>
+            <TrustGameParameters parameters={parameters} onChange={handleParameterChange} />
+            <div className="mt-5 max-w-xs">
+              <Field label="Participants target" hint="max matches per variation" htmlFor="max-per-variation" required>
+                <Input
+                  id="max-per-variation"
+                  mono
+                  type="number"
+                  placeholder="e.g. 10"
+                  min={1}
+                  value={maxPerVariation}
+                  onChange={(e) => setMaxPerVariation(e.target.value)}
+                />
+              </Field>
+            </div>
+            <div className="mt-5">
+              <PayoffPreview e1={Number(parameters.E1) || 0} m={Number(parameters.m) || 1} />
+            </div>
+            {!batchModeEnabled && (
+              <InfoAlert learnMoreHref={DOCS_LINKS.maxPayout} className="mt-4">
+                Max payout per pair: <strong>{maxPayout} ALGO</strong>
+              </InfoAlert>
+            )}
+          </Step>
+
+          <Step n={4} title="Variations" state={stateForStep(3)}>
+            <label className="flex items-center gap-3 cursor-pointer mb-4">
+              <Switch
+                checked={batchModeEnabled}
+                onCheckedChange={(checked) => {
+                  setBatchModeEnabled(checked)
+                  if (!checked) setVariations([])
+                }}
+              />
+              <span className="text-sm">Enable batch mode — create multiple variations</span>
+            </label>
+            {batchModeEnabled ? (
+              <VariationBuilder
+                parameterSchema={selectedTemplate.parameterSchema}
+                baseParameters={parameters}
+                variations={variations}
+                onVariationsChange={setVariations}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Single variation will be deployed with the base parameters above. Toggle batch mode to deploy multiple variations.
+              </p>
+            )}
+          </Step>
+
+          <Step n={5} title="Review &amp; deploy" state={reviewState} isLast>
+            <InfoAlert learnMoreHref={DOCS_LINKS.participants} className="mb-4">
+              Participants self-enroll and are distributed across variations using round robin.
+            </InfoAlert>
+            <FundingSummary
+              parameters={parameters}
+              variations={variations}
+              batchModeEnabled={batchModeEnabled}
+              maxPerVariation={maxPerVariation}
+              walletBalanceAlgo={walletBalanceAlgo}
+            />
+            {(error ?? validationError) && (
+              <div role="alert" className="mt-4 rounded-sm border border-neg/35 bg-neg-bg text-neg px-3 py-2.5 text-sm">
+                {error ?? validationError}
+              </div>
+            )}
+            <div className="flex justify-end mt-5">
+              <Btn variant="primary" onClick={handleCreate} disabled={creating || !experimentName.trim() || insufficientBalance}>
+                {creating ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" /> Deploying…
+                  </>
+                ) : (
+                  submitLabel
+                )}
+              </Btn>
+            </div>
+          </Step>
+        </>
+      )}
     </div>
   )
 }

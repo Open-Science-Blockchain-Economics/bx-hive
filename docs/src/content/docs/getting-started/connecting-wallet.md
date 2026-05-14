@@ -3,7 +3,7 @@ title: Connecting Your Wallet
 description: How to set up and connect an Algorand wallet to bx-hive.
 ---
 
-bx-hive requires an Algorand wallet to interact with the platform. Your wallet holds ALGO for funding experiments (as an Experimenter) or receiving payouts (as a Subject), and it serves as your identity on-chain.
+bx-hive requires an Algorand wallet to interact with the platform. Your wallet holds ALGO for funding experiments (as an Experimenter) or receiving payouts (as a Participant), and it serves as your identity on-chain.
 
 ## Supported Wallets
 

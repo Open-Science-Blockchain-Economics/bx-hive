@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
 
+import { Panel } from '@/components/ds/card'
+import { cn } from '@/lib/utils'
+
 interface StatCardProps {
   title: string
   value: ReactNode
@@ -8,13 +11,13 @@ interface StatCardProps {
   className?: string
 }
 
-export default function StatCard({ title, value, desc, figure, className = '' }: StatCardProps) {
+export default function StatCard({ title, value, desc, figure, className }: StatCardProps) {
   return (
-    <div className={`stat bg-base-200 rounded-box py-3 ${className}`.trim()}>
-      {figure && <div className="stat-figure">{figure}</div>}
-      <div className="stat-title">{title}</div>
-      <div className="stat-value text-2xl">{value}</div>
-      {desc && <div className="stat-desc">{desc}</div>}
-    </div>
+    <Panel className={cn('relative', className)}>
+      {figure && <div className="absolute top-3 right-3">{figure}</div>}
+      <div className="t-micro mb-1.5">{title}</div>
+      <div className="font-mono text-2xl font-medium leading-none tracking-[-0.01em] text-foreground">{value}</div>
+      {desc && <div className="text-xs text-muted-foreground mt-1.5">{desc}</div>}
+    </Panel>
   )
 }

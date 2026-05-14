@@ -1,30 +1,17 @@
-import { useEffect, useState } from 'react'
-import { FaSun, FaMoon } from 'react-icons/fa'
-
-const THEME_KEY = 'bx-hive-theme'
+import { Moon, Sun } from 'lucide-react'
+import { useTheme } from '../providers/ThemeProvider'
 
 export default function ThemeToggle() {
-  const [isDark, setIsDark] = useState(() => {
-    const saved = localStorage.getItem(THEME_KEY)
-    if (saved) return saved === 'dark'
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-  })
-
-  useEffect(() => {
-    const theme = isDark ? 'dark' : 'light'
-    document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem(THEME_KEY, theme)
-  }, [isDark])
-
+  const { theme, toggleTheme } = useTheme()
+  const next = theme === 'dark' ? 'light' : 'dark'
   return (
-    <label className="swap swap-rotate btn btn-ghost btn-circle btn-sm mr-1">
-      <input
-        type="checkbox"
-        checked={isDark}
-        onChange={(e) => setIsDark(e.target.checked)}
-      />
-      <FaMoon className="swap-off h-5 w-5" />
-      <FaSun className="swap-on h-5 w-5" />
-    </label>
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label={`Switch to ${next} theme`}
+      className="inline-flex items-center justify-center w-8 h-8 rounded-sm border border-border text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
+    >
+      {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+    </button>
   )
 }

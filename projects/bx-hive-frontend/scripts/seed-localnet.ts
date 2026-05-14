@@ -1,14 +1,13 @@
 /// <reference types="node" />
 /**
  * LocalNet seeding script
- * Creates 10 funded accounts in KMD for testing.
+ * Creates 25 funded accounts in KMD for testing.
  *
  * Usage: pnpm seed:localnet
  * Prerequisites: algokit localnet start && python -m smart_contracts deploy
  */
 
-import algosdk from 'algosdk'
-import { AlgorandClient, algos } from '@algorandfoundation/algokit-utils'
+import { AlgorandClient, algo } from '@algorandfoundation/algokit-utils'
 import { readFileSync } from 'fs'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -66,52 +65,58 @@ async function main() {
 
   console.log(`🌱 Seeding LocalNet — creating ${ACCOUNT_COUNT} funded accounts...\n`)
 
-  // AlgorandClient with KMD config for dispenser lookup
+  // AlgorandClient with KMD config for dispenser lookup and raw wallet ops
   const algorand = AlgorandClient.fromConfig({
     algodConfig: { server: algodServer, port: algodPort, token: algodToken },
     kmdConfig: { server: kmdServer, port: kmdPort, token: kmdToken },
   })
 
-  // Get the LocalNet dispenser (first large-balance account in the KMD wallet)
+  // Get the LocalNet dispenser via v10's KmdAccountManager
   const dispenser = await algorand.account.kmd.getLocalNetDispenserAccount()
   algorand.setSignerFromAccount(dispenser)
   console.log(`  Dispenser: ${dispenser.addr.toString()}\n`)
 
-  // Raw KMD client to generate new keys in a dedicated test wallet
-  const kmd = new algosdk.Kmd(kmdToken, kmdServer, kmdPort)
+  // Raw KMD client for wallet/key generation
+  const kmd = algorand.client.kmd
 
   // Create or find the dedicated test wallet
   const { wallets } = await kmd.listWallets()
-  let wallet = (wallets as Array<{ id: string; name: string }>).find((w) => w.name === TEST_WALLET_NAME)
+  const existingWallets = (wallets ?? []) as Array<{ id: string; name: string }>
+  let wallet = existingWallets.find((w) => w.name === TEST_WALLET_NAME)
   if (!wallet) {
     console.log(`  Creating KMD wallet "${TEST_WALLET_NAME}"...`)
-    const created = (await kmd.createWallet(TEST_WALLET_NAME, '')) as { wallet: { id: string; name: string } }
-    wallet = created.wallet
+    const created = await kmd.createWallet({
+      walletName: TEST_WALLET_NAME,
+      walletPassword: '',
+      walletDriverName: 'sqlite',
+      masterDerivationKey: new Uint8Array(0),
+    })
+    wallet = { id: created.wallet.id, name: created.wallet.name }
   } else {
     console.log(`  Using existing KMD wallet "${TEST_WALLET_NAME}"`)
   }
 
-  const { wallet_handle_token: handle } = await kmd.initWalletHandle(wallet.id, kmdPassword)
+  const { walletHandleToken } = await kmd.initWalletHandle({ walletId: wallet.id, walletPassword: kmdPassword })
 
   let count = 0
   try {
     for (let i = 1; i <= ACCOUNT_COUNT; i++) {
       // Create a new account inside the dedicated test wallet
-      const { address } = (await kmd.generateKey(handle)) as { address: string }
+      const { address } = await kmd.generateKey({ walletHandleToken })
       const newAddress = address.toString()
 
       // Fund from the dispenser
       await algorand.send.payment({
         sender: dispenser.addr,
         receiver: newAddress,
-        amount: algos(FUND_AMOUNT_ALGO),
+        amount: algo(FUND_AMOUNT_ALGO),
       })
 
       count++
       console.log(`  ✓ Account ${i}: ${newAddress}`)
     }
   } finally {
-    await kmd.releaseWalletHandle(handle)
+    await kmd.releaseWalletHandleToken({ walletHandleToken })
   }
 
   console.log(`\n✅ Done! ${count} accounts created in KMD wallet "${TEST_WALLET_NAME}".`)

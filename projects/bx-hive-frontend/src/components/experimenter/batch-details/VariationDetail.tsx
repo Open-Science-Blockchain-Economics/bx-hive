@@ -1,3 +1,6 @@
+import { Chip } from '@/components/ds/badge'
+import { Btn } from '@/components/ds/button'
+import { Panel } from '@/components/ds/card'
 import { getVariationLabel } from '../../../db'
 import type { Experiment, ParameterVariation, User } from '../../../types'
 
@@ -10,6 +13,12 @@ interface VariationDetailProps {
   actionInProgress: boolean
   onClose: (experimentId: string) => void
   onReopen: (experimentId: string) => void
+}
+
+const statusToTone: Record<string, 'pos' | 'warn' | 'neutral'> = {
+  active: 'pos',
+  closed: 'warn',
+  completed: 'neutral',
 }
 
 export default function VariationDetail({
@@ -27,63 +36,57 @@ export default function VariationDetail({
   const completed = experiment.matches.filter((m) => m.status === 'completed').length
 
   return (
-    <div className="border border-base-300 rounded-lg p-4">
-      <div className="flex justify-between items-start mb-3">
+    <Panel>
+      <div className="flex justify-between items-start gap-4 mb-3">
         <div>
           <div className="font-semibold">
             Variation {variationIndex + 1}: {variationLabel}
           </div>
-          <div className="text-sm text-base-content/70">
-            {experiment.players.length} players &bull; {playing} playing &bull; {completed} completed
+          <div className="text-sm text-muted-foreground">
+            {experiment.players.length} players · {playing} playing · {completed} completed
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={`badge ${
-              experiment.status === 'active' ? 'badge-success' : experiment.status === 'closed' ? 'badge-warning' : 'badge-neutral'
-            }`}
-          >
-            {experiment.status}
-          </span>
+        <div className="flex items-center gap-2 shrink-0">
+          <Chip tone={statusToTone[experiment.status] ?? 'neutral'}>{experiment.status}</Chip>
           {experiment.status === 'active' ? (
-            <button className="btn btn-warning btn-sm" onClick={() => onClose(experiment.id)} disabled={actionInProgress}>
+            <Btn variant="danger" size="sm" onClick={() => onClose(experiment.id)} disabled={actionInProgress}>
               Close
-            </button>
+            </Btn>
           ) : (
-            <button className="btn btn-success btn-sm" onClick={() => onReopen(experiment.id)} disabled={actionInProgress}>
+            <Btn variant="primary" size="sm" onClick={() => onReopen(experiment.id)} disabled={actionInProgress}>
               Reopen
-            </button>
+            </Btn>
           )}
         </div>
       </div>
 
-      <div className="flex gap-4 text-sm">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
         {variations.map((v) => (
           <div key={v.parameterName}>
-            <span className="text-base-content/70">{v.parameterName}: </span>
-            <span className="font-medium">{experiment.parameters[v.parameterName]}</span>
+            <span className="text-muted-foreground">{v.parameterName}: </span>
+            <span className="font-mono font-medium">{experiment.parameters[v.parameterName]}</span>
           </div>
         ))}
       </div>
 
       {experiment.players.length > 0 && showPlayers && (
         <div className="mt-4">
-          <div className="text-sm font-medium mb-2">Registered Players</div>
-          <div className="overflow-x-auto">
-            <table className="table table-sm">
+          <div className="t-micro mb-2">Registered Players</div>
+          <div className="overflow-x-auto rounded-sm border border-border">
+            <table className="w-full text-sm">
               <thead>
-                <tr>
-                  <th>Player</th>
-                  <th>Registered At</th>
+                <tr className="border-b border-border bg-muted">
+                  <th className="text-left t-micro px-3 py-2">Player</th>
+                  <th className="text-left t-micro px-3 py-2">Registered At</th>
                 </tr>
               </thead>
               <tbody>
                 {experiment.players.map((player) => {
                   const user = users.find((u) => u.id === player.userId)
                   return (
-                    <tr key={player.userId}>
-                      <td>{user?.name || 'Unknown'}</td>
-                      <td>{new Date(player.registeredAt).toLocaleString()}</td>
+                    <tr key={player.userId} className="border-b border-border last:border-b-0">
+                      <td className="px-3 py-2">{user?.name || 'Unknown'}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{new Date(player.registeredAt).toLocaleString()}</td>
                     </tr>
                   )
                 })}
@@ -92,6 +95,6 @@ export default function VariationDetail({
           </div>
         </div>
       )}
-    </div>
+    </Panel>
   )
 }

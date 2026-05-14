@@ -44,45 +44,29 @@ export const trustExperimentTemplate: ExperimentTemplate = {
   ],
 }
 
-export const bretTemplate: ExperimentTemplate = {
-  id: 'bret',
-  disabled: true,
-  name: 'BRET',
-  label: 'Minesweeper',
-  description:
-    'Bomb Risk Elicitation Task: A single-player risk preference experiment where you collect boxes from a grid. One box contains a bomb. Collect boxes to earn money, but if you collect the bomb, you earn nothing.',
+// Disabled placeholders so the template picker can preview future experiment
+// types. Keep parameterSchema empty until they're built.
+const bombRiskPlaceholder: ExperimentTemplate = {
+  id: 'bomb-risk',
+  name: 'Bomb Risk',
+  label: 'Bomb Risk',
+  description: 'Crosetto–Filippin. Single-player risk preference via box collection.',
   playerCount: 1,
-  parameterSchema: [
-    {
-      name: 'rows',
-      type: 'number',
-      label: 'Number of Rows',
-      description: 'Number of rows in the grid',
-      default: 10,
-      min: 5,
-      max: 20,
-    },
-    {
-      name: 'cols',
-      type: 'number',
-      label: 'Number of Columns',
-      description: 'Number of columns in the grid',
-      default: 10,
-      min: 5,
-      max: 20,
-    },
-    {
-      name: 'paymentPerBox',
-      type: 'number',
-      label: 'Payment Per Box',
-      description: 'Amount earned for each box collected (γ)',
-      default: 1,
-      min: 0.1,
-    },
-  ],
+  parameterSchema: [],
+  disabled: true,
 }
 
-export const experimentTemplates: ExperimentTemplate[] = [trustExperimentTemplate, bretTemplate]
+const dictatorPlaceholder: ExperimentTemplate = {
+  id: 'dictator',
+  name: 'Dictator',
+  label: 'Dictator',
+  description: 'One-shot allocation between proposer and recipient.',
+  playerCount: 2,
+  parameterSchema: [],
+  disabled: true,
+}
+
+export const experimentTemplates: ExperimentTemplate[] = [trustExperimentTemplate, bombRiskPlaceholder, dictatorPlaceholder]
 
 export function getTemplateById(id: string): ExperimentTemplate | undefined {
   return experimentTemplates.find((t) => t.id === id)

@@ -15,7 +15,7 @@ export default defineConfig({
 				{ label: 'Getting Started', autogenerate: { directory: 'getting-started' } },
 				{ label: 'Concepts', autogenerate: { directory: 'concepts' } },
 				{ label: 'Experimenters', autogenerate: { directory: 'experimenters' } },
-				{ label: 'Subjects', autogenerate: { directory: 'subjects' } },
+				{ label: 'Participants', autogenerate: { directory: 'participants' } },
 				{ label: 'Reference', autogenerate: { directory: 'reference' } },
 			],
 		}),

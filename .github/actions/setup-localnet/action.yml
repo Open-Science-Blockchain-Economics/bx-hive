@@ -1,0 +1,18 @@
+name: Setup AlgoKit LocalNet
+description: |
+  Installs Python 3.12 + AlgoKit CLI and starts a fresh localnet via
+  `algokit localnet start`. Caller is responsible for `algokit localnet stop`
+  cleanup — composite actions cannot define post-run hooks.
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+    - name: Install AlgoKit
+      shell: bash
+      run: pipx install algokit
+    - name: Start LocalNet
+      shell: bash
+      run: algokit localnet start

@@ -3,8 +3,13 @@ import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ErrorBoundary } from 'react-error-boundary'
 import App from './App'
+import '@fontsource-variable/source-serif-4/index.css'
+import '@fontsource-variable/source-serif-4/wght-italic.css'
+import '@fontsource-variable/inter-tight/index.css'
+import '@fontsource-variable/jetbrains-mono/index.css'
 import './styles/App.css'
 import { NetworkProvider } from './providers/NetworkProvider'
+import { ThemeProvider } from './providers/ThemeProvider'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,13 +28,9 @@ function AppFatalFallback({ error }: { error: unknown }) {
         <div className="max-w-md">
           <h1 className="text-4xl">Fatal Error</h1>
           <p className="py-4 text-base-content/80">
-            {isEnvError
-              ? 'Please set up your .env file based on .env.template.'
-              : 'The application encountered a critical error.'}
+            {isEnvError ? 'Please set up your .env file based on .env.template.' : 'The application encountered a critical error.'}
           </p>
-          <p className="text-xs font-mono text-base-content/50 break-all bg-base-200 p-2 rounded">
-            {message}
-          </p>
+          <p className="text-xs font-mono text-base-content/50 break-all bg-base-200 p-2 rounded">{message}</p>
         </div>
       </div>
     </div>
@@ -39,11 +40,13 @@ function AppFatalFallback({ error }: { error: unknown }) {
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <ErrorBoundary fallbackRender={AppFatalFallback}>
-      <NetworkProvider>
-        <QueryClientProvider client={queryClient}>
-          <App />
-        </QueryClientProvider>
-      </NetworkProvider>
+      <ThemeProvider>
+        <NetworkProvider>
+          <QueryClientProvider client={queryClient}>
+            <App />
+          </QueryClientProvider>
+        </NetworkProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   </React.StrictMode>,
 )
