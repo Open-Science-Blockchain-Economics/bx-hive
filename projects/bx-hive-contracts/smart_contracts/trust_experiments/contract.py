@@ -1,16 +1,24 @@
 from algopy import (
     ARC4Contract,
+    Asset,
     Box,
     BoxMap,
     Bytes,
     Global,
     GlobalState,
+    TransactionType,
     Txn,
     UInt64,
     arc4,
     gtxn,
     itxn,
 )
+
+# Variation app MBR (paid as ALGO regardless of payout asset):
+#   - base account MBR: 100_000 (0.1 ALGO)
+#   - +100_000 (0.1 ALGO) per asset opt-in (only when asset_id > 0)
+_VAR_APP_MBR_ALGO = 100_000
+_VAR_APP_MBR_ASA = 200_000
 
 from smart_contracts.shared.types import ExperimentGroup, VariationInfo
 
@@ -71,15 +79,39 @@ class TrustExperiments(ARC4Contract):
         unit: arc4.UInt64,
         asset_id: arc4.UInt64,
         max_participants: arc4.UInt64,
-        escrow_payment: gtxn.PaymentTransaction,
+        mbr_payment: gtxn.PaymentTransaction,
+        escrow_funding: gtxn.Transaction,
     ) -> arc4.UInt64:
         assert exp_id in self.experiments, "Experiment not found"
         experiment = self.experiments[exp_id].copy()
         assert experiment.owner == arc4.Address(Txn.sender), "Not experiment owner"
-        assert escrow_payment.receiver == Global.current_application_address, "Wrong escrow receiver"
-        assert escrow_payment.amount > UInt64(0), "Escrow must be > 0"
         assert self.tv_approval, "TrustVariation program not set"
         assert self.tv_clear, "TrustVariation program not set"
+
+        asset_id_value = asset_id.as_uint64()
+
+        # MBR leg funds the new variation app's account: 0.1 ALGO base + 0.1 ALGO
+        # per asset opt-in. Always paid in ALGO regardless of payout asset.
+        assert mbr_payment.receiver == Global.current_application_address, "Wrong MBR receiver"
+        if asset_id_value == UInt64(0):
+            assert mbr_payment.amount >= UInt64(_VAR_APP_MBR_ALGO), "MBR must be >= 0.1 ALGO"
+        else:
+            assert mbr_payment.amount >= UInt64(_VAR_APP_MBR_ASA), "MBR must be >= 0.2 ALGO"
+
+        # Escrow leg holds the actual payout pool. Payment for ALGO experiments,
+        # AssetTransfer of the chosen ASA otherwise.
+        escrow_amount = UInt64(0)
+        if asset_id_value == UInt64(0):
+            assert escrow_funding.type == TransactionType.Payment, "Escrow must be Payment for ALGO"
+            assert escrow_funding.receiver == Global.current_application_address, "Wrong escrow receiver"
+            assert escrow_funding.amount > UInt64(0), "Escrow must be > 0"
+            escrow_amount = escrow_funding.amount
+        else:
+            assert escrow_funding.type == TransactionType.AssetTransfer, "Escrow must be AssetTransfer for ASA"
+            assert escrow_funding.asset_receiver == Global.current_application_address, "Wrong escrow receiver"
+            assert escrow_funding.xfer_asset.id == asset_id_value, "Wrong asset"
+            assert escrow_funding.asset_amount > UInt64(0), "Escrow must be > 0"
+            escrow_amount = escrow_funding.asset_amount
 
         var_id = arc4.UInt32(experiment.variation_count.as_uint64())
 
@@ -108,12 +140,27 @@ class TrustExperiments(ARC4Contract):
         ).submit()
         new_app = deployed.created_app
 
-        # Forward escrow to the new TrustVariation app account
+        # Fund the new variation app's account with MBR (covers base + opt-in).
         itxn.Payment(
             receiver=new_app.address,
-            amount=escrow_payment.amount,
+            amount=mbr_payment.amount,
             fee=0,
         ).submit()
+
+        # Forward escrow to the new TrustVariation app account.
+        if asset_id_value == UInt64(0):
+            itxn.Payment(
+                receiver=new_app.address,
+                amount=escrow_amount,
+                fee=0,
+            ).submit()
+        else:
+            itxn.AssetTransfer(
+                xfer_asset=Asset(asset_id_value),
+                asset_receiver=new_app.address,
+                asset_amount=escrow_amount,
+                fee=0,
+            ).submit()
 
         # Record the deposit in TrustVariation
         # Selector: record_escrow(uint64)void
@@ -121,7 +168,7 @@ class TrustExperiments(ARC4Contract):
             app_id=new_app,
             app_args=(
                 Bytes(b"\x5c\x9a\x83\x6b"),
-                arc4.UInt64(escrow_payment.amount).bytes,
+                arc4.UInt64(escrow_amount).bytes,
             ),
             fee=0,
         ).submit()
@@ -159,12 +206,34 @@ class TrustExperiments(ARC4Contract):
         unit: arc4.UInt64,
         asset_id: arc4.UInt64,
         max_participants: arc4.UInt64,
-        escrow_payment: gtxn.PaymentTransaction,
+        mbr_payment: gtxn.PaymentTransaction,
+        escrow_funding: gtxn.Transaction,
     ) -> tuple[arc4.UInt32, arc4.UInt64]:
-        assert escrow_payment.receiver == Global.current_application_address, "Wrong escrow receiver"
-        assert escrow_payment.amount > UInt64(0), "Escrow must be > 0"
         assert self.tv_approval, "TrustVariation program not set"
         assert self.tv_clear, "TrustVariation program not set"
+
+        asset_id_value = asset_id.as_uint64()
+
+        # MBR leg funds the new variation app's account; always ALGO.
+        assert mbr_payment.receiver == Global.current_application_address, "Wrong MBR receiver"
+        if asset_id_value == UInt64(0):
+            assert mbr_payment.amount >= UInt64(_VAR_APP_MBR_ALGO), "MBR must be >= 0.1 ALGO"
+        else:
+            assert mbr_payment.amount >= UInt64(_VAR_APP_MBR_ASA), "MBR must be >= 0.2 ALGO"
+
+        # Escrow leg: Payment for ALGO, AssetTransfer for ASA.
+        escrow_amount = UInt64(0)
+        if asset_id_value == UInt64(0):
+            assert escrow_funding.type == TransactionType.Payment, "Escrow must be Payment for ALGO"
+            assert escrow_funding.receiver == Global.current_application_address, "Wrong escrow receiver"
+            assert escrow_funding.amount > UInt64(0), "Escrow must be > 0"
+            escrow_amount = escrow_funding.amount
+        else:
+            assert escrow_funding.type == TransactionType.AssetTransfer, "Escrow must be AssetTransfer for ASA"
+            assert escrow_funding.asset_receiver == Global.current_application_address, "Wrong escrow receiver"
+            assert escrow_funding.xfer_asset.id == asset_id_value, "Wrong asset"
+            assert escrow_funding.asset_amount > UInt64(0), "Escrow must be > 0"
+            escrow_amount = escrow_funding.asset_amount
 
         # Create the experiment group
         exp_id = arc4.UInt32(self.experiment_count.value)
@@ -205,12 +274,27 @@ class TrustExperiments(ARC4Contract):
         ).submit()
         new_app = deployed.created_app
 
-        # Forward escrow to the new TrustVariation app account
+        # Fund the new variation app's account with MBR.
         itxn.Payment(
             receiver=new_app.address,
-            amount=escrow_payment.amount,
+            amount=mbr_payment.amount,
             fee=0,
         ).submit()
+
+        # Forward escrow to the new TrustVariation app account.
+        if asset_id_value == UInt64(0):
+            itxn.Payment(
+                receiver=new_app.address,
+                amount=escrow_amount,
+                fee=0,
+            ).submit()
+        else:
+            itxn.AssetTransfer(
+                xfer_asset=Asset(asset_id_value),
+                asset_receiver=new_app.address,
+                asset_amount=escrow_amount,
+                fee=0,
+            ).submit()
 
         # Record the deposit in TrustVariation
         # Selector: record_escrow(uint64)void
@@ -218,7 +302,7 @@ class TrustExperiments(ARC4Contract):
             app_id=new_app,
             app_args=(
                 Bytes(b"\x5c\x9a\x83\x6b"),
-                arc4.UInt64(escrow_payment.amount).bytes,
+                arc4.UInt64(escrow_amount).bytes,
             ),
             fee=0,
         ).submit()
