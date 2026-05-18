@@ -2,6 +2,7 @@ from algopy import (
     Account,
     Application,
     ARC4Contract,
+    Asset,
     BoxMap,
     Bytes,
     Global,
@@ -94,6 +95,14 @@ class TrustVariation(ARC4Contract):
         self.registry_app.value = registry_app.as_uint64()
         self.participant_count.value = UInt64(0)
         self.max_participants.value = max_participants.as_uint64()
+
+        if asset_id.as_uint64() > UInt64(0):
+            itxn.AssetTransfer(
+                xfer_asset=Asset(asset_id.as_uint64()),
+                asset_receiver=Global.current_application_address,
+                asset_amount=UInt64(0),
+                fee=0,
+            ).submit()
 
     @arc4.abimethod
     def deposit_escrow(self, payment: gtxn.PaymentTransaction) -> None:
