@@ -9,6 +9,7 @@ import {
   enrollParticipant,
   investorDecide,
   optInToAsset,
+  optInTrustExperimentsToAsset,
   ownerCreateMatch,
   registerUser,
   setupExperiment,
@@ -89,6 +90,12 @@ describe('trust-game flow (integration)', () => {
     await registerUser(registryClient, owner, ROLE_EXPERIMENTER, 'Owner')
     await registerUser(registryClient, investor, ROLE_PARTICIPANT, 'Investor')
     await registerUser(registryClient, trustee, ROLE_PARTICIPANT, 'Trustee')
+
+    // One-time per-asset setup: TrustExperiments must be opted into the asset
+    // before it can receive the user's escrow asset-transfer leg. PR2's
+    // frontend hook will check + conditionally do this; in this test we just
+    // call it unconditionally (idempotent on the contract side).
+    await optInTrustExperimentsToAsset(algorand, owner, trustExperimentsClient, usdcAssetId)
 
     const { variationClient } = await setupExperiment(algorand, trustExperimentsClient, owner, {
       e1: E1,

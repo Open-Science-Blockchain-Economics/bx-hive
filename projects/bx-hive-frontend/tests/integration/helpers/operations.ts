@@ -136,6 +136,31 @@ export async function optInToAsset(algorand: AlgorandClient, account: Address, a
 }
 
 /**
+ * Opts the TrustExperiments app account into an asset so it can receive the
+ * user's escrow asset-transfer leg in create_variation /
+ * create_experiment_with_variation. Caller pays the 0.1 ALGO opt-in MBR.
+ * Idempotent on the contract side.
+ */
+export async function optInTrustExperimentsToAsset(
+  algorand: AlgorandClient,
+  caller: Address,
+  trustExperimentsClient: TrustExperimentsClient,
+  assetId: bigint,
+): Promise<void> {
+  const mbrPayment = await algorand.createTransaction.payment({
+    sender: caller,
+    receiver: getApplicationAddress(trustExperimentsClient.appId),
+    amount: AlgoAmount.MicroAlgos(100_000),
+  })
+  await trustExperimentsClient.send.optInToAsset({
+    sender: caller,
+    args: { assetId, mbrPayment },
+    coverAppCallInnerTransactionFees: true,
+    maxFee: AlgoAmount.MicroAlgos(3_000),
+  })
+}
+
+/**
  * Self-enrolls a participant into a TrustVariation, paying the per-participant box MBR.
  */
 export async function enrollParticipant(
