@@ -51,9 +51,16 @@ export function useTrustExperiments() {
   const createExperimentWithVariation = useCallback(
     async (name: string, params: VariationParams): Promise<{ expId: number; appId: bigint }> => {
       if (!trustExperimentsClient || !algorand || !activeAddress) throw new Error('Wallet not connected')
-      const escrowPayment = await algorand.createTransaction.payment({
+      const trustExperimentsAppAddr = getApplicationAddress(trustExperimentsClient.appId)
+      // ALGO-only path: ASA support lands in PR2 alongside the asset picker.
+      const mbrPayment = await algorand.createTransaction.payment({
         sender: activeAddress,
-        receiver: getApplicationAddress(trustExperimentsClient.appId),
+        receiver: trustExperimentsAppAddr,
+        amount: AlgoAmount.MicroAlgos(100_000),
+      })
+      const escrowFunding = await algorand.createTransaction.payment({
+        sender: activeAddress,
+        receiver: trustExperimentsAppAddr,
         amount: AlgoAmount.MicroAlgos(Number(params.escrowMicroAlgo)),
       })
       const result = await trustExperimentsClient.send.createExperimentWithVariation({
@@ -66,10 +73,11 @@ export function useTrustExperiments() {
           unit: params.unit,
           assetId: params.assetId,
           maxParticipants: params.maxParticipants ?? 0n,
-          escrowPayment,
+          mbrPayment,
+          escrowFunding,
         },
         coverAppCallInnerTransactionFees: true,
-        maxFee: microAlgo(9_000),
+        maxFee: microAlgo(12_000),
       })
       const [expId, appId] = result.return!
       return { expId: Number(expId), appId: BigInt(appId) }
@@ -85,9 +93,16 @@ export function useTrustExperiments() {
   const createVariation = useCallback(
     async (expId: number, params: VariationParams): Promise<bigint> => {
       if (!trustExperimentsClient || !algorand || !activeAddress) throw new Error('Wallet not connected')
-      const escrowPayment = await algorand.createTransaction.payment({
+      const trustExperimentsAppAddr = getApplicationAddress(trustExperimentsClient.appId)
+      // ALGO-only path: ASA support lands in PR2 alongside the asset picker.
+      const mbrPayment = await algorand.createTransaction.payment({
         sender: activeAddress,
-        receiver: getApplicationAddress(trustExperimentsClient.appId),
+        receiver: trustExperimentsAppAddr,
+        amount: AlgoAmount.MicroAlgos(100_000),
+      })
+      const escrowFunding = await algorand.createTransaction.payment({
+        sender: activeAddress,
+        receiver: trustExperimentsAppAddr,
         amount: AlgoAmount.MicroAlgos(Number(params.escrowMicroAlgo)),
       })
       const result = await trustExperimentsClient.send.createVariation({
@@ -100,10 +115,11 @@ export function useTrustExperiments() {
           unit: params.unit,
           assetId: params.assetId,
           maxParticipants: params.maxParticipants ?? 0n,
-          escrowPayment,
+          mbrPayment,
+          escrowFunding,
         },
         coverAppCallInnerTransactionFees: true,
-        maxFee: microAlgo(9_000),
+        maxFee: microAlgo(12_000),
       })
       return result.return!
     },
