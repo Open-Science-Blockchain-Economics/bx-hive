@@ -56,6 +56,30 @@ class TrustExperiments(ARC4Contract):
         self.tv_clear.value = clear
 
     @arc4.abimethod
+    def opt_in_to_asset(
+        self,
+        asset_id: arc4.UInt64,
+        mbr_payment: gtxn.PaymentTransaction,
+    ) -> None:
+        """One-time per-asset setup: opt the TrustExperiments app account into
+        an ASA so it can receive escrow asset-transfer legs from experimenters.
+        Idempotent — no-op if already opted in. Caller pays the 0.1 ALGO MBR
+        that the opt-in adds to this contract's account.
+        """
+        assert asset_id.as_uint64() > UInt64(0), "Asset ID must be > 0"
+        assert mbr_payment.receiver == Global.current_application_address, "Wrong MBR receiver"
+        assert mbr_payment.amount >= UInt64(100_000), "MBR must be >= 0.1 ALGO"
+
+        asset = Asset(asset_id.as_uint64())
+        if not Global.current_application_address.is_opted_in(asset):
+            itxn.AssetTransfer(
+                xfer_asset=asset,
+                asset_receiver=Global.current_application_address,
+                asset_amount=UInt64(0),
+                fee=0,
+            ).submit()
+
+    @arc4.abimethod
     def create_experiment(self, name: arc4.String) -> arc4.UInt32:
         exp_id = arc4.UInt32(self.experiment_count.value)
         self.experiment_count.value += UInt64(1)
