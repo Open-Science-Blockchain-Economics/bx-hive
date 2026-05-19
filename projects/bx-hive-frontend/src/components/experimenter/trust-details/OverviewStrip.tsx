@@ -1,10 +1,11 @@
 import { Panel } from '@/components/ds/card'
 import { Gauge } from '@/components/ds/gauge'
 import { StatCard } from '../../ui'
+import { useAssetMetadata } from '../../../hooks/useAssetMetadata'
 import type { VariationInfo } from '../../../hooks/useTrustExperiments'
 import { PHASE_COMPLETED, STATUS_ACTIVE, STATUS_CLOSED, STATUS_COMPLETED } from '../../../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../../../hooks/useTrustVariation'
-import { microAlgoToAlgo } from '../../../utils/amount'
+import { baseUnitsToWhole } from '../../../utils/amount'
 
 interface ParticipantEntry {
   address: string
@@ -26,6 +27,13 @@ function formatAlgo(algo: number): string {
 }
 
 export default function OverviewStrip({ variations, participants, matches, configs }: OverviewStripProps) {
+  const allConfigs = Object.values(configs)
+  // Use the first variation's asset as the unit for the aggregate total. Mixing
+  // variations with different payout assets in one experiment is unusual and
+  // would render this total meaningless regardless of how we picked decimals.
+  const referenceAssetId = allConfigs[0]?.assetId ?? 0n
+  const { decimals } = useAssetMetadata(referenceAssetId)
+
   const allParticipants = Object.values(participants).flat()
   const allMatches = Object.values(matches).flat()
   const totalEnrolled = allParticipants.length
@@ -35,14 +43,13 @@ export default function OverviewStrip({ variations, participants, matches, confi
   const matchesInPlay = allMatches.filter((m) => m.phase === 0 || m.phase === 1).length
   const completedMatches = allMatches.filter((m) => m.phase === PHASE_COMPLETED)
   const totalCompleted = completedMatches.length
-  const allConfigs = Object.values(configs)
   const variationsActive = allConfigs.filter((c) => c.status === STATUS_ACTIVE).length
   const variationsClosed = allConfigs.filter((c) => c.status === STATUS_CLOSED).length
   const variationsEnded = allConfigs.filter((c) => c.status === STATUS_COMPLETED).length
   const progressPct = totalMatches > 0 ? Math.round((totalCompleted / totalMatches) * 100) : 0
 
-  const totalPayoutMicroAlgo = completedMatches.reduce((acc, m) => acc + m.investorPayout + m.trusteePayout, 0n)
-  const totalPayoutAlgo = microAlgoToAlgo(totalPayoutMicroAlgo)
+  const totalPayoutBaseUnits = completedMatches.reduce((acc, m) => acc + m.investorPayout + m.trusteePayout, 0n)
+  const totalPayoutAlgo = baseUnitsToWhole(totalPayoutBaseUnits, decimals)
   const meanPayoutAlgo = totalCompleted > 0 ? totalPayoutAlgo / (totalCompleted * 2) : 0
 
   return (

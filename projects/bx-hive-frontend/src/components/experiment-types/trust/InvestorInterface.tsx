@@ -7,7 +7,7 @@ import { Rule } from '@/components/ds/separator'
 import { cn } from '@/lib/utils'
 import { useTrustVariation } from '../../../hooks/useTrustVariation'
 import { calculateInvestorRefund, calculateTrusteeReceived } from '../../../experiment-logic/trustExperiment'
-import { algoToMicroAlgo } from '../../../utils/amount'
+import { wholeToBaseUnits } from '../../../utils/amount'
 
 interface InvestorInterfaceProps {
   appId: bigint
@@ -15,6 +15,8 @@ interface InvestorInterfaceProps {
   E1: number
   m: number
   UNIT: number
+  /** Decimals of the variation's payout asset (6 for ALGO/USDC). */
+  decimals: number
   onDecisionMade: () => void
 }
 
@@ -40,7 +42,7 @@ function Stage({ num, label, state }: StageProps) {
   )
 }
 
-export default function InvestorInterface({ appId, matchId, E1, m, UNIT, onDecisionMade }: InvestorInterfaceProps) {
+export default function InvestorInterface({ appId, matchId, E1, m, UNIT, decimals, onDecisionMade }: InvestorInterfaceProps) {
   const { submitInvestorDecision } = useTrustVariation()
   const [investment, setInvestment] = useState(0)
   const [submitting, setSubmitting] = useState(false)
@@ -53,7 +55,7 @@ export default function InvestorInterface({ appId, matchId, E1, m, UNIT, onDecis
     setError(null)
     try {
       setSubmitting(true)
-      await submitInvestorDecision(appId, matchId, algoToMicroAlgo(investment))
+      await submitInvestorDecision(appId, matchId, wholeToBaseUnits(investment, decimals))
       onDecisionMade()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit decision')

@@ -17,6 +17,7 @@ import { pickVariationRoundRobin, type VariationSlot } from '../utils/distribute
 interface OnChainMatchView {
   appId: bigint
   match: OnChainMatch
+  assetId: bigint
 }
 
 interface OnChainExperimentView {
@@ -54,7 +55,8 @@ export default function ParticipantDashboard() {
         for (const v of vars) {
           const match = await getPlayerMatch(v.appId, activeAddress!)
           if (match) {
-            matchViews.push({ appId: v.appId, match })
+            const config = await getConfig(v.appId)
+            matchViews.push({ appId: v.appId, match, assetId: config.assetId })
             enrolled = true
             hasMatch = true
           }
@@ -192,8 +194,8 @@ export default function ParticipantDashboard() {
           <section>
             <Rule label="Trust Game — Completed" className="mb-4" />
             <div className="grid gap-3">
-              {completedOnChain.map(({ appId, match }) => (
-                <CompletedMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
+              {completedOnChain.map(({ appId, match, assetId }) => (
+                <CompletedMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} assetId={assetId} />
               ))}
             </div>
           </section>

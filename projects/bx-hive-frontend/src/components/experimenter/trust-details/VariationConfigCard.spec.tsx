@@ -1,10 +1,16 @@
 import { render, screen } from '@testing-library/react'
 import type { ReactElement } from 'react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import VariationConfigCard from './VariationConfigCard'
 import { TooltipProvider } from '@/components/ds/tooltip'
 import type { VariationConfig } from '../../../hooks/useTrustVariation'
+
+// useAssetMetadata depends on NetworkProvider + QueryClient; stub the synthetic
+// ALGO response so this component test can stay focused on layout.
+vi.mock('../../../hooks/useAssetMetadata', () => ({
+  useAssetMetadata: () => ({ assetId: 0n, decimals: 6, unitName: 'ALGO', name: 'Algorand', total: 0n }),
+}))
 
 function renderInProvider(ui: ReactElement) {
   return render(<TooltipProvider>{ui}</TooltipProvider>)
