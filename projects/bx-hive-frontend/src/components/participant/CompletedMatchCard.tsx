@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 
+import AssetIcon from '@/components/AssetIcon'
 import { Chip } from '@/components/ds/badge'
 import { Btn } from '@/components/ds/button'
 import { Panel } from '@/components/ds/card'
@@ -16,7 +17,7 @@ interface CompletedMatchCardProps {
 }
 
 export default function CompletedMatchCard({ appId, match, activeAddress, assetId }: CompletedMatchCardProps) {
-  const { decimals } = useAssetMetadata(assetId)
+  const { decimals, unitName } = useAssetMetadata(assetId)
   const payout = match.investor === activeAddress ? match.investorPayout : match.trusteePayout
 
   return (
@@ -24,8 +25,12 @@ export default function CompletedMatchCard({ appId, match, activeAddress, assetI
       <div className="flex justify-between items-start gap-4">
         <div>
           <h3 className="t-h2 mb-1">Trust Game</h3>
-          <p className="text-xs text-muted-foreground">
-            Payout: <span className="font-mono font-medium text-pos">{baseUnitsToWhole(payout, decimals).toLocaleString()} ALGO</span>
+          <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
+            Payout:{' '}
+            <span className="font-mono font-medium text-pos inline-flex items-center gap-1">
+              {baseUnitsToWhole(payout, decimals).toLocaleString()} {unitName}
+              <AssetIcon assetId={assetId} unitName={unitName} className="size-3.5" />
+            </span>
           </p>
         </div>
         <Chip tone="pos">Completed</Chip>

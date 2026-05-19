@@ -1,3 +1,4 @@
+import AssetIcon from '@/components/AssetIcon'
 import { Panel } from '@/components/ds/card'
 import { Gauge } from '@/components/ds/gauge'
 import { StatCard } from '../../ui'
@@ -32,7 +33,7 @@ export default function OverviewStrip({ variations, participants, matches, confi
   // variations with different payout assets in one experiment is unusual and
   // would render this total meaningless regardless of how we picked decimals.
   const referenceAssetId = allConfigs[0]?.assetId ?? 0n
-  const { decimals } = useAssetMetadata(referenceAssetId)
+  const { decimals, unitName } = useAssetMetadata(referenceAssetId)
 
   const allParticipants = Object.values(participants).flat()
   const allMatches = Object.values(matches).flat()
@@ -99,10 +100,11 @@ export default function OverviewStrip({ variations, participants, matches, confi
       <StatCard
         title="Total payout"
         value={
-          <>
+          <span className="inline-flex items-baseline gap-1.5">
             {formatAlgo(totalPayoutAlgo)}
-            <span className="text-xs text-muted-foreground font-mono ml-1.5">ALGO</span>
-          </>
+            <span className="text-xs text-muted-foreground font-mono">{unitName}</span>
+            <AssetIcon assetId={referenceAssetId} unitName={unitName} className="size-3.5 translate-y-0.5" />
+          </span>
         }
         desc={totalCompleted > 0 ? <>μ = {meanPayoutAlgo.toFixed(2)} / participant</> : <>no completed matches yet</>}
       />

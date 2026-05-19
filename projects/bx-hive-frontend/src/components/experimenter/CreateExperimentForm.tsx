@@ -332,6 +332,7 @@ export default function CreateExperimentForm({
               batchModeEnabled={batchModeEnabled}
               maxPerVariation={maxPerVariation}
               walletBalanceAlgo={walletBalanceAlgo}
+              payoutAsset={payoutAsset}
             />
             {(error ?? validationError) && (
               <div role="alert" className="mt-4 rounded-sm border border-neg/35 bg-neg-bg text-neg px-3 py-2.5 text-sm">

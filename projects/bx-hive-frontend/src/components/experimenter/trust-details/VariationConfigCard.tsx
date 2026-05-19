@@ -78,7 +78,7 @@ function CapacityUnit({ participantCount, maxParticipants }: { participantCount:
 export default function VariationConfigCard({ config, appId, participantCount }: VariationConfigCardProps) {
   // Synthetic ALGO metadata is returned for assetId=0n, so this hook is safe
   // to call even when config hasn't loaded yet.
-  const { decimals } = useAssetMetadata(config?.assetId ?? 0n)
+  const { decimals, unitName } = useAssetMetadata(config?.assetId ?? 0n)
 
   if (!config) {
     return (
@@ -100,10 +100,10 @@ export default function VariationConfigCard({ config, appId, participantCount }:
       </div>
       <div className="overflow-x-auto">
         <div className="flex divide-x divide-border w-full">
-          <Metric label="E1 Endowment" value={baseUnitsToWhole(config.e1, decimals).toFixed(3)} unit="ALGO" />
-          <Metric label="E2 Endowment" value={baseUnitsToWhole(config.e2, decimals).toFixed(3)} unit="ALGO" />
+          <Metric label="E1 Endowment" value={baseUnitsToWhole(config.e1, decimals).toFixed(3)} unit={unitName} />
+          <Metric label="E2 Endowment" value={baseUnitsToWhole(config.e2, decimals).toFixed(3)} unit={unitName} />
           <Metric label="Multiplier" value={`×${String(config.multiplier)}`} unit="trust factor" />
-          <Metric label="Unit Size" value={baseUnitsToWhole(config.unit, decimals).toFixed(3)} unit="ALGO" />
+          <Metric label="Unit Size" value={baseUnitsToWhole(config.unit, decimals).toFixed(3)} unit={unitName} />
           <Metric
             label="Capacity"
             value={capacityValue}

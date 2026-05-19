@@ -1,5 +1,7 @@
+import AssetIcon from '@/components/AssetIcon'
 import { cn } from '@/lib/utils'
 import { getVariationLabel } from '../../db'
+import type { AssetMetadata } from '../../hooks/useAssetMetadata'
 import type { ParameterVariation } from '../../types'
 import { computeEscrowWhole, computeMatchMbrAlgo, generateVariationCombinations } from '../../utils/trustGameCalc'
 
@@ -9,6 +11,8 @@ interface FundingSummaryProps {
   batchModeEnabled: boolean
   maxPerVariation: string
   walletBalanceAlgo: number | null
+  /** Payout asset selected in the picker. */
+  payoutAsset: AssetMetadata
 }
 
 export default function FundingSummary({
@@ -17,6 +21,7 @@ export default function FundingSummary({
   batchModeEnabled,
   maxPerVariation,
   walletBalanceAlgo,
+  payoutAsset,
 }: FundingSummaryProps) {
   const maxSub = Number(maxPerVariation)
   if (!maxPerVariation || maxSub < 2) return null
@@ -35,8 +40,12 @@ export default function FundingSummary({
   }))
   const totalEscrow = rows.reduce((sum, r) => sum + r.escrow, 0)
   const totalMatchMbr = rows.reduce((sum, r) => sum + r.matchMbr, 0)
-  const total = totalEscrow + totalMatchMbr
-  const insufficient = walletBalanceAlgo !== null && total > walletBalanceAlgo
+  const isAlgo = payoutAsset.assetId === 0n
+  // The wallet's ALGO balance must cover MBR (always) plus escrow (only when
+  // escrow is in ALGO). For ASA experiments, the experimenter is responsible
+  // for holding sufficient ASA balance separately.
+  const algoRequired = isAlgo ? totalEscrow + totalMatchMbr : totalMatchMbr
+  const insufficient = walletBalanceAlgo !== null && algoRequired > walletBalanceAlgo
 
   return (
     <div className="mt-6">
@@ -46,7 +55,12 @@ export default function FundingSummary({
           <thead>
             <tr className="border-b border-border bg-muted">
               <th className="text-left t-micro px-3 py-2">Variation</th>
-              <th className="text-right t-micro px-3 py-2">Escrow (ALGO)</th>
+              <th className="text-right t-micro px-3 py-2">
+                <span className="inline-flex items-center justify-end gap-1.5">
+                  Escrow ({payoutAsset.unitName})
+                  <AssetIcon assetId={payoutAsset.assetId} unitName={payoutAsset.unitName} className="size-3" />
+                </span>
+              </th>
               <th className="text-right t-micro px-3 py-2">Match MBR (ALGO)</th>
             </tr>
           </thead>
@@ -62,15 +76,17 @@ export default function FundingSummary({
           <tfoot>
             <tr className="border-t border-border bg-muted font-semibold">
               <td className="px-3 py-2">Total</td>
-              <td className="text-right font-mono px-3 py-2">{totalEscrow} ALGO</td>
+              <td className="text-right font-mono px-3 py-2">
+                {totalEscrow} {payoutAsset.unitName}
+              </td>
               <td className="text-right font-mono px-3 py-2">{totalMatchMbr.toFixed(4)} ALGO</td>
             </tr>
           </tfoot>
         </table>
       </div>
       <p className="text-xs text-muted-foreground mt-2">
-        Escrow funds payouts to players. Match MBR (0.0883 ALGO/match) covers on-chain storage and is paid when matches are created.
-        Participants pay 0.0169 ALGO each on self-enrollment.
+        Escrow funds payouts to players in {payoutAsset.unitName}. Match MBR (0.0883 ALGO/match) covers on-chain storage and is paid in ALGO
+        regardless of payout asset. Participants pay 0.0169 ALGO each on self-enrollment.
       </p>
       <div
         role="alert"
@@ -81,13 +97,22 @@ export default function FundingSummary({
       >
         {insufficient ? (
           <>
-            Insufficient balance. You need <strong>{total.toFixed(4)} ALGO</strong> total but your wallet only has{' '}
+            Insufficient ALGO balance. You need <strong>{algoRequired.toFixed(4)} ALGO</strong> in your wallet but only have{' '}
             <strong>{walletBalanceAlgo!.toFixed(2)} ALGO</strong>. Add funds before creating this experiment.
           </>
-        ) : (
+        ) : isAlgo ? (
           <>
             Your wallet will be charged <strong>{totalEscrow} ALGO</strong> escrow at creation. Match MBR (
             <strong>{totalMatchMbr.toFixed(4)} ALGO</strong>) is charged per match when matches are created.
+          </>
+        ) : (
+          <>
+            Your wallet will be charged{' '}
+            <strong>
+              {totalEscrow} {payoutAsset.unitName}
+            </strong>{' '}
+            escrow plus <strong>{totalMatchMbr.toFixed(4)} ALGO</strong> MBR at creation. Make sure you hold enough {payoutAsset.unitName}{' '}
+            before submitting.
           </>
         )}
       </div>

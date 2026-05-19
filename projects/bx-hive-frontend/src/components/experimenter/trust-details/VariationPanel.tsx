@@ -24,7 +24,7 @@ interface VariationPanelProps {
 
 export default function VariationPanel({ variation, participants, matches, config, onCreateMatch }: VariationPanelProps) {
   const unassigned = participants.filter((s) => s.assigned === 0)
-  const { decimals } = useAssetMetadata(config?.assetId ?? 0n)
+  const { decimals, unitName } = useAssetMetadata(config?.assetId ?? 0n)
 
   return (
     <Panel className="flex flex-col gap-6">
@@ -33,7 +33,7 @@ export default function VariationPanel({ variation, participants, matches, confi
       {config && config.status === STATUS_ACTIVE && (
         <CreateMatchForm appId={variation.appId} unassigned={unassigned} onCreateMatch={onCreateMatch} />
       )}
-      <MatchesTable matches={matches} decimals={decimals} />
+      <MatchesTable matches={matches} decimals={decimals} unitName={unitName} assetId={config?.assetId ?? 0n} />
     </Panel>
   )
 }

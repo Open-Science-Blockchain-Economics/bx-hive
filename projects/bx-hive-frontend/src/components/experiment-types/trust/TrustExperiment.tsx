@@ -38,7 +38,7 @@ function WaitingState({ title, children, onRefresh }: WaitingStateProps) {
 }
 
 export default function TrustExperiment({ appId, match, config, activeAddress, onRefresh }: TrustExperimentProps) {
-  const { decimals } = useAssetMetadata(config.assetId)
+  const { decimals, unitName } = useAssetMetadata(config.assetId)
   const E1 = baseUnitsToWhole(config.e1, decimals)
   const E2 = baseUnitsToWhole(config.e2, decimals)
   const m = Number(config.multiplier)
@@ -65,7 +65,16 @@ export default function TrustExperiment({ appId, match, config, activeAddress, o
   if (phase === PHASE_INVESTOR_DECISION) {
     if (isInvestor) {
       return (
-        <InvestorInterface appId={appId} matchId={match.matchId} E1={E1} m={m} UNIT={UNIT} decimals={decimals} onDecisionMade={onRefresh} />
+        <InvestorInterface
+          appId={appId}
+          matchId={match.matchId}
+          E1={E1}
+          m={m}
+          UNIT={UNIT}
+          decimals={decimals}
+          unitName={unitName}
+          onDecisionMade={onRefresh}
+        />
       )
     }
     return (
@@ -95,11 +104,18 @@ export default function TrustExperiment({ appId, match, config, activeAddress, o
     return (
       <WaitingState title="Waiting for Trustee" onRefresh={onRefresh}>
         <p>
-          You invested <span className="font-mono font-semibold text-foreground">{invested.toLocaleString()} ALGO</span>.
+          You invested{' '}
+          <span className="font-mono font-semibold text-foreground">
+            {invested.toLocaleString()} {unitName}
+          </span>
+          .
         </p>
         <p>
-          The Trustee received <span className="font-mono font-semibold text-foreground">{(invested * m).toLocaleString()} ALGO</span> and
-          is deciding how much to return.
+          The Trustee received{' '}
+          <span className="font-mono font-semibold text-foreground">
+            {(invested * m).toLocaleString()} {unitName}
+          </span>{' '}
+          and is deciding how much to return.
         </p>
       </WaitingState>
     )
