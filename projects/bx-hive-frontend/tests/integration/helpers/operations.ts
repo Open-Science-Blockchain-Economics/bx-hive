@@ -14,16 +14,22 @@ export const ROLE_PARTICIPANT = 1
 const PARTICIPANT_BOX_MBR_MICROALGOS = 16_900
 const MATCH_BOX_MBR_MICROALGOS = 88_300
 
+// Variation app MBR; mirrors smart_contracts/trust_experiments/contract.py.
+const VAR_APP_MBR_ALGO = 100_000
+const VAR_APP_MBR_ASA = 200_000
+
 export interface VariationParams {
-  /** Investor endowment in microAlgo */
+  /** Investor endowment in base units of the payout asset */
   e1: bigint
-  /** Trustee endowment in microAlgo */
+  /** Trustee endowment in base units of the payout asset */
   e2: bigint
   multiplier: bigint
-  /** Decision step size in microAlgo */
+  /** Decision step size in base units of the payout asset */
   unit: bigint
-  /** Escrow funded into the variation app at creation, in microAlgo */
+  /** Escrow funded into the variation app at creation, in base units of the payout asset */
   escrow: bigint
+  /** 0n for native ALGO (default); positive for an ASA payout */
+  assetId?: bigint
   name?: string
   label?: string
 }
@@ -37,6 +43,10 @@ export interface SetupExperimentResult {
 /**
  * Creates an experiment with one variation in a single call and returns
  * a typed client pointing at the spawned Layer-3 variation contract.
+ *
+ * When params.assetId === 0n (or unset), escrow is funded with native ALGO.
+ * Otherwise the caller must already hold the asset; this helper builds the
+ * escrow leg as an AssetTransfer of params.escrow base units of params.assetId.
  */
 export async function setupExperiment(
   algorand: AlgorandClient,
@@ -44,11 +54,28 @@ export async function setupExperiment(
   owner: Address,
   params: VariationParams,
 ): Promise<SetupExperimentResult> {
-  const escrowPayment = await algorand.createTransaction.payment({
+  const assetId = params.assetId ?? 0n
+  const trustExperimentsAppAddr = getApplicationAddress(trustExperimentsClient.appId)
+
+  const mbrPayment = await algorand.createTransaction.payment({
     sender: owner,
-    receiver: getApplicationAddress(trustExperimentsClient.appId),
-    amount: AlgoAmount.MicroAlgos(Number(params.escrow)),
+    receiver: trustExperimentsAppAddr,
+    amount: AlgoAmount.MicroAlgos(assetId === 0n ? VAR_APP_MBR_ALGO : VAR_APP_MBR_ASA),
   })
+
+  const escrowFunding =
+    assetId === 0n
+      ? await algorand.createTransaction.payment({
+          sender: owner,
+          receiver: trustExperimentsAppAddr,
+          amount: AlgoAmount.MicroAlgos(Number(params.escrow)),
+        })
+      : await algorand.createTransaction.assetTransfer({
+          sender: owner,
+          receiver: trustExperimentsAppAddr,
+          assetId,
+          amount: params.escrow,
+        })
 
   const result = await trustExperimentsClient.send.createExperimentWithVariation({
     args: {
@@ -58,12 +85,13 @@ export async function setupExperiment(
       e2: params.e2,
       multiplier: params.multiplier,
       unit: params.unit,
-      assetId: 0n,
+      assetId,
       maxParticipants: 0n,
-      escrowPayment,
+      mbrPayment,
+      escrowFunding,
     },
     coverAppCallInnerTransactionFees: true,
-    maxFee: AlgoAmount.MicroAlgos(9_000),
+    maxFee: AlgoAmount.MicroAlgos(12_000),
   })
   const [expId, variationAppId] = result.return!
 
@@ -73,6 +101,63 @@ export async function setupExperiment(
   })
 
   return { expId: Number(expId), variationAppId, variationClient }
+}
+
+/**
+ * Creates a mock USDC-like ASA owned by `creator` and returns its asset id.
+ * Mirrors the fields used by the LocalNet seed script (unit_name=USDC,
+ * decimals=6) so tests look like the development environment.
+ */
+export async function createMockUsdc(algorand: AlgorandClient, creator: Address, total: bigint = 10_000_000_000_000_000n): Promise<bigint> {
+  const result = await algorand.send.assetCreate({
+    sender: creator,
+    total,
+    decimals: 6,
+    assetName: 'USD Coin (mock)',
+    unitName: 'USDC',
+    defaultFrozen: false,
+    manager: creator,
+    reserve: creator,
+  })
+  return BigInt(result.assetId)
+}
+
+/**
+ * Opts an account into an asset (zero-amount self-transfer). Idempotent
+ * via try/catch: if already opted in, the second attempt fails harmlessly
+ * and we proceed.
+ */
+export async function optInToAsset(algorand: AlgorandClient, account: Address, assetId: bigint): Promise<void> {
+  try {
+    await algorand.send.assetOptIn({ sender: account, assetId })
+  } catch {
+    // already opted in
+  }
+}
+
+/**
+ * Opts the TrustExperiments app account into an asset so it can receive the
+ * user's escrow asset-transfer leg in create_variation /
+ * create_experiment_with_variation. Caller pays the 0.1 ALGO opt-in MBR.
+ * Idempotent on the contract side.
+ */
+export async function optInTrustExperimentsToAsset(
+  algorand: AlgorandClient,
+  caller: Address,
+  trustExperimentsClient: TrustExperimentsClient,
+  assetId: bigint,
+): Promise<void> {
+  const mbrPayment = await algorand.createTransaction.payment({
+    sender: caller,
+    receiver: getApplicationAddress(trustExperimentsClient.appId),
+    amount: AlgoAmount.MicroAlgos(100_000),
+  })
+  await trustExperimentsClient.send.optInToAsset({
+    sender: caller,
+    args: { assetId, mbrPayment },
+    coverAppCallInnerTransactionFees: true,
+    maxFee: AlgoAmount.MicroAlgos(3_000),
+  })
 }
 
 /**

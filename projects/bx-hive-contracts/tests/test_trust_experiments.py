@@ -102,7 +102,12 @@ def test_get_experiment_not_found_fails(context: AlgopyTestContext) -> None:
 
 def test_create_variation_experiment_not_found_fails(context: AlgopyTestContext) -> None:
     contract = _make_experiments(context)
-    dummy_payment = context.any.txn.payment(
+    dummy_mbr = context.any.txn.payment(
+        sender=context.default_sender,
+        receiver=context.default_sender,
+        amount=1_000,
+    )
+    dummy_escrow = context.any.txn.payment(
         sender=context.default_sender,
         receiver=context.default_sender,
         amount=1_000,
@@ -117,7 +122,8 @@ def test_create_variation_experiment_not_found_fails(context: AlgopyTestContext)
             arc4.UInt64(10),
             arc4.UInt64(0),
             arc4.UInt64(0),  # max_participants
-            dummy_payment,
+            dummy_mbr,
+            dummy_escrow,
         )
 
 
@@ -126,7 +132,12 @@ def test_create_variation_not_owner_fails(context: AlgopyTestContext) -> None:
     exp_id = contract.create_experiment(arc4.String("Alpha"))
 
     other = context.any.account()
-    dummy_payment = context.any.txn.payment(
+    dummy_mbr = context.any.txn.payment(
+        sender=other,
+        receiver=context.default_sender,
+        amount=1_000,
+    )
+    dummy_escrow = context.any.txn.payment(
         sender=other,
         receiver=context.default_sender,
         amount=1_000,
@@ -145,8 +156,50 @@ def test_create_variation_not_owner_fails(context: AlgopyTestContext) -> None:
                 arc4.UInt64(10),
                 arc4.UInt64(0),
                 arc4.UInt64(0),  # max_participants
-                dummy_payment,
+                dummy_mbr,
+                dummy_escrow,
             )
+
+
+# -------------------------------------------------------------------------
+# opt_in_to_asset
+# -------------------------------------------------------------------------
+
+
+def test_opt_in_to_asset_emits_inner_optin(context: AlgopyTestContext) -> None:
+    contract = _make_experiments(context)
+    asa = context.any.asset()
+    app_addr = context.ledger.get_app(contract.__app_id__).address
+    mbr = context.any.txn.payment(
+        sender=context.default_sender, receiver=app_addr, amount=100_000
+    )
+    contract.opt_in_to_asset(arc4.UInt64(int(asa.id)), mbr)
+
+    last_itxn = context.txn.last_group.last_itxn.asset_transfer
+    assert last_itxn.xfer_asset == asa
+    assert last_itxn.asset_amount == 0
+    assert last_itxn.asset_receiver == app_addr
+
+
+def test_opt_in_to_asset_zero_asset_id_fails(context: AlgopyTestContext) -> None:
+    contract = _make_experiments(context)
+    app_addr = context.ledger.get_app(contract.__app_id__).address
+    mbr = context.any.txn.payment(
+        sender=context.default_sender, receiver=app_addr, amount=100_000
+    )
+    with pytest.raises(Exception, match="Asset ID must be > 0"):
+        contract.opt_in_to_asset(arc4.UInt64(0), mbr)
+
+
+def test_opt_in_to_asset_insufficient_mbr_fails(context: AlgopyTestContext) -> None:
+    contract = _make_experiments(context)
+    asa = context.any.asset()
+    app_addr = context.ledger.get_app(contract.__app_id__).address
+    short_mbr = context.any.txn.payment(
+        sender=context.default_sender, receiver=app_addr, amount=50_000
+    )
+    with pytest.raises(Exception, match="MBR must be >= 0.1 ALGO"):
+        contract.opt_in_to_asset(arc4.UInt64(int(asa.id)), short_mbr)
 
 
 # -------------------------------------------------------------------------

@@ -32,12 +32,15 @@ def _make_variation(
     ctx: AlgopyTestContext,
     owner: Account | None = None,
     max_participants: int = 0,
+    asset_id: int = ASSET_ID,
 ) -> TrustVariation:
     """Create and initialise a TrustVariation.
 
     If owner is None the contract is owned by ctx.default_sender (the implicit Txn.sender).
     Pass a different account to test non-owner access-control paths.
     max_participants=0 means unlimited; a positive value caps self-enrollment.
+    asset_id=0 means native ALGO payouts; a positive value triggers the
+    ASA branch (opt-in inner txn at create, AssetTransfer payouts).
     """
     contract = TrustVariation()
     contract.create(
@@ -49,7 +52,7 @@ def _make_variation(
         arc4.UInt64(E2),
         arc4.UInt64(MULTIPLIER),
         arc4.UInt64(UNIT),
-        arc4.UInt64(ASSET_ID),
+        arc4.UInt64(asset_id),
         arc4.UInt64(0),  # registry_app
         arc4.UInt64(max_participants),
     )
@@ -126,6 +129,28 @@ def test_create_zero_unit_fails(context: AlgopyTestContext) -> None:
             arc4.UInt64(0),  # registry_app
             arc4.UInt64(0),  # max_participants
         )
+
+
+def test_create_emits_asset_optin_when_asset_id_gt_zero(
+    context: AlgopyTestContext,
+) -> None:
+    """When asset_id > 0, create() issues a zero-amount AssetTransfer self-transfer
+    to opt the variation app's account into the configured ASA."""
+    asa = context.any.asset()
+    _make_variation(context, asset_id=int(asa.id))
+
+    last_itxn = context.txn.last_group.last_itxn.asset_transfer
+    assert last_itxn.xfer_asset == asa
+    assert last_itxn.asset_amount == 0
+
+
+def test_create_no_asset_optin_when_asset_id_zero(context: AlgopyTestContext) -> None:
+    """When asset_id == 0 (native ALGO), create() does not issue an opt-in inner txn."""
+    _make_variation(context, asset_id=0)
+
+    # last_group has no inner txns (no opt-in fired); accessing last_itxn raises.
+    with pytest.raises(Exception):
+        _ = context.txn.last_group.last_itxn
 
 
 # -------------------------------------------------------------------------
@@ -318,9 +343,17 @@ def test_submit_investor_decision_not_multiple_fails(context: AlgopyTestContext)
 # -------------------------------------------------------------------------
 
 
-def test_submit_trustee_decision_payouts(context: AlgopyTestContext) -> None:
-    """E1=100, E2=50, m=3, s=40, r=60 → investor_payout=120, trustee_payout=110."""
-    contract = _make_variation(context)
+@pytest.mark.parametrize("asset_id_param", [0, 1001])
+def test_submit_trustee_decision_payouts(
+    context: AlgopyTestContext, asset_id_param: int
+) -> None:
+    """E1=100, E2=50, m=3, s=40, r=60 → investor_payout=120, trustee_payout=110.
+
+    Parametrized over asset_id ∈ {0 (ALGO), 1001 (mock ASA)}. State updates
+    are identical regardless of payout asset; the contract internally picks
+    Payment vs AssetTransfer for the inner txns.
+    """
+    contract = _make_variation(context, asset_id=asset_id_param)
     investor, trustee, trustee_acct = _add_participants(context, contract)
     match_id = _create_match(context, contract, investor.copy(), trustee.copy())
 
@@ -398,15 +431,16 @@ def test_withdraw_escrow_no_remaining_fails(context: AlgopyTestContext) -> None:
 # -------------------------------------------------------------------------
 
 
-def test_get_config(context: AlgopyTestContext) -> None:
-    contract = _make_variation(context)
+@pytest.mark.parametrize("asset_id_param", [0, 1001])
+def test_get_config(context: AlgopyTestContext, asset_id_param: int) -> None:
+    contract = _make_variation(context, asset_id=asset_id_param)
     config = contract.get_config()
 
     assert config.e1 == arc4.UInt64(E1)
     assert config.e2 == arc4.UInt64(E2)
     assert config.multiplier == arc4.UInt64(MULTIPLIER)
     assert config.unit == arc4.UInt64(UNIT)
-    assert config.asset_id == arc4.UInt64(ASSET_ID)
+    assert config.asset_id == arc4.UInt64(asset_id_param)
     assert config.status == arc4.UInt8(STATUS_ACTIVE)
     assert config.max_participants == arc4.UInt64(0)
 
@@ -494,6 +528,7 @@ def test_add_participants_bypasses_max_participants(context: AlgopyTestContext) 
 def _make_variation_with_experiments_app(
     ctx: AlgopyTestContext,
     max_participants: int = 0,
+    asset_id: int = ASSET_ID,
 ) -> tuple[TrustVariation, "Application"]:
     """Create a variation whose experiments_app is a real mock application."""
     experiments_app = ctx.any.application()
@@ -507,7 +542,7 @@ def _make_variation_with_experiments_app(
         arc4.UInt64(E2),
         arc4.UInt64(MULTIPLIER),
         arc4.UInt64(UNIT),
-        arc4.UInt64(ASSET_ID),
+        arc4.UInt64(asset_id),
         arc4.UInt64(0),  # registry_app
         arc4.UInt64(max_participants),
     )
@@ -576,12 +611,15 @@ def test_end_variation_sets_completed(context: AlgopyTestContext) -> None:
     assert contract.status.value == STATUS_COMPLETED
 
 
-def test_end_variation_returns_remaining_escrow(context: AlgopyTestContext) -> None:
-    contract = _make_variation(context)
+@pytest.mark.parametrize("asset_id_param", [0, 1001])
+def test_end_variation_returns_remaining_escrow(
+    context: AlgopyTestContext, asset_id_param: int
+) -> None:
+    contract = _make_variation(context, asset_id=asset_id_param)
     contract.escrow_deposited.value = UInt64(1000)
     contract.escrow_paid_out.value = UInt64(300)
     contract.end_variation()
-    # Remaining 700 returned; deposited decremented
+    # Remaining 700 returned; deposited decremented (regardless of asset path)
     assert contract.escrow_deposited.value == 300
     assert contract.status.value == STATUS_COMPLETED
 

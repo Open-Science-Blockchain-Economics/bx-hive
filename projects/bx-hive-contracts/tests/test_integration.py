@@ -49,8 +49,14 @@ def context() -> Iterator[AlgopyTestContext]:
         yield ctx
 
 
-def test_full_experiment_flow(context: AlgopyTestContext) -> None:
-    """End-to-end: register → create experiment → run game → verify payouts."""
+@pytest.mark.parametrize("asset_id_param", [0, 1001])
+def test_full_experiment_flow(context: AlgopyTestContext, asset_id_param: int) -> None:
+    """End-to-end: register → create experiment → run game → verify payouts.
+
+    Parametrized over asset_id ∈ {0 (ALGO via deposit_escrow), 1001 (mock ASA
+    via record_escrow simulating TrustExperiments forwarding the asset)}.
+    Payout math and final state are identical regardless of asset path.
+    """
     alice = context.default_sender   # experimenter / variation owner
     bob = context.any.account()      # investor
     dan = context.any.account()      # trustee
@@ -122,7 +128,7 @@ def test_full_experiment_flow(context: AlgopyTestContext) -> None:
         arc4.UInt64(E2),
         arc4.UInt64(MULTIPLIER),
         arc4.UInt64(UNIT),
-        arc4.UInt64(ASSET_ID),
+        arc4.UInt64(asset_id_param),
         arc4.UInt64(registry.__app_id__),  # registry_app
         arc4.UInt64(0),  # max_participants (0 = unlimited)
     )
@@ -130,12 +136,23 @@ def test_full_experiment_flow(context: AlgopyTestContext) -> None:
     assert variation.e1.value == E1
     assert variation.owner.value == alice
 
-    # Alice funds the escrow
+    # Alice funds the escrow.
+    # ALGO path: experimenter calls deposit_escrow directly with a payment txn.
+    # ASA path: TrustExperiments would forward an AssetTransfer and call record_escrow;
+    # we simulate that here by calling record_escrow with experiments_app as sender.
     app_addr = context.ledger.get_app(variation.__app_id__).address
-    pay = context.any.txn.payment(
-        sender=alice, receiver=app_addr, amount=ESCROW_AMOUNT
-    )
-    variation.deposit_escrow(pay)
+    if asset_id_param == 0:
+        pay = context.any.txn.payment(
+            sender=alice, receiver=app_addr, amount=ESCROW_AMOUNT
+        )
+        variation.deposit_escrow(pay)
+    else:
+        exp_addr = context.ledger.get_app(experiments.__app_id__).address
+        exp_call = context.any.txn.application_call(
+            sender=exp_addr, app_id=Application(variation.__app_id__)
+        )
+        with context.txn.create_group(gtxns=[exp_call], active_txn_index=0):
+            variation.record_escrow(arc4.UInt64(ESCROW_AMOUNT))
     assert variation.escrow_deposited.value == ESCROW_AMOUNT
 
     # Enroll Bob (investor) and Dan (trustee)

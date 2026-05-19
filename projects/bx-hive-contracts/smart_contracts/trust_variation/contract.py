@@ -2,6 +2,7 @@ from algopy import (
     Account,
     Application,
     ARC4Contract,
+    Asset,
     BoxMap,
     Bytes,
     Global,
@@ -95,6 +96,14 @@ class TrustVariation(ARC4Contract):
         self.participant_count.value = UInt64(0)
         self.max_participants.value = max_participants.as_uint64()
 
+        if asset_id.as_uint64() > UInt64(0):
+            itxn.AssetTransfer(
+                xfer_asset=Asset(asset_id.as_uint64()),
+                asset_receiver=Global.current_application_address,
+                asset_amount=UInt64(0),
+                fee=0,
+            ).submit()
+
     @arc4.abimethod
     def deposit_escrow(self, payment: gtxn.PaymentTransaction) -> None:
         assert Txn.sender == self.owner.value, "Not owner"
@@ -115,11 +124,19 @@ class TrustVariation(ARC4Contract):
 
         remaining = self.escrow_deposited.value - self.escrow_paid_out.value
         if remaining > UInt64(0):
-            itxn.Payment(
-                receiver=self.owner.value,
-                amount=remaining,
-                fee=0,
-            ).submit()
+            if self.asset_id.value == UInt64(0):
+                itxn.Payment(
+                    receiver=self.owner.value,
+                    amount=remaining,
+                    fee=0,
+                ).submit()
+            else:
+                itxn.AssetTransfer(
+                    xfer_asset=Asset(self.asset_id.value),
+                    asset_receiver=self.owner.value,
+                    asset_amount=remaining,
+                    fee=0,
+                ).submit()
             self.escrow_deposited.value -= remaining
 
         self.status.value = UInt64(STATUS_COMPLETED)
@@ -251,17 +268,32 @@ class TrustVariation(ARC4Contract):
         investor_payout = self.e1.value - s + r
         trustee_payout = self.e2.value + max_return - r
 
-        itxn.Payment(
-            receiver=Account(match.investor.bytes),
-            amount=investor_payout,
-            fee=0,
-        ).submit()
+        if self.asset_id.value == UInt64(0):
+            itxn.Payment(
+                receiver=Account(match.investor.bytes),
+                amount=investor_payout,
+                fee=0,
+            ).submit()
 
-        itxn.Payment(
-            receiver=Account(match.trustee.bytes),
-            amount=trustee_payout,
-            fee=0,
-        ).submit()
+            itxn.Payment(
+                receiver=Account(match.trustee.bytes),
+                amount=trustee_payout,
+                fee=0,
+            ).submit()
+        else:
+            itxn.AssetTransfer(
+                xfer_asset=Asset(self.asset_id.value),
+                asset_receiver=Account(match.investor.bytes),
+                asset_amount=investor_payout,
+                fee=0,
+            ).submit()
+
+            itxn.AssetTransfer(
+                xfer_asset=Asset(self.asset_id.value),
+                asset_receiver=Account(match.trustee.bytes),
+                asset_amount=trustee_payout,
+                fee=0,
+            ).submit()
 
         self.escrow_paid_out.value += investor_payout + trustee_payout
         self.paid_out_count.value += UInt64(1)
@@ -282,11 +314,19 @@ class TrustVariation(ARC4Contract):
         remaining = self.escrow_deposited.value - self.escrow_paid_out.value
         assert remaining > UInt64(0), "No remaining escrow"
 
-        itxn.Payment(
-            receiver=self.owner.value,
-            amount=remaining,
-            fee=0,
-        ).submit()
+        if self.asset_id.value == UInt64(0):
+            itxn.Payment(
+                receiver=self.owner.value,
+                amount=remaining,
+                fee=0,
+            ).submit()
+        else:
+            itxn.AssetTransfer(
+                xfer_asset=Asset(self.asset_id.value),
+                asset_receiver=self.owner.value,
+                asset_amount=remaining,
+                fee=0,
+            ).submit()
 
         self.escrow_deposited.value -= remaining
 
