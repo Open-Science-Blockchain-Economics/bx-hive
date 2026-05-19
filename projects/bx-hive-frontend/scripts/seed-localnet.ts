@@ -80,13 +80,13 @@ function upsertEnvVar(filePath: string, key: string, value: string): void {
 async function mintOrReuseMockUsdc(algorand: AlgorandClient, dispenserAddr: string): Promise<bigint> {
   const existingRaw = env('VITE_USDC_ASSET_ID', '')
   if (existingRaw) {
-    const existingId = BigInt(existingRaw)
     try {
+      const existingId = BigInt(existingRaw)
       await algorand.client.algod.assetById(existingId)
       console.log(`  Reusing existing mock USDC asset ${existingId}`)
       return existingId
     } catch {
-      console.log(`  VITE_USDC_ASSET_ID=${existingId} no longer exists on algod — creating a new one`)
+      console.log(`  VITE_USDC_ASSET_ID="${existingRaw}" could not be reused — creating a new asset`)
     }
   }
   const result = await algorand.send.assetCreate({
