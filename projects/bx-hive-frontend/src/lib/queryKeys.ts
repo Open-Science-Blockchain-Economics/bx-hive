@@ -13,4 +13,5 @@ export const queryKeys = {
   localnetAccountRegistration: (address: string) => ['localnet-account-registration', address] as const,
   activeUser: (address: string) => ['active-user', address] as const,
   assetMetadata: (assetId: bigint) => ['asset-metadata', String(assetId)] as const,
+  localnetAccountBalances: (address: string) => ['localnet-account-balances', address] as const,
 }

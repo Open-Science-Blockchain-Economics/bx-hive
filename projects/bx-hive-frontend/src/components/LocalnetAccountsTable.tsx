@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useWallet } from '@txnlab/use-wallet-react'
 
+import AssetIcon from '@/components/AssetIcon'
 import { Chip } from '@/components/ds/badge'
 import { Btn } from '@/components/ds/button'
 import { Panel } from '@/components/ds/card'
@@ -9,6 +10,7 @@ import { Input } from '@/components/ds/input'
 import { cn } from '@/lib/utils'
 import { type LocalnetAccount, type LocalnetAccountRole, useLocalnetAccounts } from '../hooks/useLocalnetAccounts'
 import { truncateAddress } from '../utils/address'
+import { baseUnitsToWhole } from '../utils/amount'
 import { CopyButton } from './ui'
 
 function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
@@ -173,6 +175,22 @@ function AccountRow({
           )}
         </td>
         <td className="px-3 py-2 text-right">
+          <div className="inline-flex flex-col items-end gap-0.5 font-mono text-xs">
+            <span className="inline-flex items-center gap-1">
+              {account.balanceMicroAlgo === null ? '—' : baseUnitsToWhole(account.balanceMicroAlgo, 6).toFixed(2)}
+              <AssetIcon assetId={0n} unitName="ALGO" className="size-3" />
+            </span>
+            {account.assetBalance ? (
+              <span className="inline-flex items-center gap-1">
+                {baseUnitsToWhole(account.assetBalance.amount, account.assetBalance.decimals).toLocaleString()}
+                <AssetIcon assetId={account.assetBalance.assetId} unitName={account.assetBalance.unitName} className="size-3" />
+              </span>
+            ) : (
+              <span className="text-faint">—</span>
+            )}
+          </div>
+        </td>
+        <td className="px-3 py-2 text-right">
           {account.registered ? (
             activeAddress === account.address ? (
               <span className="inline-flex items-center gap-1.5 text-pos text-xs font-medium">
@@ -199,7 +217,7 @@ function AccountRow({
       {/* Expandable registration form — shown when row is selected and unregistered */}
       {isSelected && !account.registered && (
         <tr className="bg-muted">
-          <td colSpan={4} className="py-3 px-3">
+          <td colSpan={5} className="py-3 px-3">
             <div className="flex items-center gap-3 flex-wrap">
               <Input
                 type="text"
@@ -283,6 +301,7 @@ export default function LocalnetAccountsTable() {
                 <th className="text-left t-micro px-3 py-2 hidden sm:table-cell w-12">#</th>
                 <th className="text-left t-micro px-3 py-2">Address</th>
                 <th className="text-left t-micro px-3 py-2">Role</th>
+                <th className="text-right t-micro px-3 py-2">Balance</th>
                 <th className="text-right t-micro px-3 py-2">Status</th>
               </tr>
             </thead>
