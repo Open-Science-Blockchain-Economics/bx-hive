@@ -1,6 +1,7 @@
 import { AlgoAmount, AlgorandClient, getApplicationAddress, microAlgo } from '@algorandfoundation/algokit-utils'
 import { useCallback } from 'react'
 import type { ExperimentGroup, TrustExperimentsClient, VariationInfo } from '../contracts/TrustExperiments'
+import { isAccountOptedInToAsset } from '../utils/algorand'
 import { useAlgorand } from './useAlgorand'
 
 export type { ExperimentGroup, VariationInfo }
@@ -26,15 +27,6 @@ export interface VariationParams {
 // asset opt-in. Mirrors the constants in TrustExperiments.create_variation.
 const VAR_APP_MBR_ALGO = 100_000
 const VAR_APP_MBR_ASA = 200_000
-
-async function isAccountOptedInToAsset(algorand: AlgorandClient, address: string, assetId: bigint): Promise<boolean> {
-  try {
-    const info = await algorand.client.algod.accountAssetInformation(address, assetId)
-    return Boolean(info.assetHolding)
-  } catch {
-    return false
-  }
-}
 
 /**
  * Builds the MBR + escrow + (optional) opt-in legs for a create-variation /
