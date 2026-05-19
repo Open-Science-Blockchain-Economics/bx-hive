@@ -1,3 +1,4 @@
+import AssetIcon from '@/components/AssetIcon'
 import { Field } from '@/components/ds/field'
 import type { AssetMetadata } from '@/hooks/useAssetMetadata'
 
@@ -40,21 +41,24 @@ export default function PayoutAssetPicker({ value, onChange }: PayoutAssetPicker
   return (
     <div className="max-w-xs">
       <Field label="Payout asset" htmlFor="payout-asset" required>
-        <select
-          id="payout-asset"
-          className={SELECT_CLASS}
-          value={String(value.assetId)}
-          onChange={(e) => {
-            const next = PAYOUT_ASSETS.find((a) => String(a.assetId) === e.target.value)
-            if (next) onChange(next)
-          }}
-        >
-          {PAYOUT_ASSETS.map((a) => (
-            <option key={String(a.assetId)} value={String(a.assetId)}>
-              {a.unitName}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2">
+          <AssetIcon assetId={value.assetId} unitName={value.unitName} className="size-5" />
+          <select
+            id="payout-asset"
+            className={SELECT_CLASS}
+            value={String(value.assetId)}
+            onChange={(e) => {
+              const next = PAYOUT_ASSETS.find((a) => String(a.assetId) === e.target.value)
+              if (next) onChange(next)
+            }}
+          >
+            {PAYOUT_ASSETS.map((a) => (
+              <option key={String(a.assetId)} value={String(a.assetId)}>
+                {a.unitName}
+              </option>
+            ))}
+          </select>
+        </div>
       </Field>
     </div>
   )
