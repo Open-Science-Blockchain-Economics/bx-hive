@@ -21,7 +21,7 @@ const ALGO_METADATA: AssetMetadata = {
   total: 0n,
 }
 
-async function fetchAssetMetadata(assetId: bigint): Promise<AssetMetadata> {
+export async function fetchAssetMetadata(assetId: bigint): Promise<AssetMetadata> {
   if (assetId === 0n) return ALGO_METADATA
   const algorand = getAlgorandClient()
   const asset = await algorand.client.algod.assetById(assetId)

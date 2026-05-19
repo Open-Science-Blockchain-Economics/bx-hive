@@ -11,10 +11,12 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip
 import { cn } from '@/lib/utils'
 import { getVariationLabel } from '../../db'
 import { experimentTemplates, getTemplateById } from '../../experiment-logic/templates'
+import type { AssetMetadata } from '../../hooks/useAssetMetadata'
 import type { ParameterVariation } from '../../types'
 import { computeEscrowWhole, generateVariationCombinations, toVariationParams } from '../../utils/trustGameCalc'
 import InfoAlert from '../ui/InfoAlert'
 import FundingSummary from './FundingSummary'
+import PayoutAssetPicker, { defaultPayoutAsset } from './PayoutAssetPicker'
 import TemplateSelector from './TemplateSelector'
 import TrustGameParameters from './TrustGameParameters'
 import { VariationBuilder } from './VariationBuilder'
@@ -112,6 +114,7 @@ export default function CreateExperimentForm({
   const [batchModeEnabled, setBatchModeEnabled] = useState(false)
   const [variations, setVariations] = useState<ParameterVariation[]>([])
   const [maxPerVariation, setMaxPerVariation] = useState<string>('')
+  const [payoutAsset, setPayoutAsset] = useState<AssetMetadata>(defaultPayoutAsset)
 
   const selectedTemplate = getTemplateById(selectedTemplateId)
 
@@ -141,22 +144,24 @@ export default function CreateExperimentForm({
   const trustMutation = useMutation({
     mutationFn: async () => {
       const maxSub = Number(maxPerVariation) * 2
+      const aId = payoutAsset.assetId
+      const dec = payoutAsset.decimals
       if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
         const combos = generateVariationCombinations(parameters, variations)
         const { expId } = await createExperimentWithVariation(
           experimentName.trim(),
-          toVariationParams(combos[0], getVariationLabel(combos[0], variations), maxSub, computeEscrowWhole(combos[0], maxSub)),
+          toVariationParams(combos[0], getVariationLabel(combos[0], variations), maxSub, computeEscrowWhole(combos[0], maxSub), aId, dec),
         )
         for (let i = 1; i < combos.length; i++) {
           await createVariation(
             expId,
-            toVariationParams(combos[i], getVariationLabel(combos[i], variations), maxSub, computeEscrowWhole(combos[i], maxSub)),
+            toVariationParams(combos[i], getVariationLabel(combos[i], variations), maxSub, computeEscrowWhole(combos[i], maxSub), aId, dec),
           )
         }
       } else {
         await createExperimentWithVariation(
           experimentName.trim(),
-          toVariationParams(parameters, 'Default', maxSub, computeEscrowWhole(parameters, maxSub)),
+          toVariationParams(parameters, 'Default', maxSub, computeEscrowWhole(parameters, maxSub), aId, dec),
         )
       }
     },
@@ -206,15 +211,18 @@ export default function CreateExperimentForm({
   const step1Done = !!selectedTemplate && !selectedTemplate.disabled
   const step2Done = !!experimentName.trim()
   const step3Done = step2Done && !!maxPerVariation && Number(maxPerVariation) >= 1
-  const step4Done = step3Done && (!batchModeEnabled || hasBatch)
-  const stepsDone = [step1Done, step2Done, step3Done, step4Done]
+  // Payout-asset picker always has a valid selection (defaults to ALGO/USDC),
+  // so it auto-completes once step 3 is done.
+  const step4Done = step3Done
+  const step5Done = step4Done && (!batchModeEnabled || hasBatch)
+  const stepsDone = [step1Done, step2Done, step3Done, step4Done, step5Done]
   const activeIdx = stepsDone.findIndex((d) => !d)
   const stateForStep = (idx: number): StepState => {
     if (stepsDone[idx]) return 'done'
     if (activeIdx === idx) return 'active'
     return 'pending'
   }
-  const reviewState: StepState = step4Done ? 'active' : 'pending'
+  const reviewState: StepState = step5Done ? 'active' : 'pending'
 
   return (
     <div>
@@ -282,7 +290,14 @@ export default function CreateExperimentForm({
             )}
           </Step>
 
-          <Step n={4} title="Variations" state={stateForStep(3)}>
+          <Step n={4} title="Choose payout asset" state={stateForStep(3)}>
+            <PayoutAssetPicker value={payoutAsset} onChange={setPayoutAsset} />
+            <p className="text-xs text-muted-foreground mt-2">
+              All escrow funding, investor/trustee endowments, and payouts use this asset. Match MBR is always paid in ALGO regardless.
+            </p>
+          </Step>
+
+          <Step n={5} title="Variations" state={stateForStep(4)}>
             <label className="flex items-center gap-3 cursor-pointer mb-4">
               <Switch
                 checked={batchModeEnabled}
@@ -307,7 +322,7 @@ export default function CreateExperimentForm({
             )}
           </Step>
 
-          <Step n={5} title="Review &amp; deploy" state={reviewState} isLast>
+          <Step n={6} title="Review &amp; deploy" state={reviewState} isLast>
             <InfoAlert learnMoreHref={DOCS_LINKS.participants} className="mb-4">
               Participants self-enroll and are distributed across variations using round robin.
             </InfoAlert>
