@@ -7,19 +7,19 @@ export type { ExperimentGroup, VariationInfo }
 
 export interface VariationParams {
   label: string
-  /** E1 endowment in microAlgo (E1 ALGO * 1_000_000) */
+  /** E1 endowment in base units of the payout asset (E1 * 10^decimals) */
   e1: bigint
-  /** E2 endowment in microAlgo */
+  /** E2 endowment in base units of the payout asset */
   e2: bigint
   multiplier: bigint
-  /** Unit size in microAlgo */
+  /** Unit size in base units of the payout asset */
   unit: bigint
   /** Asset ID — 0 for ALGO */
   assetId: bigint
   /** Max participants per variation — 0 for unlimited */
   maxParticipants?: bigint
-  /** Pre-funded escrow in microAlgo to deposit at creation */
-  escrowMicroAlgo: bigint
+  /** Pre-funded escrow in base units of the payout asset to deposit at creation */
+  escrowBaseUnits: bigint
 }
 
 /**
@@ -61,7 +61,7 @@ export function useTrustExperiments() {
       const escrowFunding = await algorand.createTransaction.payment({
         sender: activeAddress,
         receiver: trustExperimentsAppAddr,
-        amount: AlgoAmount.MicroAlgos(Number(params.escrowMicroAlgo)),
+        amount: AlgoAmount.MicroAlgos(Number(params.escrowBaseUnits)),
       })
       const result = await trustExperimentsClient.send.createExperimentWithVariation({
         args: {
@@ -103,7 +103,7 @@ export function useTrustExperiments() {
       const escrowFunding = await algorand.createTransaction.payment({
         sender: activeAddress,
         receiver: trustExperimentsAppAddr,
-        amount: AlgoAmount.MicroAlgos(Number(params.escrowMicroAlgo)),
+        amount: AlgoAmount.MicroAlgos(Number(params.escrowBaseUnits)),
       })
       const result = await trustExperimentsClient.send.createVariation({
         args: {

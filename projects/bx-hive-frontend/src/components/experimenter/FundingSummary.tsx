@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 import { getVariationLabel } from '../../db'
 import type { ParameterVariation } from '../../types'
-import { computeEscrowAlgo, computeMatchMbrAlgo, generateVariationCombinations } from '../../utils/trustGameCalc'
+import { computeEscrowWhole, computeMatchMbrAlgo, generateVariationCombinations } from '../../utils/trustGameCalc'
 
 interface FundingSummaryProps {
   parameters: Record<string, number | string>
@@ -29,7 +29,7 @@ export default function FundingSummary({
   const matchMbrPerVar = computeMatchMbrAlgo(maxSub)
   const rows = combos.map((combo, i) => ({
     label: batchModeEnabled ? getVariationLabel(combo, variations) : 'Default',
-    escrow: computeEscrowAlgo(combo, maxSub),
+    escrow: computeEscrowWhole(combo, maxSub),
     matchMbr: matchMbrPerVar,
     index: i,
   }))

@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 import { getVariationLabel } from '../../db'
 import { experimentTemplates, getTemplateById } from '../../experiment-logic/templates'
 import type { ParameterVariation } from '../../types'
-import { computeEscrowAlgo, generateVariationCombinations, toVariationParams } from '../../utils/trustGameCalc'
+import { computeEscrowWhole, generateVariationCombinations, toVariationParams } from '../../utils/trustGameCalc'
 import InfoAlert from '../ui/InfoAlert'
 import FundingSummary from './FundingSummary'
 import TemplateSelector from './TemplateSelector'
@@ -145,18 +145,18 @@ export default function CreateExperimentForm({
         const combos = generateVariationCombinations(parameters, variations)
         const { expId } = await createExperimentWithVariation(
           experimentName.trim(),
-          toVariationParams(combos[0], getVariationLabel(combos[0], variations), maxSub, computeEscrowAlgo(combos[0], maxSub)),
+          toVariationParams(combos[0], getVariationLabel(combos[0], variations), maxSub, computeEscrowWhole(combos[0], maxSub)),
         )
         for (let i = 1; i < combos.length; i++) {
           await createVariation(
             expId,
-            toVariationParams(combos[i], getVariationLabel(combos[i], variations), maxSub, computeEscrowAlgo(combos[i], maxSub)),
+            toVariationParams(combos[i], getVariationLabel(combos[i], variations), maxSub, computeEscrowWhole(combos[i], maxSub)),
           )
         }
       } else {
         await createExperimentWithVariation(
           experimentName.trim(),
-          toVariationParams(parameters, 'Default', maxSub, computeEscrowAlgo(parameters, maxSub)),
+          toVariationParams(parameters, 'Default', maxSub, computeEscrowWhole(parameters, maxSub)),
         )
       }
     },
@@ -194,7 +194,7 @@ export default function CreateExperimentForm({
       batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
         ? generateVariationCombinations(parameters, variations)
         : [parameters]
-    return combos.reduce((sum, combo) => sum + computeEscrowAlgo(combo, maxSub), 0)
+    return combos.reduce((sum, combo) => sum + computeEscrowWhole(combo, maxSub), 0)
   })()
 
   const insufficientBalance = walletBalanceAlgo !== null && totalEscrowAlgo > 0 && totalEscrowAlgo > walletBalanceAlgo
