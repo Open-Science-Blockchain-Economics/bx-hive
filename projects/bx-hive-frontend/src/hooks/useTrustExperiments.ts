@@ -1,6 +1,6 @@
-import { AlgoAmount, getApplicationAddress, microAlgo } from '@algorandfoundation/algokit-utils'
+import { AlgoAmount, AlgorandClient, getApplicationAddress, microAlgo } from '@algorandfoundation/algokit-utils'
 import { useCallback } from 'react'
-import type { ExperimentGroup, VariationInfo } from '../contracts/TrustExperiments'
+import type { ExperimentGroup, TrustExperimentsClient, VariationInfo } from '../contracts/TrustExperiments'
 import { useAlgorand } from './useAlgorand'
 
 export type { ExperimentGroup, VariationInfo }
@@ -20,6 +20,87 @@ export interface VariationParams {
   maxParticipants?: bigint
   /** Pre-funded escrow in base units of the payout asset to deposit at creation */
   escrowBaseUnits: bigint
+}
+
+// MBR funded to the new variation app account: 0.1 ALGO base + 0.1 ALGO per
+// asset opt-in. Mirrors the constants in TrustExperiments.create_variation.
+const VAR_APP_MBR_ALGO = 100_000
+const VAR_APP_MBR_ASA = 200_000
+
+async function isAccountOptedInToAsset(algorand: AlgorandClient, address: string, assetId: bigint): Promise<boolean> {
+  try {
+    const info = await algorand.client.algod.accountAssetInformation(address, assetId)
+    return Boolean(info.assetHolding)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Builds the MBR + escrow + (optional) opt-in legs for a create-variation /
+ * create-experiment-with-variation call group. Returns prebuilt txn args
+ * suitable for the typed client's app-call params; also returns a list of
+ * additional appcall/asset-optin params that must be prepended in the group.
+ */
+interface CreateGroupLegs {
+  mbrPayment: Awaited<ReturnType<AlgorandClient['createTransaction']['payment']>>
+  escrowFunding:
+    | Awaited<ReturnType<AlgorandClient['createTransaction']['payment']>>
+    | Awaited<ReturnType<AlgorandClient['createTransaction']['assetTransfer']>>
+  trustExperimentsOptInCall: Awaited<ReturnType<TrustExperimentsClient['params']['optInToAsset']>> | null
+  needsExperimenterOptIn: boolean
+}
+
+async function buildCreateGroupLegs(
+  algorand: AlgorandClient,
+  trustExperimentsClient: TrustExperimentsClient,
+  activeAddress: string,
+  params: VariationParams,
+): Promise<CreateGroupLegs> {
+  const trustExperimentsAppAddr = getApplicationAddress(trustExperimentsClient.appId)
+  const assetId = params.assetId
+
+  const mbrPayment = await algorand.createTransaction.payment({
+    sender: activeAddress,
+    receiver: trustExperimentsAppAddr,
+    amount: AlgoAmount.MicroAlgos(assetId === 0n ? VAR_APP_MBR_ALGO : VAR_APP_MBR_ASA),
+  })
+
+  const escrowFunding =
+    assetId === 0n
+      ? await algorand.createTransaction.payment({
+          sender: activeAddress,
+          receiver: trustExperimentsAppAddr,
+          amount: AlgoAmount.MicroAlgos(Number(params.escrowBaseUnits)),
+        })
+      : await algorand.createTransaction.assetTransfer({
+          sender: activeAddress,
+          receiver: trustExperimentsAppAddr.toString(),
+          assetId,
+          amount: params.escrowBaseUnits,
+        })
+
+  let trustExperimentsOptInCall: CreateGroupLegs['trustExperimentsOptInCall'] = null
+  let needsExperimenterOptIn = false
+
+  if (assetId > 0n) {
+    const teOptedIn = await isAccountOptedInToAsset(algorand, trustExperimentsAppAddr.toString(), assetId)
+    if (!teOptedIn) {
+      const optInMbr = await algorand.createTransaction.payment({
+        sender: activeAddress,
+        receiver: trustExperimentsAppAddr,
+        amount: AlgoAmount.MicroAlgos(100_000),
+      })
+      trustExperimentsOptInCall = await trustExperimentsClient.params.optInToAsset({
+        sender: activeAddress,
+        args: { assetId, mbrPayment: optInMbr },
+        maxFee: microAlgo(3_000),
+      })
+    }
+    needsExperimenterOptIn = !(await isAccountOptedInToAsset(algorand, activeAddress, assetId))
+  }
+
+  return { mbrPayment, escrowFunding, trustExperimentsOptInCall, needsExperimenterOptIn }
 }
 
 /**
@@ -46,40 +127,42 @@ export function useTrustExperiments() {
 
   /**
    * Atomically creates a new experiment group and its first variation in one transaction.
+   * For ASA experiments, the group also conditionally prepends a TrustExperiments
+   * asset opt-in and the experimenter's own asset opt-in so the whole flow ships
+   * in a single wallet signature.
    * Returns { expId, appId }.
    */
   const createExperimentWithVariation = useCallback(
     async (name: string, params: VariationParams): Promise<{ expId: number; appId: bigint }> => {
       if (!trustExperimentsClient || !algorand || !activeAddress) throw new Error('Wallet not connected')
-      const trustExperimentsAppAddr = getApplicationAddress(trustExperimentsClient.appId)
-      // ALGO-only path: ASA support lands in PR2 alongside the asset picker.
-      const mbrPayment = await algorand.createTransaction.payment({
-        sender: activeAddress,
-        receiver: trustExperimentsAppAddr,
-        amount: AlgoAmount.MicroAlgos(100_000),
-      })
-      const escrowFunding = await algorand.createTransaction.payment({
-        sender: activeAddress,
-        receiver: trustExperimentsAppAddr,
-        amount: AlgoAmount.MicroAlgos(Number(params.escrowBaseUnits)),
-      })
-      const result = await trustExperimentsClient.send.createExperimentWithVariation({
-        args: {
-          name,
-          label: params.label,
-          e1: params.e1,
-          e2: params.e2,
-          multiplier: params.multiplier,
-          unit: params.unit,
-          assetId: params.assetId,
-          maxParticipants: params.maxParticipants ?? 0n,
-          mbrPayment,
-          escrowFunding,
-        },
-        coverAppCallInnerTransactionFees: true,
-        maxFee: microAlgo(12_000),
-      })
-      const [expId, appId] = result.return!
+      const legs = await buildCreateGroupLegs(algorand, trustExperimentsClient, activeAddress, params)
+
+      const composer = algorand.newGroup({ coverAppCallInnerTransactionFees: true, populateAppCallResources: true })
+      if (legs.trustExperimentsOptInCall) composer.addAppCallMethodCall(legs.trustExperimentsOptInCall)
+      if (legs.needsExperimenterOptIn) composer.addAssetOptIn({ sender: activeAddress, assetId: params.assetId })
+      composer.addAppCallMethodCall(
+        await trustExperimentsClient.params.createExperimentWithVariation({
+          sender: activeAddress,
+          args: {
+            name,
+            label: params.label,
+            e1: params.e1,
+            e2: params.e2,
+            multiplier: params.multiplier,
+            unit: params.unit,
+            assetId: params.assetId,
+            maxParticipants: params.maxParticipants ?? 0n,
+            mbrPayment: legs.mbrPayment,
+            escrowFunding: legs.escrowFunding,
+          },
+          maxFee: microAlgo(12_000),
+        }),
+      )
+
+      const result = await composer.send()
+      const returns = result.returns ?? []
+      const lastReturn = returns[returns.length - 1]
+      const [expId, appId] = lastReturn.returnValue as [bigint, bigint]
       return { expId: Number(expId), appId: BigInt(appId) }
     },
     [trustExperimentsClient, algorand, activeAddress],
@@ -93,35 +176,34 @@ export function useTrustExperiments() {
   const createVariation = useCallback(
     async (expId: number, params: VariationParams): Promise<bigint> => {
       if (!trustExperimentsClient || !algorand || !activeAddress) throw new Error('Wallet not connected')
-      const trustExperimentsAppAddr = getApplicationAddress(trustExperimentsClient.appId)
-      // ALGO-only path: ASA support lands in PR2 alongside the asset picker.
-      const mbrPayment = await algorand.createTransaction.payment({
-        sender: activeAddress,
-        receiver: trustExperimentsAppAddr,
-        amount: AlgoAmount.MicroAlgos(100_000),
-      })
-      const escrowFunding = await algorand.createTransaction.payment({
-        sender: activeAddress,
-        receiver: trustExperimentsAppAddr,
-        amount: AlgoAmount.MicroAlgos(Number(params.escrowBaseUnits)),
-      })
-      const result = await trustExperimentsClient.send.createVariation({
-        args: {
-          expId,
-          label: params.label,
-          e1: params.e1,
-          e2: params.e2,
-          multiplier: params.multiplier,
-          unit: params.unit,
-          assetId: params.assetId,
-          maxParticipants: params.maxParticipants ?? 0n,
-          mbrPayment,
-          escrowFunding,
-        },
-        coverAppCallInnerTransactionFees: true,
-        maxFee: microAlgo(12_000),
-      })
-      return result.return!
+      const legs = await buildCreateGroupLegs(algorand, trustExperimentsClient, activeAddress, params)
+
+      const composer = algorand.newGroup({ coverAppCallInnerTransactionFees: true, populateAppCallResources: true })
+      if (legs.trustExperimentsOptInCall) composer.addAppCallMethodCall(legs.trustExperimentsOptInCall)
+      if (legs.needsExperimenterOptIn) composer.addAssetOptIn({ sender: activeAddress, assetId: params.assetId })
+      composer.addAppCallMethodCall(
+        await trustExperimentsClient.params.createVariation({
+          sender: activeAddress,
+          args: {
+            expId,
+            label: params.label,
+            e1: params.e1,
+            e2: params.e2,
+            multiplier: params.multiplier,
+            unit: params.unit,
+            assetId: params.assetId,
+            maxParticipants: params.maxParticipants ?? 0n,
+            mbrPayment: legs.mbrPayment,
+            escrowFunding: legs.escrowFunding,
+          },
+          maxFee: microAlgo(12_000),
+        }),
+      )
+
+      const result = await composer.send()
+      const returns = result.returns ?? []
+      const lastReturn = returns[returns.length - 1]
+      return lastReturn.returnValue as bigint
     },
     [trustExperimentsClient, algorand, activeAddress],
   )
