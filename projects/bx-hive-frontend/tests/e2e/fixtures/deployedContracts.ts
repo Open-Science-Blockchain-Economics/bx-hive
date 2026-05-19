@@ -7,6 +7,8 @@ const ENV_FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../../../.env
 export interface DeployedContracts {
   registryAppId: bigint
   trustExperimentsAppId: bigint
+  /** Mock USDC asset id minted in globalSetup. */
+  usdcAssetId: bigint
 }
 
 /**
@@ -29,5 +31,6 @@ export function readDeployedContracts(): DeployedContracts {
   return {
     registryAppId: match('VITE_REGISTRY_APP_ID'),
     trustExperimentsAppId: match('VITE_TRUST_EXPERIMENTS_APP_ID'),
+    usdcAssetId: match('VITE_USDC_ASSET_ID'),
   }
 }
