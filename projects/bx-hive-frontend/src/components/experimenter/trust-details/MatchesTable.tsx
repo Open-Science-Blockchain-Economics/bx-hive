@@ -4,11 +4,18 @@ import { Chip } from '@/components/ds/badge'
 import { PHASE_COMPLETED } from '../../../hooks/useTrustVariation'
 import type { Match } from '../../../hooks/useTrustVariation'
 import { truncateAddress } from '../../../utils/address'
-import { microAlgoToAlgo } from '../../../utils/amount'
+import AssetIcon from '../../AssetIcon'
+import { baseUnitsToWhole } from '../../../utils/amount'
 import { loraAccountUrl } from '../../../utils/lora'
 
 interface MatchesTableProps {
   matches: Match[]
+  /** Decimals of the variation's payout asset (6 for ALGO/USDC). */
+  decimals: number
+  /** Unit name of the variation's payout asset (e.g. "ALGO", "USDC"). */
+  unitName: string
+  /** Asset id (0n for native ALGO). */
+  assetId: bigint
 }
 
 function AddrLink({ address }: { address: string }) {
@@ -25,7 +32,17 @@ function AddrLink({ address }: { address: string }) {
   )
 }
 
-export default function MatchesTable({ matches }: MatchesTableProps) {
+export default function MatchesTable({ matches, decimals, unitName, assetId }: MatchesTableProps) {
+  const renderPayoutCell = (amount: bigint, completed: boolean) =>
+    completed ? (
+      <span className="inline-flex items-center justify-end gap-1.5">
+        {baseUnitsToWhole(amount, decimals).toFixed(3)} {unitName}
+        <AssetIcon assetId={assetId} unitName={unitName} className="size-3.5" />
+      </span>
+    ) : (
+      '—'
+    )
+
   return (
     <div>
       <h3 className="t-h2 mb-3">Matches ({matches.length})</h3>
@@ -63,12 +80,8 @@ export default function MatchesTable({ matches }: MatchesTableProps) {
                       <Chip tone="info">Investor deciding</Chip>
                     )}
                   </td>
-                  <td className="px-3 py-2 text-right font-mono">
-                    {m.phase === PHASE_COMPLETED ? `${microAlgoToAlgo(m.investorPayout).toFixed(3)} ALGO` : '—'}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono">
-                    {m.phase === PHASE_COMPLETED ? `${microAlgoToAlgo(m.trusteePayout).toFixed(3)} ALGO` : '—'}
-                  </td>
+                  <td className="px-3 py-2 text-right font-mono">{renderPayoutCell(m.investorPayout, m.phase === PHASE_COMPLETED)}</td>
+                  <td className="px-3 py-2 text-right font-mono">{renderPayoutCell(m.trusteePayout, m.phase === PHASE_COMPLETED)}</td>
                 </tr>
               ))}
             </tbody>

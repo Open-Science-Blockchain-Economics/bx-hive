@@ -7,6 +7,25 @@ import { useNetworkConfig, type NetworkConfig } from '../providers/NetworkProvid
 
 const ROLE_MAP = { experimenter: 0, participant: 1 } as const
 
+/** USDC asset id picked up at module load (LocalNet seed populates VITE_USDC_ASSET_ID). */
+function getConfiguredAssetId(): bigint | null {
+  const raw = import.meta.env.VITE_USDC_ASSET_ID
+  if (!raw) return null
+  try {
+    const id = BigInt(String(raw).trim())
+    return id > 0n ? id : null
+  } catch {
+    return null
+  }
+}
+
+export interface AccountAssetBalance {
+  assetId: bigint
+  amount: bigint
+  decimals: number
+  unitName: string
+}
+
 export type LocalnetAccountRole = 'experimenter' | 'participant'
 
 export interface LocalnetAccount {
@@ -15,6 +34,10 @@ export interface LocalnetAccount {
   registered: boolean
   role?: LocalnetAccountRole
   onChainName?: string
+  /** ALGO balance in microAlgos. `null` if the account isn't on-chain yet. */
+  balanceMicroAlgo: bigint | null
+  /** Configured asset balance (e.g. mock USDC). `null` if not opted in or no asset configured. */
+  assetBalance: AccountAssetBalance | null
 }
 
 interface KmdAccountEntry {
@@ -72,6 +95,43 @@ async function fetchKmdAccounts(config: NetworkConfig): Promise<KmdAccountsData>
   }
 }
 
+async function fetchAccountBalances(
+  config: NetworkConfig,
+  address: string,
+): Promise<{ balanceMicroAlgo: bigint | null; assetBalance: AccountAssetBalance | null }> {
+  const algorand = getAlgorandWithKmd(config)
+  let balanceMicroAlgo: bigint | null = null
+  try {
+    const info = await algorand.client.algod.accountInformation(address)
+    balanceMicroAlgo = info.amount
+  } catch {
+    // account hasn't been observed by algod yet — treat as 0
+  }
+
+  let assetBalance: AccountAssetBalance | null = null
+  const assetId = getConfiguredAssetId()
+  if (assetId) {
+    try {
+      const [holding, asset] = await Promise.all([
+        algorand.client.algod.accountAssetInformation(address, assetId),
+        algorand.client.algod.assetById(assetId),
+      ])
+      if (holding.assetHolding) {
+        assetBalance = {
+          assetId,
+          amount: holding.assetHolding.amount,
+          decimals: asset.params.decimals,
+          unitName: asset.params.unitName ?? '',
+        }
+      }
+    } catch {
+      // not opted in — leave null
+    }
+  }
+
+  return { balanceMicroAlgo, assetBalance }
+}
+
 async function fetchAccountRegistration(
   config: NetworkConfig,
   address: string,
@@ -126,14 +186,26 @@ export function useLocalnetAccounts() {
     })),
   })
 
-  // Merge KMD account entries with their registration status
+  // Query 3: Per-account ALGO + configured-asset balances
+  const balanceQueries = useQueries({
+    queries: kmdData.accounts.map((account) => ({
+      queryKey: [...queryKeys.localnetAccountBalances(account.address), configVersion],
+      queryFn: () => fetchAccountBalances(networkConfig, account.address),
+      enabled: kmdData.seeded,
+    })),
+  })
+
+  // Merge KMD account entries with their registration status and balances
   const accounts: LocalnetAccount[] = kmdData.accounts.map((account, index) => {
     const reg = registrationQueries[index]?.data
+    const bal = balanceQueries[index]?.data
     return {
       ...account,
       registered: reg?.registered ?? false,
       role: reg?.role,
       onChainName: reg?.onChainName,
+      balanceMicroAlgo: bal?.balanceMicroAlgo ?? null,
+      assetBalance: bal?.assetBalance ?? null,
     }
   })
 
@@ -156,6 +228,7 @@ export function useLocalnetAccounts() {
     },
     onSuccess: ({ address }) => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.localnetAccountRegistration(address) })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.localnetAccountBalances(address) })
     },
   })
 
@@ -168,6 +241,10 @@ export function useLocalnetAccounts() {
         receiver: address,
         amount: algo(amount),
       })
+      return { address }
+    },
+    onSuccess: ({ address }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.localnetAccountBalances(address) })
     },
   })
 
@@ -176,7 +253,7 @@ export function useLocalnetAccounts() {
     seeded: kmdData.seeded,
     registerAccount: (address: string, name: string, role: LocalnetAccountRole) =>
       registerMutation.mutateAsync({ address, name, role }).then(() => undefined),
-    fundAccount: (address: string, amount: number) => fundMutation.mutateAsync({ address, amount }),
+    fundAccount: (address: string, amount: number) => fundMutation.mutateAsync({ address, amount }).then(() => undefined),
     fundingInProgress: fundMutation.isPending,
     refresh: refetch,
   }

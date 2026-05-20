@@ -1,8 +1,9 @@
 import { Btn } from '@/components/ds/button'
 import { Panel } from '@/components/ds/card'
+import { useAssetMetadata } from '../../../hooks/useAssetMetadata'
 import type { Match, VariationConfig } from '../../../hooks/useTrustVariation'
 import { PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '../../../hooks/useTrustVariation'
-import { microAlgoToAlgo } from '../../../utils/amount'
+import { baseUnitsToWhole } from '../../../utils/amount'
 import InvestorInterface from './InvestorInterface'
 import ResultsDisplay from './ResultsDisplay'
 import TrusteeInterface from './TrusteeInterface'
@@ -37,10 +38,11 @@ function WaitingState({ title, children, onRefresh }: WaitingStateProps) {
 }
 
 export default function TrustExperiment({ appId, match, config, activeAddress, onRefresh }: TrustExperimentProps) {
-  const E1 = microAlgoToAlgo(config.e1)
-  const E2 = microAlgoToAlgo(config.e2)
+  const { decimals, unitName } = useAssetMetadata(config.assetId)
+  const E1 = baseUnitsToWhole(config.e1, decimals)
+  const E2 = baseUnitsToWhole(config.e2, decimals)
   const m = Number(config.multiplier)
-  const UNIT = microAlgoToAlgo(config.unit)
+  const UNIT = baseUnitsToWhole(config.unit, decimals)
 
   const isInvestor = match.investor === activeAddress
   const phase = match.phase
@@ -51,10 +53,10 @@ export default function TrustExperiment({ appId, match, config, activeAddress, o
         E1={E1}
         E2={E2}
         m={m}
-        investorDecision={microAlgoToAlgo(match.investment)}
-        trusteeDecision={microAlgoToAlgo(match.returnAmount)}
-        investorPayout={microAlgoToAlgo(match.investorPayout)}
-        trusteePayout={microAlgoToAlgo(match.trusteePayout)}
+        investorDecision={baseUnitsToWhole(match.investment, decimals)}
+        trusteeDecision={baseUnitsToWhole(match.returnAmount, decimals)}
+        investorPayout={baseUnitsToWhole(match.investorPayout, decimals)}
+        trusteePayout={baseUnitsToWhole(match.trusteePayout, decimals)}
         isInvestor={isInvestor}
       />
     )
@@ -62,7 +64,18 @@ export default function TrustExperiment({ appId, match, config, activeAddress, o
 
   if (phase === PHASE_INVESTOR_DECISION) {
     if (isInvestor) {
-      return <InvestorInterface appId={appId} matchId={match.matchId} E1={E1} m={m} UNIT={UNIT} onDecisionMade={onRefresh} />
+      return (
+        <InvestorInterface
+          appId={appId}
+          matchId={match.matchId}
+          E1={E1}
+          m={m}
+          UNIT={UNIT}
+          decimals={decimals}
+          unitName={unitName}
+          onDecisionMade={onRefresh}
+        />
+      )
     }
     return (
       <WaitingState title="Waiting for Investor" onRefresh={onRefresh}>
@@ -81,20 +94,28 @@ export default function TrustExperiment({ appId, match, config, activeAddress, o
           E2={E2}
           m={m}
           UNIT={UNIT}
-          investorDecision={microAlgoToAlgo(match.investment)}
+          decimals={decimals}
+          investorDecision={baseUnitsToWhole(match.investment, decimals)}
           onDecisionMade={onRefresh}
         />
       )
     }
-    const invested = microAlgoToAlgo(match.investment)
+    const invested = baseUnitsToWhole(match.investment, decimals)
     return (
       <WaitingState title="Waiting for Trustee" onRefresh={onRefresh}>
         <p>
-          You invested <span className="font-mono font-semibold text-foreground">{invested.toLocaleString()} ALGO</span>.
+          You invested{' '}
+          <span className="font-mono font-semibold text-foreground">
+            {invested.toLocaleString()} {unitName}
+          </span>
+          .
         </p>
         <p>
-          The Trustee received <span className="font-mono font-semibold text-foreground">{(invested * m).toLocaleString()} ALGO</span> and
-          is deciding how much to return.
+          The Trustee received{' '}
+          <span className="font-mono font-semibold text-foreground">
+            {(invested * m).toLocaleString()} {unitName}
+          </span>{' '}
+          and is deciding how much to return.
         </p>
       </WaitingState>
     )

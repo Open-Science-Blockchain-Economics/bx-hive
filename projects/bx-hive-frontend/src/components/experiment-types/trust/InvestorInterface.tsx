@@ -7,7 +7,7 @@ import { Rule } from '@/components/ds/separator'
 import { cn } from '@/lib/utils'
 import { useTrustVariation } from '../../../hooks/useTrustVariation'
 import { calculateInvestorRefund, calculateTrusteeReceived } from '../../../experiment-logic/trustExperiment'
-import { algoToMicroAlgo } from '../../../utils/amount'
+import { wholeToBaseUnits } from '../../../utils/amount'
 
 interface InvestorInterfaceProps {
   appId: bigint
@@ -15,6 +15,10 @@ interface InvestorInterfaceProps {
   E1: number
   m: number
   UNIT: number
+  /** Decimals of the variation's payout asset (6 for ALGO/USDC). */
+  decimals: number
+  /** Unit name of the variation's payout asset (e.g. "ALGO", "USDC"). */
+  unitName: string
   onDecisionMade: () => void
 }
 
@@ -40,7 +44,7 @@ function Stage({ num, label, state }: StageProps) {
   )
 }
 
-export default function InvestorInterface({ appId, matchId, E1, m, UNIT, onDecisionMade }: InvestorInterfaceProps) {
+export default function InvestorInterface({ appId, matchId, E1, m, UNIT, decimals, unitName, onDecisionMade }: InvestorInterfaceProps) {
   const { submitInvestorDecision } = useTrustVariation()
   const [investment, setInvestment] = useState(0)
   const [submitting, setSubmitting] = useState(false)
@@ -53,7 +57,7 @@ export default function InvestorInterface({ appId, matchId, E1, m, UNIT, onDecis
     setError(null)
     try {
       setSubmitting(true)
-      await submitInvestorDecision(appId, matchId, algoToMicroAlgo(investment))
+      await submitInvestorDecision(appId, matchId, wholeToBaseUnits(investment, decimals))
       onDecisionMade()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit decision')
@@ -89,7 +93,9 @@ export default function InvestorInterface({ appId, matchId, E1, m, UNIT, onDecis
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
         <Panel padded={false} className="p-4 border-primary/35 bg-accent">
           <div className="t-micro mb-1">Your Endowment</div>
-          <div className="font-mono text-3xl font-medium leading-none tracking-[-0.01em] text-primary">{E1.toLocaleString()} ALGO</div>
+          <div className="font-mono text-3xl font-medium leading-none tracking-[-0.01em] text-primary">
+            {E1.toLocaleString()} {unitName}
+          </div>
           <div className="text-xs text-muted-foreground mt-1.5">to invest</div>
         </Panel>
         <Panel padded={false} className="p-4">
