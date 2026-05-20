@@ -13,7 +13,7 @@ import { getVariationLabel } from '../../db'
 import { experimentTemplates, getTemplateById } from '../../experiment-logic/templates'
 import type { AssetMetadata } from '../../hooks/useAssetMetadata'
 import type { ParameterVariation } from '../../types'
-import { computeEscrowWhole, generateVariationCombinations, toVariationParams } from '../../utils/trustGameCalc'
+import { computeAlgoRequired, computeEscrowWhole, generateVariationCombinations, toVariationParams } from '../../utils/trustGameCalc'
 import InfoAlert from '../ui/InfoAlert'
 import FundingSummary from './FundingSummary'
 import PayoutAssetPicker, { defaultPayoutAsset } from './PayoutAssetPicker'
@@ -192,17 +192,17 @@ export default function CreateExperimentForm({
 
   const maxPayout = (Number(parameters.E1) || 0) * (Number(parameters.m) || 1) + (Number(parameters.E2) || 0)
 
-  const totalEscrowAlgo = (() => {
-    if (!maxPerVariation || Number(maxPerVariation) < 1) return 0
+  const { algoRequired } = (() => {
+    if (!maxPerVariation || Number(maxPerVariation) < 1) return { algoRequired: 0 }
     const maxSub = Number(maxPerVariation) * 2
     const combos =
       batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
         ? generateVariationCombinations(parameters, variations)
         : [parameters]
-    return combos.reduce((sum, combo) => sum + computeEscrowWhole(combo, maxSub), 0)
+    return computeAlgoRequired(combos, maxSub, payoutAsset.assetId === 0n)
   })()
 
-  const insufficientBalance = walletBalanceAlgo !== null && totalEscrowAlgo > 0 && totalEscrowAlgo > walletBalanceAlgo
+  const insufficientBalance = walletBalanceAlgo !== null && algoRequired > 0 && algoRequired > walletBalanceAlgo
   const hasBatch = batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
   const variationCount = hasBatch ? variations.reduce((acc, v) => acc * v.values.length, 1) : 1
   const submitLabel = hasBatch ? `Deploy with ${variationCount} variations` : 'Deploy experiment'

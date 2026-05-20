@@ -38,6 +38,23 @@ export function computeMatchMbrAlgo(maxParticipants: number): number {
 }
 
 /**
+ * Up-front ALGO the experimenter wallet must hold to submit. Escrow only
+ * counts when the payout asset is ALGO; MBR is always ALGO. The ASA balance
+ * check for non-ALGO escrows is the experimenter's responsibility (the
+ * FundingSummary surfaces a note).
+ */
+export function computeAlgoRequired(
+  combos: Record<string, number | string>[],
+  maxParticipants: number,
+  isAlgoPayout: boolean,
+): { totalEscrowWhole: number; totalMatchMbrAlgo: number; algoRequired: number } {
+  const totalEscrowWhole = combos.reduce((sum, c) => sum + computeEscrowWhole(c, maxParticipants), 0)
+  const totalMatchMbrAlgo = combos.length * computeMatchMbrAlgo(maxParticipants)
+  const algoRequired = (isAlgoPayout ? totalEscrowWhole : 0) + totalMatchMbrAlgo
+  return { totalEscrowWhole, totalMatchMbrAlgo, algoRequired }
+}
+
+/**
  * Convert trust-game frontend params (whole-units numbers) to contract args
  * (base-units bigints) for the chosen payout asset.
  */

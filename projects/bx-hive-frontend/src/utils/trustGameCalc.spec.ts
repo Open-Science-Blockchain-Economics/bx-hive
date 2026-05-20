@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { computeEscrowWhole, computeMatchMbrAlgo, generateVariationCombinations, toVariationParams } from './trustGameCalc'
+import {
+  computeAlgoRequired,
+  computeEscrowWhole,
+  computeMatchMbrAlgo,
+  generateVariationCombinations,
+  toVariationParams,
+} from './trustGameCalc'
 
 describe('generateVariationCombinations', () => {
   it('expands a factorial combination of parameter variations', () => {
@@ -81,5 +87,61 @@ describe('toVariationParams', () => {
     const out = toVariationParams(base, 'v1', 7, 1000)
     expect(out.label).toBe('v1')
     expect(out.maxParticipants).toBe(7n)
+  })
+})
+
+describe('computeAlgoRequired', () => {
+  const oneCombo = [{ E1: 100, E2: 50, m: 3 }]
+
+  it('counts escrow when payout asset is ALGO', () => {
+    // maxParticipants=10 → 5 pairs → escrow=(100*3+50)*5=1750 ALGO; MBR=5*0.0883
+    const out = computeAlgoRequired(oneCombo, 10, true)
+    expect(out.totalEscrowWhole).toBe(1750)
+    expect(out.totalMatchMbrAlgo).toBeCloseTo(0.4415, 6)
+    expect(out.algoRequired).toBeCloseTo(1750.4415, 6)
+  })
+
+  it('excludes escrow from the ALGO requirement when payout asset is NOT ALGO', () => {
+    // Regression: a 1750-USDC escrow + 0.44-ALGO MBR should only count the MBR
+    // toward the wallet's ALGO requirement, not 1750. (Previously this was
+    // treated as 1750 ALGO required, breaking the Deploy button for any
+    // non-trivial USDC experiment whose wallet had less than the USDC count
+    // in ALGO.)
+    const out = computeAlgoRequired(oneCombo, 10, false)
+    expect(out.totalEscrowWhole).toBe(1750)
+    expect(out.totalMatchMbrAlgo).toBeCloseTo(0.4415, 6)
+    expect(out.algoRequired).toBeCloseTo(0.4415, 6)
+  })
+
+  it('regression: large USDC escrow with a small ALGO wallet does not block submission', () => {
+    // Mirrors the reported issue: 3 batch variations, maxParticipants=10
+    // (5 pairs/variation), E1=100, E2=0 across m ∈ {3,4,5}. Escrow per
+    // variation: 1500 / 2000 / 2500 USDC; total 6000 USDC. MBR per variation:
+    // 0.4415 ALGO; total 1.3245 ALGO. (Matches the Funding Summary the user
+    // saw with the Deploy button incorrectly disabled.)
+    const combos = [
+      { E1: 100, E2: 0, m: 3 },
+      { E1: 100, E2: 0, m: 4 },
+      { E1: 100, E2: 0, m: 5 },
+    ]
+    const usdc = computeAlgoRequired(combos, 10, false)
+    const algo = computeAlgoRequired(combos, 10, true)
+
+    expect(usdc.totalEscrowWhole).toBe(6000)
+    expect(usdc.algoRequired).toBeCloseTo(1.3245, 4)
+    expect(algo.algoRequired).toBeCloseTo(6001.3245, 4)
+
+    // A typical seeded wallet has ~10 ALGO. The USDC case must NOT be flagged
+    // insufficient against that balance; the ALGO case obviously is.
+    const walletAlgo = 10
+    expect(usdc.algoRequired <= walletAlgo).toBe(true)
+    expect(algo.algoRequired <= walletAlgo).toBe(false)
+  })
+
+  it('returns zeros for an empty combo list', () => {
+    const out = computeAlgoRequired([], 10, true)
+    expect(out.totalEscrowWhole).toBe(0)
+    expect(out.totalMatchMbrAlgo).toBe(0)
+    expect(out.algoRequired).toBe(0)
   })
 })

@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils'
 import { getVariationLabel } from '../../db'
 import type { AssetMetadata } from '../../hooks/useAssetMetadata'
 import type { ParameterVariation } from '../../types'
-import { computeEscrowWhole, computeMatchMbrAlgo, generateVariationCombinations } from '../../utils/trustGameCalc'
+import { computeAlgoRequired, computeEscrowWhole, computeMatchMbrAlgo, generateVariationCombinations } from '../../utils/trustGameCalc'
 
 interface FundingSummaryProps {
   parameters: Record<string, number | string>
@@ -38,13 +38,8 @@ export default function FundingSummary({
     matchMbr: matchMbrPerVar,
     index: i,
   }))
-  const totalEscrow = rows.reduce((sum, r) => sum + r.escrow, 0)
-  const totalMatchMbr = rows.reduce((sum, r) => sum + r.matchMbr, 0)
   const isAlgo = payoutAsset.assetId === 0n
-  // The wallet's ALGO balance must cover MBR (always) plus escrow (only when
-  // escrow is in ALGO). For ASA experiments, the experimenter is responsible
-  // for holding sufficient ASA balance separately.
-  const algoRequired = isAlgo ? totalEscrow + totalMatchMbr : totalMatchMbr
+  const { totalEscrowWhole: totalEscrow, totalMatchMbrAlgo: totalMatchMbr, algoRequired } = computeAlgoRequired(combos, maxSub, isAlgo)
   const insufficient = walletBalanceAlgo !== null && algoRequired > walletBalanceAlgo
 
   return (
