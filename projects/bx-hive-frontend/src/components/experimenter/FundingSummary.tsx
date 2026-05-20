@@ -13,6 +13,8 @@ interface FundingSummaryProps {
   walletBalanceAlgo: number | null
   /** Payout asset selected in the picker. */
   payoutAsset: AssetMetadata
+  /** Whole-unit balance of the picked non-ALGO asset; null while loading or for ALGO. */
+  walletAssetBalance?: number | null
 }
 
 export default function FundingSummary({
@@ -22,6 +24,7 @@ export default function FundingSummary({
   maxPerVariation,
   walletBalanceAlgo,
   payoutAsset,
+  walletAssetBalance = null,
 }: FundingSummaryProps) {
   const maxSub = Number(maxPerVariation)
   if (!maxPerVariation || maxSub < 2) return null
@@ -41,6 +44,7 @@ export default function FundingSummary({
   const isAlgo = payoutAsset.assetId === 0n
   const { totalEscrowWhole: totalEscrow, totalMatchMbrAlgo: totalMatchMbr, algoRequired } = computeAlgoRequired(combos, maxSub, isAlgo)
   const insufficient = walletBalanceAlgo !== null && algoRequired > walletBalanceAlgo
+  const insufficientAsset = !isAlgo && walletAssetBalance !== null && walletAssetBalance < totalEscrow
 
   return (
     <div className="mt-6">
@@ -87,13 +91,25 @@ export default function FundingSummary({
         role="alert"
         className={cn(
           'mt-3 rounded-sm border px-3 py-2.5 text-sm',
-          insufficient ? 'border-neg/35 bg-neg-bg text-neg' : 'border-info/35 bg-info-bg text-info',
+          insufficient || insufficientAsset ? 'border-neg/35 bg-neg-bg text-neg' : 'border-info/35 bg-info-bg text-info',
         )}
       >
         {insufficient ? (
           <>
             Insufficient ALGO balance. You need <strong>{algoRequired.toFixed(4)} ALGO</strong> in your wallet but only have{' '}
             <strong>{walletBalanceAlgo!.toFixed(2)} ALGO</strong>. Add funds before creating this experiment.
+          </>
+        ) : insufficientAsset ? (
+          <>
+            Insufficient {payoutAsset.unitName} balance. You need{' '}
+            <strong>
+              {totalEscrow} {payoutAsset.unitName}
+            </strong>{' '}
+            but only have{' '}
+            <strong>
+              {walletAssetBalance!.toFixed(2)} {payoutAsset.unitName}
+            </strong>
+            . Add funds before creating this experiment.
           </>
         ) : isAlgo ? (
           <>
