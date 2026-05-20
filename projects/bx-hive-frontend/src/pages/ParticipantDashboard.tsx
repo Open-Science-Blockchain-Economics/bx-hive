@@ -157,7 +157,7 @@ export default function ParticipantDashboard() {
     <div>
       <div className="mb-8">
         <h1 className="t-h1">{activeUser?.name ? `${activeUser.name}'s Dashboard` : 'My Dashboard'}</h1>
-        <p className="text-sm text-muted-foreground mt-1">View and participate in experiments</p>
+        <p className="text-sm text-muted-foreground mt-1">Pick an experiment to play, or check on the ones you've joined.</p>
       </div>
 
       <div className="flex flex-col gap-8">
