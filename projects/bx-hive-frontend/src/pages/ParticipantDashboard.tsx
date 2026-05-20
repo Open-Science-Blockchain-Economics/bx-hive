@@ -47,6 +47,16 @@ export default function ParticipantDashboard() {
       const matchViews: OnChainMatchView[] = []
       const expViews: OnChainExperimentView[] = []
 
+      const configCache = new Map<bigint, ReturnType<typeof getConfig>>()
+      const config = (appId: bigint) => {
+        let p = configCache.get(appId)
+        if (!p) {
+          p = getConfig(appId)
+          configCache.set(appId, p)
+        }
+        return p
+      }
+
       for (const group of groups) {
         const vars = await listVariations(group.expId, Number(group.variationCount))
         let enrolled = false
@@ -55,8 +65,8 @@ export default function ParticipantDashboard() {
         for (const v of vars) {
           const match = await getPlayerMatch(v.appId, activeAddress!)
           if (match) {
-            const config = await getConfig(v.appId)
-            matchViews.push({ appId: v.appId, match, assetId: config.assetId })
+            const cfg = await config(v.appId)
+            matchViews.push({ appId: v.appId, match, assetId: cfg.assetId })
             enrolled = true
             hasMatch = true
           }
@@ -77,11 +87,11 @@ export default function ParticipantDashboard() {
 
         const slots: VariationSlot[] = await Promise.all(
           vars.map(async (v) => {
-            const [count, config] = await Promise.all([getParticipantCount(v.appId), getConfig(v.appId)])
+            const [count, cfg] = await Promise.all([getParticipantCount(v.appId), config(v.appId)])
             return {
               appId: v.appId,
               participantCount: count,
-              maxParticipants: Number(config.maxParticipants),
+              maxParticipants: Number(cfg.maxParticipants),
             }
           }),
         )
