@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Check, Loader2 } from 'lucide-react'
 
 import { Btn } from '@/components/ds/button'
@@ -11,8 +11,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip
 import { cn } from '@/lib/utils'
 import { getVariationLabel } from '../../db'
 import { experimentTemplates, getTemplateById } from '../../experiment-logic/templates'
+import { useAlgorand } from '../../hooks/useAlgorand'
 import type { AssetMetadata } from '../../hooks/useAssetMetadata'
 import type { ParameterVariation } from '../../types'
+import { baseUnitsToWhole } from '../../utils/amount'
 import { computeAlgoRequired, computeEscrowWhole, generateVariationCombinations, toVariationParams } from '../../utils/trustGameCalc'
 import InfoAlert from '../ui/InfoAlert'
 import FundingSummary from './FundingSummary'
@@ -115,6 +117,25 @@ export default function CreateExperimentForm({
   const [variations, setVariations] = useState<ParameterVariation[]>([])
   const [maxPerVariation, setMaxPerVariation] = useState<string>('')
   const [payoutAsset, setPayoutAsset] = useState<AssetMetadata>(defaultPayoutAsset)
+
+  const { algorand, activeAddress } = useAlgorand()
+  // Holds the experimenter's whole-unit balance of the picked non-ALGO asset, or
+  // null while loading / when the asset is ALGO (the ALGO balance is already in
+  // walletBalanceAlgo). FundingSummary uses this to warn before submission.
+  const { data: walletAssetBalance = null } = useQuery({
+    queryKey: ['create-experiment-asset-balance', activeAddress, String(payoutAsset.assetId)],
+    enabled: !!activeAddress && !!algorand && payoutAsset.assetId !== 0n,
+    queryFn: async () => {
+      try {
+        const holding = await algorand!.client.algod.accountAssetInformation(activeAddress!, payoutAsset.assetId)
+        if (!holding.assetHolding) return 0
+        return baseUnitsToWhole(holding.assetHolding.amount, payoutAsset.decimals)
+      } catch {
+        // not opted in yet — treat as zero so the warning fires
+        return 0
+      }
+    },
+  })
 
   const selectedTemplate = getTemplateById(selectedTemplateId)
 
@@ -332,6 +353,7 @@ export default function CreateExperimentForm({
               batchModeEnabled={batchModeEnabled}
               maxPerVariation={maxPerVariation}
               walletBalanceAlgo={walletBalanceAlgo}
+              walletAssetBalance={walletAssetBalance}
               payoutAsset={payoutAsset}
             />
             {(error ?? validationError) && (
