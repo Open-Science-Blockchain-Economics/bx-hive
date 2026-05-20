@@ -1,3 +1,4 @@
+import { TEST_WALLET_NAME } from '../../src/lib/constants'
 import { TrustVariationClient } from '../../src/contracts/TrustVariation'
 import { ownerCreateMatch } from '../integration/helpers/operations'
 import { expect, test } from './fixtures'
@@ -51,6 +52,15 @@ test('full USDC round-trip: picker + bundled opt-ins + asset-transfer payouts', 
     assetId: usdc,
     amount: 10_000n * BASE,
   })
+
+  // Restore the experimenter as the default signer so any later algorand.send.*
+  // calls in this spec (and anything reading the default signer) behave as
+  // expected. The fixture is per-spec, so this only affects this test.
+  const experimenterSigner = await algorand.account.kmd.getWalletAccount(
+    TEST_WALLET_NAME,
+    (a) => a.address.toString() === experimenter.address,
+  )
+  if (experimenterSigner) algorand.setSignerFromAccount(experimenterSigner)
 
   const { expId, variationAppId } = await createExperimentAndVariation(page, algorand, experimenter.address, {
     name: `e2e-usdc-${Date.now()}`,
