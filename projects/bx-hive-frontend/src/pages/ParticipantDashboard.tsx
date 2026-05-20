@@ -161,20 +161,12 @@ export default function ParticipantDashboard() {
       </div>
 
       <div className="flex flex-col gap-8">
-        {joinableExperiments.length > 0 && (
+        {activeOnChain.length > 0 && (
           <section>
-            <Rule label="Trust Game — Available" className="mb-4" />
+            <Rule label="Trust Game — Active" className="mb-4" />
             <div className="grid gap-3">
-              {joinableExperiments.map(({ group, variations, slots, isFull }) => (
-                <JoinableExperimentCard
-                  key={group.expId}
-                  group={group}
-                  variations={variations}
-                  isFull={isFull}
-                  joining={joinMutation.isPending ? (joinMutation.variables?.expId ?? null) : null}
-                  joinError={getJoinError(group.expId)}
-                  onJoin={(expId) => joinMutation.mutate({ expId, slots })}
-                />
+              {activeOnChain.map(({ appId, match }) => (
+                <ActiveMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
               ))}
             </div>
           </section>
@@ -191,12 +183,20 @@ export default function ParticipantDashboard() {
           </section>
         )}
 
-        {activeOnChain.length > 0 && (
+        {joinableExperiments.length > 0 && (
           <section>
-            <Rule label="Trust Game — Active" className="mb-4" />
+            <Rule label="Trust Game — Available" className="mb-4" />
             <div className="grid gap-3">
-              {activeOnChain.map(({ appId, match }) => (
-                <ActiveMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
+              {joinableExperiments.map(({ group, variations, slots, isFull }) => (
+                <JoinableExperimentCard
+                  key={group.expId}
+                  group={group}
+                  variations={variations}
+                  isFull={isFull}
+                  joining={joinMutation.isPending ? (joinMutation.variables?.expId ?? null) : null}
+                  joinError={getJoinError(group.expId)}
+                  onJoin={(expId) => joinMutation.mutate({ expId, slots })}
+                />
               ))}
             </div>
           </section>
