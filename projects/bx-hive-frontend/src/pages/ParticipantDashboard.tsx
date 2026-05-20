@@ -6,6 +6,7 @@ import ActiveMatchCard from '../components/participant/ActiveMatchCard'
 import CompletedMatchCard from '../components/participant/CompletedMatchCard'
 import EnrolledWaitingCard from '../components/participant/EnrolledWaitingCard'
 import JoinableExperimentCard from '../components/participant/JoinableExperimentCard'
+import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
@@ -36,6 +37,7 @@ interface OnChainData {
 
 export default function ParticipantDashboard() {
   const { activeAddress } = useAlgorand()
+  const { activeUser } = useActiveUser()
   const { listExperiments, listVariations } = useTrustExperiments()
   const { getPlayerMatch, selfEnroll, getParticipantCount, getConfig, isParticipantEnrolled } = useTrustVariation()
   const queryClient = useQueryClient()
@@ -154,7 +156,7 @@ export default function ParticipantDashboard() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="t-h1">Participant Dashboard</h1>
+        <h1 className="t-h1">{activeUser?.name ? `${activeUser.name}'s Dashboard` : 'My Dashboard'}</h1>
         <p className="text-sm text-muted-foreground mt-1">View and participate in experiments</p>
       </div>
 
