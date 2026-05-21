@@ -208,7 +208,7 @@ export default function CreateExperimentForm({
   const validationError = !experimentName.trim()
     ? 'Experiment name is required'
     : !maxPerVariation || Number(maxPerVariation) < 1
-      ? 'Max matches per variation must be at least 1'
+      ? 'Matches per variation must be at least 1'
       : null
 
   const maxPayout = (Number(parameters.E1) || 0) * (Number(parameters.m) || 1) + (Number(parameters.E2) || 0)
@@ -289,7 +289,7 @@ export default function CreateExperimentForm({
           <Step n={3} title="Configure base parameters" state={stateForStep(2)}>
             <TrustGameParameters parameters={parameters} onChange={handleParameterChange} />
             <div className="mt-5 max-w-xs">
-              <Field label="Participants target" hint="max matches per variation" htmlFor="max-per-variation" required>
+              <Field label="Matches per variation" hint="Each match runs 2 participants" htmlFor="max-per-variation" required>
                 <Input
                   id="max-per-variation"
                   mono

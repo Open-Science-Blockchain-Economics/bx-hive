@@ -212,7 +212,7 @@ export default function TrustExperimentDetails() {
                 }}
               >
                 {autoRefresh ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-                {autoRefresh ? 'Pause' : 'Resume'}
+                {autoRefresh ? 'Pause updates' : 'Resume updates'}
               </Btn>
             </TooltipTrigger>
             <TooltipContent side="bottom">{autoRefresh ? 'Pause auto-refresh' : 'Resume auto-refresh (every 5s)'}</TooltipContent>

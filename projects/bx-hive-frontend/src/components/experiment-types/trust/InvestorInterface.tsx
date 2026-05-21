@@ -124,6 +124,9 @@ export default function InvestorInterface({ appId, matchId, E1, m, UNIT, decimal
           </div>
         ) : (
           <div className="flex flex-col gap-2">
+            <div className="text-center font-mono text-xl font-medium tabular-nums text-primary" aria-live="polite">
+              {investment.toLocaleString()}
+            </div>
             <input
               type="range"
               min={0}
@@ -136,7 +139,6 @@ export default function InvestorInterface({ appId, matchId, E1, m, UNIT, decimal
             />
             <div className="flex justify-between text-xs text-muted-foreground font-mono">
               <span>0</span>
-              <span className="font-bold text-base text-primary">{investment.toLocaleString()}</span>
               <span>{E1.toLocaleString()}</span>
             </div>
           </div>

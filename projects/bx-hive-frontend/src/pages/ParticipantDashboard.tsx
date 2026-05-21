@@ -6,6 +6,7 @@ import ActiveMatchCard from '../components/participant/ActiveMatchCard'
 import CompletedMatchCard from '../components/participant/CompletedMatchCard'
 import EnrolledWaitingCard from '../components/participant/EnrolledWaitingCard'
 import JoinableExperimentCard from '../components/participant/JoinableExperimentCard'
+import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
@@ -36,6 +37,7 @@ interface OnChainData {
 
 export default function ParticipantDashboard() {
   const { activeAddress } = useAlgorand()
+  const { activeUser } = useActiveUser()
   const { listExperiments, listVariations } = useTrustExperiments()
   const { getPlayerMatch, selfEnroll, getParticipantCount, getConfig, isParticipantEnrolled } = useTrustVariation()
   const queryClient = useQueryClient()
@@ -154,25 +156,17 @@ export default function ParticipantDashboard() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="t-h1">Participant Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">View and participate in experiments</p>
+        <h1 className="t-h1">{activeUser?.name ? `${activeUser.name}'s Dashboard` : 'My Dashboard'}</h1>
+        <p className="text-sm text-muted-foreground mt-1">Pick an experiment to play, or check on the ones you've joined.</p>
       </div>
 
       <div className="flex flex-col gap-8">
-        {joinableExperiments.length > 0 && (
+        {activeOnChain.length > 0 && (
           <section>
-            <Rule label="Trust Game — Available" className="mb-4" />
+            <Rule label="Trust Game — Active" className="mb-4" />
             <div className="grid gap-3">
-              {joinableExperiments.map(({ group, variations, slots, isFull }) => (
-                <JoinableExperimentCard
-                  key={group.expId}
-                  group={group}
-                  variations={variations}
-                  isFull={isFull}
-                  joining={joinMutation.isPending ? (joinMutation.variables?.expId ?? null) : null}
-                  joinError={getJoinError(group.expId)}
-                  onJoin={(expId) => joinMutation.mutate({ expId, slots })}
-                />
+              {activeOnChain.map(({ appId, match }) => (
+                <ActiveMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
               ))}
             </div>
           </section>
@@ -189,12 +183,20 @@ export default function ParticipantDashboard() {
           </section>
         )}
 
-        {activeOnChain.length > 0 && (
+        {joinableExperiments.length > 0 && (
           <section>
-            <Rule label="Trust Game — Active" className="mb-4" />
+            <Rule label="Trust Game — Available" className="mb-4" />
             <div className="grid gap-3">
-              {activeOnChain.map(({ appId, match }) => (
-                <ActiveMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
+              {joinableExperiments.map(({ group, variations, slots, isFull }) => (
+                <JoinableExperimentCard
+                  key={group.expId}
+                  group={group}
+                  variations={variations}
+                  isFull={isFull}
+                  joining={joinMutation.isPending ? (joinMutation.variables?.expId ?? null) : null}
+                  joinError={getJoinError(group.expId)}
+                  onJoin={(expId) => joinMutation.mutate({ expId, slots })}
+                />
               ))}
             </div>
           </section>
