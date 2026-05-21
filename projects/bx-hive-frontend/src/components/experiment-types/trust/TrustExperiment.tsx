@@ -35,19 +35,23 @@ function refreshLabel(dataUpdatedAt: number, refreshIntervalMs: number, now: num
 }
 
 function WaitingState({ title, children, dataUpdatedAt, refreshIntervalMs }: WaitingStateProps) {
-  const [now, setNow] = useState(() => Date.now())
+  // Store the computed label rather than `now`: React.setState bails on identical strings,
+  // so the 250ms tick only triggers a re-render when the displayed text actually changes.
+  const [label, setLabel] = useState(() => refreshLabel(dataUpdatedAt, refreshIntervalMs, Date.now()))
 
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 250)
+    const tick = () => setLabel(refreshLabel(dataUpdatedAt, refreshIntervalMs, Date.now()))
+    tick()
+    const id = setInterval(tick, 250)
     return () => clearInterval(id)
-  }, [])
+  }, [dataUpdatedAt, refreshIntervalMs])
 
   return (
     <Panel className="text-center">
       <h2 className="t-h1 mb-3">{title}</h2>
       <div className="text-sm text-muted-foreground mb-2 flex flex-col gap-2">{children}</div>
       <p className="text-sm text-muted-foreground mt-3">You can leave this page and come back later — your match will be waiting.</p>
-      <p className="text-xs text-muted-foreground mt-4 tabular-nums">{refreshLabel(dataUpdatedAt, refreshIntervalMs, now)}</p>
+      <p className="text-xs text-muted-foreground mt-4 tabular-nums">{label}</p>
     </Panel>
   )
 }
