@@ -289,7 +289,7 @@ export default function CreateExperimentForm({
           <Step n={3} title="Configure base parameters" state={stateForStep(2)}>
             <TrustGameParameters parameters={parameters} onChange={handleParameterChange} />
             <div className="mt-5 max-w-xs">
-              <Field label="Participants target" hint="max matches per variation" htmlFor="max-per-variation" required>
+              <Field label="Matches per variation" hint="Each match runs 2 participants" htmlFor="max-per-variation" required>
                 <Input
                   id="max-per-variation"
                   mono
