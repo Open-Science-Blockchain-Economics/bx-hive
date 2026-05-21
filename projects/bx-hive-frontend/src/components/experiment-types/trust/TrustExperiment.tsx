@@ -52,7 +52,15 @@ function WaitingState({ title, children, dataUpdatedAt, refreshIntervalMs }: Wai
   )
 }
 
-export default function TrustExperiment({ appId, match, config, activeAddress, dataUpdatedAt, refreshIntervalMs, onRefresh }: TrustExperimentProps) {
+export default function TrustExperiment({
+  appId,
+  match,
+  config,
+  activeAddress,
+  dataUpdatedAt,
+  refreshIntervalMs,
+  onRefresh,
+}: TrustExperimentProps) {
   const { decimals, unitName } = useAssetMetadata(config.assetId)
   const E1 = baseUnitsToWhole(config.e1, decimals)
   const E2 = baseUnitsToWhole(config.e2, decimals)
