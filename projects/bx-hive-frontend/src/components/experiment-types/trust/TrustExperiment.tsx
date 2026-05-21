@@ -46,6 +46,7 @@ function WaitingState({ title, children, dataUpdatedAt, refreshIntervalMs }: Wai
     <Panel className="text-center">
       <h2 className="t-h1 mb-3">{title}</h2>
       <div className="text-sm text-muted-foreground mb-2 flex flex-col gap-2">{children}</div>
+      <p className="text-sm text-muted-foreground mt-3">You can leave this page and come back later — your match will be waiting.</p>
       <p className="text-xs text-muted-foreground mt-4 tabular-nums">{refreshLabel(dataUpdatedAt, refreshIntervalMs, now)}</p>
     </Panel>
   )
