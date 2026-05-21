@@ -17,6 +17,8 @@ import { renderInstructions, trustVariationTokens } from '../lib/renderInstructi
 
 // ── On-chain Trust Game view ─────────────────────────────────────────────────
 
+const REFRESH_INTERVAL_MS = 5000
+
 function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddress: string }) {
   const [showInstructions, setShowInstructions] = useState(true)
   const { getPlayerMatch, getConfig } = useTrustVariation()
@@ -26,6 +28,7 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
     isLoading,
     error: queryError,
     refetch,
+    dataUpdatedAt,
   } = useQuery({
     queryKey: queryKeys.playerMatch(appId, activeAddress),
     queryFn: async () => {
@@ -33,7 +36,7 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
       if (!match) throw new Error('You are not matched in this variation yet.')
       return { match, config } as { match: NonNullable<Awaited<ReturnType<typeof getPlayerMatch>>>; config: VariationConfig }
     },
-    refetchInterval: 3000,
+    refetchInterval: REFRESH_INTERVAL_MS,
   })
 
   if (isLoading) {
@@ -71,6 +74,8 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
         match={data.match}
         config={data.config}
         activeAddress={activeAddress}
+        dataUpdatedAt={dataUpdatedAt}
+        refreshIntervalMs={REFRESH_INTERVAL_MS}
         onRefresh={() => void refetch()}
       />
     </div>
