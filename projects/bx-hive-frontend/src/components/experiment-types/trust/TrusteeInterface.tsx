@@ -153,6 +153,9 @@ export default function TrusteeInterface({
           </div>
         ) : (
           <div className="flex flex-col gap-2">
+            <div className="text-center font-mono text-xl font-medium tabular-nums text-primary" aria-live="polite">
+              {returnAmount.toLocaleString()}
+            </div>
             <input
               type="range"
               min={0}
@@ -165,7 +168,6 @@ export default function TrusteeInterface({
             />
             <div className="flex justify-between text-xs text-muted-foreground font-mono">
               <span>0</span>
-              <span className="font-bold text-base text-primary">{returnAmount.toLocaleString()}</span>
               <span>{received.toLocaleString()}</span>
             </div>
           </div>
