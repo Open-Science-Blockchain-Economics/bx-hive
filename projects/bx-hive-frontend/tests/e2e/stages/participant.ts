@@ -9,7 +9,7 @@ async function gotoParticipantDashboard(page: Page, participant: KmdAccount): Pr
     .getByRole('link', { name: /^Dashboard$/i })
     .first()
     .click()
-  await page.getByRole('heading', { name: /Participant Dashboard/i }).waitFor()
+  await page.getByRole('heading', { name: /Dashboard$/i }).waitFor()
 }
 
 /**

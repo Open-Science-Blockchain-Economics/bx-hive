@@ -66,9 +66,7 @@ export async function createExperimentAndVariation(
     await page.getByLabel(/Step Size/i).fill(String(params.unitAlgo))
   }
 
-  // Field renamed from "Max matches per variation" to "Participants target" (with
-  // hint "max matches per variation"). Match against the hint text via getByLabel.
-  await page.getByLabel(/Participants target/i).fill(String(params.maxMatchesPerVariation))
+  await page.getByLabel(/Matches per variation/i).fill(String(params.maxMatchesPerVariation))
 
   // Step 4: pick the payout asset from the dropdown. Native <select>, so we
   // can drive it via selectOption with the displayed unit-name label.

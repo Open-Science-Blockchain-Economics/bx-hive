@@ -208,7 +208,7 @@ export default function CreateExperimentForm({
   const validationError = !experimentName.trim()
     ? 'Experiment name is required'
     : !maxPerVariation || Number(maxPerVariation) < 1
-      ? 'Max matches per variation must be at least 1'
+      ? 'Matches per variation must be at least 1'
       : null
 
   const maxPayout = (Number(parameters.E1) || 0) * (Number(parameters.m) || 1) + (Number(parameters.E2) || 0)
