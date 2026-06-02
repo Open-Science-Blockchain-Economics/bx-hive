@@ -1,4 +1,4 @@
-import { Download, Play } from 'lucide-react'
+import { Download } from 'lucide-react'
 
 import { HexGrid } from '@/components/ds/hex-grid'
 import { HexMark } from '@/components/ds/hex-mark'
@@ -48,11 +48,15 @@ export default function About() {
             <span className="font-display italic font-normal text-primary">behavioral economics lab</span>.
           </h1>
           <div>
-            {/* TODO: replace placeholder with embedded platform tour video */}
-            <div className="aspect-video w-full bg-foreground text-background grid place-items-center rounded-2xl">
-              <Play className="size-16" strokeWidth={1.2} />
-            </div>
-            <p className="font-ui text-[15px] text-muted-foreground mt-4">90 seconds — what bxHive does.</p>
+            <video
+              src="/about-split.mp4"
+              poster="/about-split-poster.jpg"
+              className="aspect-video w-full rounded-2xl bg-foreground"
+              controls
+              preload="metadata"
+              playsInline
+            />
+            <p className="font-ui text-[15px] text-muted-foreground mt-4">97 seconds — what bxHive does.</p>
           </div>
         </div>
       </section>

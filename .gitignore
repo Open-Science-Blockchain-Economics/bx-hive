@@ -172,8 +172,14 @@ node_modules
 # Claude Code
 .claude/
 .mcp.json
+.agents/
+skills-lock.json
+docs/superpowers/
 
 .worktree/
 
 .vscode/settings.json
 .playwright-mcp
+
+# Remotion video source (rendered MP4s are committed in bx-hive-frontend/public/)
+/projects/bx-hive-video/
