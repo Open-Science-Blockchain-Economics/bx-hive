@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import { instructionsPlugin } from './vite-plugins/instructions'
+import { staticDeckPlugin } from './vite-plugins/static-deck'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -14,6 +15,8 @@ export default defineConfig({
     },
   },
   plugins: [
+    // Must precede react() so /slides/ rewrites before the SPA fallback runs.
+    staticDeckPlugin({ base: '/slides/' }),
     instructionsPlugin({
       contractsDir: path.resolve(__dirname, '../bx-hive-contracts'),
     }),
