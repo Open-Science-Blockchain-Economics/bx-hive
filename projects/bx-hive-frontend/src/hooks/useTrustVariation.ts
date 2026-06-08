@@ -205,9 +205,11 @@ export function useTrustVariation() {
       const client = getTrustVariationClient(appId)
       if (!client) return []
       const map = await client.state.box.participants.getMap()
+      // Stable order across polls: the BoxMap read order is non-deterministic, so sort
+      // by address (deterministic) to stop the participants table reshuffling on refresh.
       return Array.from(map.entries())
         .map(([address, info]) => ({ address, ...info }))
-        .sort((a, b) => a.enrolled - b.enrolled)
+        .sort((a, b) => a.address.localeCompare(b.address))
     },
     [getTrustVariationClient],
   )
