@@ -15,7 +15,7 @@ export default function Layout() {
     <ActiveUserProvider>
       <ExperimentManagerProvider>
         <TooltipProvider>
-          <ScrollRestoration />
+          <ScrollRestoration getKey={(location) => location.pathname} />
           <div className="min-h-screen flex flex-col bg-background text-foreground">
             <TopBar />
             <main className="flex-1">
