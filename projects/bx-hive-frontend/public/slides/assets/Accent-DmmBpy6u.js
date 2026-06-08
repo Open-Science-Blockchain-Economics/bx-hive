@@ -1,0 +1,1 @@
+import{B as e,L as t,y as n}from"./modules/shiki-DB9HpJnJ.js";import{nt as r}from"./index-C4rXdMwt.js";var i={class:`serif-accent`},a={__name:`Accent`,setup(a){let{$slidev:o,$nav:s,$clicksContext:c,$clicks:l,$page:u,$renderContext:d,$frontmatter:f}=r();return(r,a)=>(t(),n(`span`,i,[e(r.$slots,`default`)]))}};export{a as t};

@@ -23,8 +23,8 @@ const RESOURCES = [
   {
     title: 'Slide deck',
     body: "A 20-minute deck on the platform's design and current research direction.",
-    cta: 'View PDF',
-    href: '#',
+    cta: 'Open deck',
+    href: '/slides/',
   },
   {
     title: 'Recorded talk',
@@ -133,6 +133,7 @@ export default function About() {
               <a
                 key={title}
                 href={href}
+                {...(href !== '#' ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
                 className="bg-card border border-border rounded-2xl p-8 flex flex-col gap-3 hover:border-foreground transition-colors"
               >
                 <HexMark size={24} className="text-primary mb-2" />
