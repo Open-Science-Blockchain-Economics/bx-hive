@@ -37,17 +37,17 @@ export function E2EAutoConnect() {
     void (async () => {
       try {
         if (!kmdWallet.isConnected) {
+          // Fresh connect — KMD's listKeys enumerates ALL accounts, so the
+          // target is guaranteed present. No reconnect needed.
           await kmdWallet.connect()
-        }
-        // use-wallet persists the KMD account list in localStorage
-        // (@txnlab/use-wallet:v4) and restores it WITHOUT re-querying KMD. If the
-        // persisted list is from a different run (e.g. a sandbox watch session),
-        // `target` won't be in it and setActiveAccount would silently fall back
-        // to accounts[0]. Only in that case do we reconnect to re-enumerate the
-        // wallet (KMD's listKeys returns ALL accounts). The common e2e path —
-        // switching between accounts already present — skips the reconnect, so
-        // its behaviour is unchanged.
-        if (!hasTarget()) {
+        } else if (!hasTarget()) {
+          // Already connected from a persisted list (e.g. a long-lived sandbox
+          // watch session). use-wallet:v4 restores that list from localStorage
+          // WITHOUT re-querying KMD, so a target from a different run is absent
+          // and setActiveAccount would silently fall back to accounts[0].
+          // Reconnect to re-enumerate. This branch never runs on the e2e path
+          // (fresh context, empty storage → the connect above already ran),
+          // so e2e no longer triggers a spurious second connect/disconnect.
           await kmdWallet.connect()
         }
         kmdWallet.setActive()
