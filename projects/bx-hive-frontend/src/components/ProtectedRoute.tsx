@@ -9,10 +9,16 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { activeUser, isLoading } = useActiveUser()
+  const { activeUser, isLoading, isFetched } = useActiveUser()
   const { activeAddress } = useWallet()
 
-  if (isLoading) {
+  // A connected wallet whose user lookup hasn't completed yet must wait, not
+  // redirect: useActiveUser is `enabled: !!activeAddress`, and a disabled
+  // react-query reports isLoading=false, so there's a window where activeAddress
+  // is set but the query hasn't run. Redirecting then bounces a freshly-connected
+  // wallet off its own route. isFetched stays false until the lookup completes,
+  // so an unregistered account still falls through to the branch below.
+  if (isLoading || (activeAddress && !isFetched)) {
     return (
       <div className="flex justify-center items-center py-12">
         <span className="loading loading-spinner loading-lg"></span>
