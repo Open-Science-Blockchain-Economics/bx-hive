@@ -76,3 +76,17 @@ It has also been configured to have a productive dev experience out of the box i
 # Integrating with smart contracts and application clients
 
 Refer to the detailed guidance on [integrating with smart contracts and application clients](./src/contracts/README.md). In essence, for any smart contract codebase generated with AlgoKit or other tools that produce compile contracts into ARC34 compliant app specifications, you can use the `algokit generate` command to generate TypeScript or Python typed client. Once generated simply drag and drop the generated client into `./src/contracts` and import it into your React components as you see fit.
+
+# Payout asset
+
+The trust-game contracts pay out in whatever asset the experimenter picks at variation creation. `asset_id == 0` means native ALGO; any positive asset id targets an Algorand Standard Asset (USDC is the first one wired up end-to-end).
+
+The frontend reads the network-specific USDC asset id from `VITE_USDC_ASSET_ID` (see [`.env.template`](./.env.template)):
+
+| Network  | `VITE_USDC_ASSET_ID` | Source |
+| -------- | --- | --- |
+| LocalNet | populated by `pnpm seed:localnet` | the seed script mints a mock USDC (`unit_name=USDC`, 6 decimals) on first run and writes the id back into `.env`; subsequent runs reuse it |
+| TestNet  | `10458941` | Algorand Foundation testnet USDC |
+| MainNet  | `31566704` | Circle mainnet USDC |
+
+The picker step in `CreateExperimentForm` offers ALGO plus USDC (when the env var is set). Both the experimenter's asset opt-in and each participant's opt-in are bundled into the same atomic transaction group as the action that needs them, so the wallet UX is still one popup per action — no separate "opt in to USDC" step. MBR fees (variation app account, match boxes, participant boxes) are always paid in ALGO regardless of payout asset, since they're protocol-level costs.

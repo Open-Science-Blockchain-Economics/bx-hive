@@ -6,6 +6,7 @@ import ActiveMatchCard from '../components/participant/ActiveMatchCard'
 import CompletedMatchCard from '../components/participant/CompletedMatchCard'
 import EnrolledWaitingCard from '../components/participant/EnrolledWaitingCard'
 import JoinableExperimentCard from '../components/participant/JoinableExperimentCard'
+import { useActiveUser } from '../hooks/useActiveUser'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
@@ -17,6 +18,7 @@ import { pickVariationRoundRobin, type VariationSlot } from '../utils/distribute
 interface OnChainMatchView {
   appId: bigint
   match: OnChainMatch
+  assetId: bigint
 }
 
 interface OnChainExperimentView {
@@ -35,6 +37,7 @@ interface OnChainData {
 
 export default function ParticipantDashboard() {
   const { activeAddress } = useAlgorand()
+  const { activeUser } = useActiveUser()
   const { listExperiments, listVariations } = useTrustExperiments()
   const { getPlayerMatch, selfEnroll, getParticipantCount, getConfig, isParticipantEnrolled } = useTrustVariation()
   const queryClient = useQueryClient()
@@ -46,6 +49,16 @@ export default function ParticipantDashboard() {
       const matchViews: OnChainMatchView[] = []
       const expViews: OnChainExperimentView[] = []
 
+      const configCache = new Map<bigint, ReturnType<typeof getConfig>>()
+      const config = (appId: bigint) => {
+        let p = configCache.get(appId)
+        if (!p) {
+          p = getConfig(appId)
+          configCache.set(appId, p)
+        }
+        return p
+      }
+
       for (const group of groups) {
         const vars = await listVariations(group.expId, Number(group.variationCount))
         let enrolled = false
@@ -54,7 +67,8 @@ export default function ParticipantDashboard() {
         for (const v of vars) {
           const match = await getPlayerMatch(v.appId, activeAddress!)
           if (match) {
-            matchViews.push({ appId: v.appId, match })
+            const cfg = await config(v.appId)
+            matchViews.push({ appId: v.appId, match, assetId: cfg.assetId })
             enrolled = true
             hasMatch = true
           }
@@ -75,11 +89,11 @@ export default function ParticipantDashboard() {
 
         const slots: VariationSlot[] = await Promise.all(
           vars.map(async (v) => {
-            const [count, config] = await Promise.all([getParticipantCount(v.appId), getConfig(v.appId)])
+            const [count, cfg] = await Promise.all([getParticipantCount(v.appId), config(v.appId)])
             return {
               appId: v.appId,
               participantCount: count,
-              maxParticipants: Number(config.maxParticipants),
+              maxParticipants: Number(cfg.maxParticipants),
             }
           }),
         )
@@ -142,11 +156,33 @@ export default function ParticipantDashboard() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="t-h1">Participant Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">View and participate in experiments</p>
+        <h1 className="t-h1">{activeUser?.name ? `${activeUser.name}'s Dashboard` : 'My Dashboard'}</h1>
+        <p className="text-sm text-muted-foreground mt-1">Pick an experiment to play, or check on the ones you've joined.</p>
       </div>
 
       <div className="flex flex-col gap-8">
+        {activeOnChain.length > 0 && (
+          <section>
+            <Rule label="Trust Game — Active" className="mb-4" />
+            <div className="grid gap-3">
+              {activeOnChain.map(({ appId, match }) => (
+                <ActiveMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {enrolledWaiting.length > 0 && (
+          <section>
+            <Rule label="Trust Game — Enrolled" className="mb-4" />
+            <div className="grid gap-3">
+              {enrolledWaiting.map(({ group }) => (
+                <EnrolledWaitingCard key={group.expId} group={group} />
+              ))}
+            </div>
+          </section>
+        )}
+
         {joinableExperiments.length > 0 && (
           <section>
             <Rule label="Trust Game — Available" className="mb-4" />
@@ -166,34 +202,12 @@ export default function ParticipantDashboard() {
           </section>
         )}
 
-        {enrolledWaiting.length > 0 && (
-          <section>
-            <Rule label="Trust Game — Enrolled" className="mb-4" />
-            <div className="grid gap-3">
-              {enrolledWaiting.map(({ group }) => (
-                <EnrolledWaitingCard key={group.expId} group={group} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {activeOnChain.length > 0 && (
-          <section>
-            <Rule label="Trust Game — Active" className="mb-4" />
-            <div className="grid gap-3">
-              {activeOnChain.map(({ appId, match }) => (
-                <ActiveMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
-              ))}
-            </div>
-          </section>
-        )}
-
         {completedOnChain.length > 0 && (
           <section>
             <Rule label="Trust Game — Completed" className="mb-4" />
             <div className="grid gap-3">
-              {completedOnChain.map(({ appId, match }) => (
-                <CompletedMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
+              {completedOnChain.map(({ appId, match, assetId }) => (
+                <CompletedMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} assetId={assetId} />
               ))}
             </div>
           </section>

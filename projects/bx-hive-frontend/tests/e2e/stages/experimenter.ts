@@ -6,16 +6,18 @@ import { readDeployedContracts } from '../fixtures/deployedContracts'
 export interface CreateExperimentParams {
   /** Required — must be unique per run so the chain query can disambiguate. */
   name: string
-  /** Investor endowment in ALGO (defaults to template default of 100). */
+  /** Investor endowment in whole units of the payout asset (defaults to template default of 100). */
   e1Algo?: number
-  /** Trustee endowment in ALGO (defaults to 0). */
+  /** Trustee endowment in whole units of the payout asset (defaults to 0). */
   e2Algo?: number
   /** Multiplier (defaults to 3). */
   multiplier?: number
-  /** Step size in ALGO (defaults to 1). */
+  /** Step size in whole units of the payout asset (defaults to 1). */
   unitAlgo?: number
   /** Required — max matches per variation (1 + escrow scales with this). */
   maxMatchesPerVariation: number
+  /** Payout asset selection — picks the matching dropdown option. Defaults to ALGO. */
+  payoutAsset?: 'ALGO' | 'USDC'
 }
 
 export interface CreatedExperiment {
@@ -64,9 +66,12 @@ export async function createExperimentAndVariation(
     await page.getByLabel(/Step Size/i).fill(String(params.unitAlgo))
   }
 
-  // Field renamed from "Max matches per variation" to "Participants target" (with
-  // hint "max matches per variation"). Match against the hint text via getByLabel.
-  await page.getByLabel(/Participants target/i).fill(String(params.maxMatchesPerVariation))
+  await page.getByLabel(/Matches per variation/i).fill(String(params.maxMatchesPerVariation))
+
+  // Step 4: pick the payout asset from the dropdown. Native <select>, so we
+  // can drive it via selectOption with the displayed unit-name label.
+  const payoutAsset = params.payoutAsset ?? 'ALGO'
+  await page.getByLabel(/Payout asset/i).selectOption({ label: payoutAsset })
 
   // Submit button label: "Deploy experiment" (single) or "Deploy with N variations" (batch).
   await page.getByRole('button', { name: /^Deploy/i }).click()

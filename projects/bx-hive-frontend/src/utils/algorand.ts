@@ -59,3 +59,16 @@ export function getTrustVariationClient(algorand: AlgorandClient, appId: bigint,
     defaultSender: sender,
   })
 }
+
+/**
+ * Returns true if the given account holds the given asset (i.e. has opted in).
+ * Treats the algod 404 — "missing from account" — as not opted in.
+ */
+export async function isAccountOptedInToAsset(algorand: AlgorandClient, address: string, assetId: bigint): Promise<boolean> {
+  try {
+    const info = await algorand.client.algod.accountAssetInformation(address, assetId)
+    return Boolean(info.assetHolding)
+  } catch {
+    return false
+  }
+}

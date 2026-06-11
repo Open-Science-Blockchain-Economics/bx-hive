@@ -19,6 +19,8 @@ const buttonsModeProps = {
   E1: 10,
   m: 3,
   UNIT: 2,
+  decimals: 6,
+  unitName: 'ALGO',
   onDecisionMade: vi.fn(),
 }
 

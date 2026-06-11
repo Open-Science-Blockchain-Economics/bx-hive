@@ -7,7 +7,7 @@ import { Rule } from '@/components/ds/separator'
 import { cn } from '@/lib/utils'
 import { useTrustVariation } from '../../../hooks/useTrustVariation'
 import { calculateTrusteeReceived } from '../../../experiment-logic/trustExperiment'
-import { algoToMicroAlgo } from '../../../utils/amount'
+import { wholeToBaseUnits } from '../../../utils/amount'
 
 interface TrusteeInterfaceProps {
   appId: bigint
@@ -16,6 +16,8 @@ interface TrusteeInterfaceProps {
   E2: number
   m: number
   UNIT: number
+  /** Decimals of the variation's payout asset (6 for ALGO/USDC). */
+  decimals: number
   investorDecision: number
   onDecisionMade: () => void
 }
@@ -45,7 +47,17 @@ function Stage({ num, label, state }: StageProps) {
   )
 }
 
-export default function TrusteeInterface({ appId, matchId, E1, E2, m, UNIT, investorDecision, onDecisionMade }: TrusteeInterfaceProps) {
+export default function TrusteeInterface({
+  appId,
+  matchId,
+  E1,
+  E2,
+  m,
+  UNIT,
+  decimals,
+  investorDecision,
+  onDecisionMade,
+}: TrusteeInterfaceProps) {
   const { submitTrusteeDecision } = useTrustVariation()
   const received = calculateTrusteeReceived(investorDecision, m)
 
@@ -59,7 +71,7 @@ export default function TrusteeInterface({ appId, matchId, E1, E2, m, UNIT, inve
     setError(null)
     try {
       setSubmitting(true)
-      await submitTrusteeDecision(appId, matchId, algoToMicroAlgo(returnAmount))
+      await submitTrusteeDecision(appId, matchId, wholeToBaseUnits(returnAmount, decimals))
       onDecisionMade()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit decision')
@@ -141,6 +153,9 @@ export default function TrusteeInterface({ appId, matchId, E1, E2, m, UNIT, inve
           </div>
         ) : (
           <div className="flex flex-col gap-2">
+            <div className="text-center font-mono text-xl font-medium tabular-nums text-primary" aria-live="polite">
+              {returnAmount.toLocaleString()}
+            </div>
             <input
               type="range"
               min={0}
@@ -153,7 +168,6 @@ export default function TrusteeInterface({ appId, matchId, E1, E2, m, UNIT, inve
             />
             <div className="flex justify-between text-xs text-muted-foreground font-mono">
               <span>0</span>
-              <span className="font-bold text-base text-primary">{returnAmount.toLocaleString()}</span>
               <span>{received.toLocaleString()}</span>
             </div>
           </div>

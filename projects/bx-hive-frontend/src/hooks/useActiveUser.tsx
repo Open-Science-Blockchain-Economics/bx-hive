@@ -26,6 +26,8 @@ const ROLE_REVERSE: Record<number, UserRole> = { 0: 'experimenter', 1: 'particip
 interface ActiveUserContextType {
   activeUser: User | null
   isLoading: boolean
+  /** True once the Registry lookup for the active address has completed at least once. */
+  isFetched: boolean
   /** Re-fetches the user from Registry for the given address. Call after registration. */
   setActiveUser: (address: string) => Promise<void>
   clearActiveUser: () => void
@@ -43,7 +45,11 @@ export function ActiveUserProvider({ children }: { children: ReactNode }) {
     signerRef.current = transactionSigner
   }, [transactionSigner])
 
-  const { data: activeUser = null, isLoading } = useQuery({
+  const {
+    data: activeUser = null,
+    isLoading,
+    isFetched,
+  } = useQuery({
     queryKey: [...queryKeys.activeUser(activeAddress ?? ''), configVersion],
     queryFn: async (): Promise<User | null> => {
       const algorand = getAlgorandClient()
@@ -82,7 +88,9 @@ export function ActiveUserProvider({ children }: { children: ReactNode }) {
   }, [queryClient, activeAddress])
 
   return (
-    <ActiveUserContext.Provider value={{ activeUser, isLoading, setActiveUser, clearActiveUser }}>{children}</ActiveUserContext.Provider>
+    <ActiveUserContext.Provider value={{ activeUser, isLoading, isFetched, setActiveUser, clearActiveUser }}>
+      {children}
+    </ActiveUserContext.Provider>
   )
 }
 

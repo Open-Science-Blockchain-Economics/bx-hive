@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
 import VariationPanel from '../components/experimenter/trust-details/VariationPanel'
 import { LoadingSpinner, StatusDot } from '../components/ui'
+import { useAssetMetadata } from '../hooks/useAssetMetadata'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import { STATUS_ACTIVE, useTrustVariation } from '../hooks/useTrustVariation'
@@ -36,6 +37,39 @@ interface ExperimentDetailsData {
 
 function formatExpId(id: number): string {
   return `EXP-${String(id).padStart(4, '0')}`
+}
+
+interface VariationTabProps {
+  v: VariationInfo
+  cfg: VariationConfig | undefined
+  hasWaiting: boolean
+  isActive: boolean
+  onClick: () => void
+}
+
+// Per-tab component so each variation's tooltip resolves its own asset's
+// decimals via useAssetMetadata (hooks can't be called in a map).
+function VariationTab({ v, cfg, hasWaiting, isActive, onClick }: VariationTabProps) {
+  const { decimals } = useAssetMetadata(cfg?.assetId ?? 0n)
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          role="tab"
+          type="button"
+          onClick={onClick}
+          className={cn(
+            'inline-flex items-center gap-1.5 px-3 py-2 -mb-px border-b-2 text-sm font-medium transition-colors',
+            isActive ? 'text-foreground border-primary' : 'text-muted-foreground border-transparent hover:text-foreground',
+          )}
+        >
+          Var {v.varId + 1}
+          <StatusDot color={statusDotColor(cfg, hasWaiting)} label={statusLabel(cfg)} />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{variationTooltip(v, cfg, decimals)}</TooltipContent>
+    </Tooltip>
+  )
 }
 
 function formatCreatedAt(timestamp: bigint | number): string {
@@ -178,7 +212,7 @@ export default function TrustExperimentDetails() {
                 }}
               >
                 {autoRefresh ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-                {autoRefresh ? 'Pause' : 'Resume'}
+                {autoRefresh ? 'Pause updates' : 'Resume updates'}
               </Btn>
             </TooltipTrigger>
             <TooltipContent side="bottom">{autoRefresh ? 'Pause auto-refresh' : 'Resume auto-refresh (every 5s)'}</TooltipContent>
@@ -223,27 +257,15 @@ export default function TrustExperimentDetails() {
           <div role="tablist" className="flex flex-wrap gap-1 mb-0 border-b border-border">
             {vars.map((v, idx) => {
               const k = String(v.appId)
-              const cfg = cfgs[k]
-              const hasWaiting = (subs[k] ?? []).some((s) => s.assigned === 0)
-              const isActive = selectedVarIdx === idx
               return (
-                <Tooltip key={v.varId}>
-                  <TooltipTrigger asChild>
-                    <button
-                      role="tab"
-                      type="button"
-                      onClick={() => setSelectedVarIdx(idx)}
-                      className={cn(
-                        'inline-flex items-center gap-1.5 px-3 py-2 -mb-px border-b-2 text-sm font-medium transition-colors',
-                        isActive ? 'text-foreground border-primary' : 'text-muted-foreground border-transparent hover:text-foreground',
-                      )}
-                    >
-                      Var {v.varId + 1}
-                      <StatusDot color={statusDotColor(cfg, hasWaiting)} label={statusLabel(cfg)} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">{variationTooltip(v, cfg)}</TooltipContent>
-                </Tooltip>
+                <VariationTab
+                  key={v.varId}
+                  v={v}
+                  cfg={cfgs[k]}
+                  hasWaiting={(subs[k] ?? []).some((s) => s.assigned === 0)}
+                  isActive={selectedVarIdx === idx}
+                  onClick={() => setSelectedVarIdx(idx)}
+                />
               )
             })}
           </div>

@@ -19,6 +19,7 @@ const buttonsModeProps = {
   E2: 10,
   m: 2,
   UNIT: 2,
+  decimals: 6,
   investorDecision: 3,
   onDecisionMade: vi.fn(),
 }

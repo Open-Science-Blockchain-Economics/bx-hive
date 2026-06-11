@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Check, Loader2 } from 'lucide-react'
 
 import { Btn } from '@/components/ds/button'
@@ -11,10 +11,14 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip
 import { cn } from '@/lib/utils'
 import { getVariationLabel } from '../../db'
 import { experimentTemplates, getTemplateById } from '../../experiment-logic/templates'
+import { useAlgorand } from '../../hooks/useAlgorand'
+import type { AssetMetadata } from '../../hooks/useAssetMetadata'
 import type { ParameterVariation } from '../../types'
-import { computeEscrowAlgo, generateVariationCombinations, toVariationParams } from '../../utils/trustGameCalc'
+import { baseUnitsToWhole } from '../../utils/amount'
+import { computeAlgoRequired, computeEscrowWhole, generateVariationCombinations, toVariationParams } from '../../utils/trustGameCalc'
 import InfoAlert from '../ui/InfoAlert'
 import FundingSummary from './FundingSummary'
+import PayoutAssetPicker, { defaultPayoutAsset } from './PayoutAssetPicker'
 import TemplateSelector from './TemplateSelector'
 import TrustGameParameters from './TrustGameParameters'
 import { VariationBuilder } from './VariationBuilder'
@@ -112,6 +116,26 @@ export default function CreateExperimentForm({
   const [batchModeEnabled, setBatchModeEnabled] = useState(false)
   const [variations, setVariations] = useState<ParameterVariation[]>([])
   const [maxPerVariation, setMaxPerVariation] = useState<string>('')
+  const [payoutAsset, setPayoutAsset] = useState<AssetMetadata>(defaultPayoutAsset)
+
+  const { algorand, activeAddress } = useAlgorand()
+  // Holds the experimenter's whole-unit balance of the picked non-ALGO asset, or
+  // null while loading / when the asset is ALGO (the ALGO balance is already in
+  // walletBalanceAlgo). FundingSummary uses this to warn before submission.
+  const { data: walletAssetBalance = null } = useQuery({
+    queryKey: ['create-experiment-asset-balance', activeAddress, String(payoutAsset.assetId)],
+    enabled: !!activeAddress && !!algorand && payoutAsset.assetId !== 0n,
+    queryFn: async () => {
+      try {
+        const holding = await algorand!.client.algod.accountAssetInformation(activeAddress!, payoutAsset.assetId)
+        if (!holding.assetHolding) return 0
+        return baseUnitsToWhole(holding.assetHolding.amount, payoutAsset.decimals)
+      } catch {
+        // not opted in yet — treat as zero so the warning fires
+        return 0
+      }
+    },
+  })
 
   const selectedTemplate = getTemplateById(selectedTemplateId)
 
@@ -141,22 +165,24 @@ export default function CreateExperimentForm({
   const trustMutation = useMutation({
     mutationFn: async () => {
       const maxSub = Number(maxPerVariation) * 2
+      const aId = payoutAsset.assetId
+      const dec = payoutAsset.decimals
       if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
         const combos = generateVariationCombinations(parameters, variations)
         const { expId } = await createExperimentWithVariation(
           experimentName.trim(),
-          toVariationParams(combos[0], getVariationLabel(combos[0], variations), maxSub, computeEscrowAlgo(combos[0], maxSub)),
+          toVariationParams(combos[0], getVariationLabel(combos[0], variations), maxSub, computeEscrowWhole(combos[0], maxSub), aId, dec),
         )
         for (let i = 1; i < combos.length; i++) {
           await createVariation(
             expId,
-            toVariationParams(combos[i], getVariationLabel(combos[i], variations), maxSub, computeEscrowAlgo(combos[i], maxSub)),
+            toVariationParams(combos[i], getVariationLabel(combos[i], variations), maxSub, computeEscrowWhole(combos[i], maxSub), aId, dec),
           )
         }
       } else {
         await createExperimentWithVariation(
           experimentName.trim(),
-          toVariationParams(parameters, 'Default', maxSub, computeEscrowAlgo(parameters, maxSub)),
+          toVariationParams(parameters, 'Default', maxSub, computeEscrowWhole(parameters, maxSub), aId, dec),
         )
       }
     },
@@ -182,22 +208,22 @@ export default function CreateExperimentForm({
   const validationError = !experimentName.trim()
     ? 'Experiment name is required'
     : !maxPerVariation || Number(maxPerVariation) < 1
-      ? 'Max matches per variation must be at least 1'
+      ? 'Matches per variation must be at least 1'
       : null
 
   const maxPayout = (Number(parameters.E1) || 0) * (Number(parameters.m) || 1) + (Number(parameters.E2) || 0)
 
-  const totalEscrowAlgo = (() => {
-    if (!maxPerVariation || Number(maxPerVariation) < 1) return 0
+  const { algoRequired } = (() => {
+    if (!maxPerVariation || Number(maxPerVariation) < 1) return { algoRequired: 0 }
     const maxSub = Number(maxPerVariation) * 2
     const combos =
       batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
         ? generateVariationCombinations(parameters, variations)
         : [parameters]
-    return combos.reduce((sum, combo) => sum + computeEscrowAlgo(combo, maxSub), 0)
+    return computeAlgoRequired(combos, maxSub, payoutAsset.assetId === 0n)
   })()
 
-  const insufficientBalance = walletBalanceAlgo !== null && totalEscrowAlgo > 0 && totalEscrowAlgo > walletBalanceAlgo
+  const insufficientBalance = walletBalanceAlgo !== null && algoRequired > 0 && algoRequired > walletBalanceAlgo
   const hasBatch = batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)
   const variationCount = hasBatch ? variations.reduce((acc, v) => acc * v.values.length, 1) : 1
   const submitLabel = hasBatch ? `Deploy with ${variationCount} variations` : 'Deploy experiment'
@@ -206,15 +232,18 @@ export default function CreateExperimentForm({
   const step1Done = !!selectedTemplate && !selectedTemplate.disabled
   const step2Done = !!experimentName.trim()
   const step3Done = step2Done && !!maxPerVariation && Number(maxPerVariation) >= 1
-  const step4Done = step3Done && (!batchModeEnabled || hasBatch)
-  const stepsDone = [step1Done, step2Done, step3Done, step4Done]
+  // Payout-asset picker always has a valid selection (defaults to ALGO/USDC),
+  // so it auto-completes once step 3 is done.
+  const step4Done = step3Done
+  const step5Done = step4Done && (!batchModeEnabled || hasBatch)
+  const stepsDone = [step1Done, step2Done, step3Done, step4Done, step5Done]
   const activeIdx = stepsDone.findIndex((d) => !d)
   const stateForStep = (idx: number): StepState => {
     if (stepsDone[idx]) return 'done'
     if (activeIdx === idx) return 'active'
     return 'pending'
   }
-  const reviewState: StepState = step4Done ? 'active' : 'pending'
+  const reviewState: StepState = step5Done ? 'active' : 'pending'
 
   return (
     <div>
@@ -260,7 +289,7 @@ export default function CreateExperimentForm({
           <Step n={3} title="Configure base parameters" state={stateForStep(2)}>
             <TrustGameParameters parameters={parameters} onChange={handleParameterChange} />
             <div className="mt-5 max-w-xs">
-              <Field label="Participants target" hint="max matches per variation" htmlFor="max-per-variation" required>
+              <Field label="Matches per variation" hint="Each match runs 2 participants" htmlFor="max-per-variation" required>
                 <Input
                   id="max-per-variation"
                   mono
@@ -282,7 +311,14 @@ export default function CreateExperimentForm({
             )}
           </Step>
 
-          <Step n={4} title="Variations" state={stateForStep(3)}>
+          <Step n={4} title="Choose payout asset" state={stateForStep(3)}>
+            <PayoutAssetPicker value={payoutAsset} onChange={setPayoutAsset} />
+            <p className="text-xs text-muted-foreground mt-2">
+              All escrow funding, investor/trustee endowments, and payouts use this asset. Match MBR is always paid in ALGO regardless.
+            </p>
+          </Step>
+
+          <Step n={5} title="Variations" state={stateForStep(4)}>
             <label className="flex items-center gap-3 cursor-pointer mb-4">
               <Switch
                 checked={batchModeEnabled}
@@ -307,7 +343,7 @@ export default function CreateExperimentForm({
             )}
           </Step>
 
-          <Step n={5} title="Review &amp; deploy" state={reviewState} isLast>
+          <Step n={6} title="Review &amp; deploy" state={reviewState} isLast>
             <InfoAlert learnMoreHref={DOCS_LINKS.participants} className="mb-4">
               Participants self-enroll and are distributed across variations using round robin.
             </InfoAlert>
@@ -317,6 +353,8 @@ export default function CreateExperimentForm({
               batchModeEnabled={batchModeEnabled}
               maxPerVariation={maxPerVariation}
               walletBalanceAlgo={walletBalanceAlgo}
+              walletAssetBalance={walletAssetBalance}
+              payoutAsset={payoutAsset}
             />
             {(error ?? validationError) && (
               <div role="alert" className="mt-4 rounded-sm border border-neg/35 bg-neg-bg text-neg px-3 py-2.5 text-sm">

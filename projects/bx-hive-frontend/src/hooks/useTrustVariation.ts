@@ -1,6 +1,7 @@
-import { AlgoAmount, getApplicationAddress } from '@algorandfoundation/algokit-utils'
+import { AlgoAmount, getApplicationAddress, microAlgo } from '@algorandfoundation/algokit-utils'
 import { useCallback } from 'react'
 import type { Match, VariationConfig } from '../contracts/TrustVariation'
+import { isAccountOptedInToAsset } from '../utils/algorand'
 import { useAlgorand } from './useAlgorand'
 
 export type { Match, VariationConfig }
@@ -160,8 +161,9 @@ export function useTrustVariation() {
   )
 
   /**
-   * Self-enroll the connected wallet into a TrustVariation.
-   * Sends a grouped MBR payment + selfEnroll method call.
+   * Self-enroll the connected wallet into a TrustVariation. For ASA variations
+   * (assetId > 0) the group conditionally prepends an assetOptIn for the
+   * participant so the join + opt-in lands in a single wallet signature.
    */
   const selfEnroll = useCallback(
     async (appId: bigint): Promise<void> => {
@@ -169,18 +171,28 @@ export function useTrustVariation() {
       const client = getTrustVariationClient(appId)
       if (!client) throw new Error('Wallet not connected')
 
+      // Look up the variation's payout asset so we know whether to bundle an opt-in.
+      const configResult = await client.send.getConfig({ args: {} })
+      const assetId = configResult.return?.assetId ?? 0n
+      const needsOptIn = assetId > 0n && !(await isAccountOptedInToAsset(algorand, activeAddress, assetId))
+
       const appAddress = getApplicationAddress(appId)
-      const mbrPayment = algorand.createTransaction.payment({
+      const mbrPayment = await algorand.createTransaction.payment({
         sender: activeAddress,
         receiver: appAddress,
         amount: AlgoAmount.MicroAlgos(16_900),
       })
 
-      await client.send.selfEnroll({
-        args: { mbrPayment },
-        coverAppCallInnerTransactionFees: true,
-        maxFee: AlgoAmount.MicroAlgos(3_000),
-      })
+      const composer = algorand.newGroup({ coverAppCallInnerTransactionFees: true, populateAppCallResources: true })
+      if (needsOptIn) composer.addAssetOptIn({ sender: activeAddress, assetId })
+      composer.addAppCallMethodCall(
+        await client.params.selfEnroll({
+          sender: activeAddress,
+          args: { mbrPayment },
+          maxFee: microAlgo(3_000),
+        }),
+      )
+      await composer.send()
     },
     [algorand, activeAddress, getTrustVariationClient],
   )
@@ -193,9 +205,11 @@ export function useTrustVariation() {
       const client = getTrustVariationClient(appId)
       if (!client) return []
       const map = await client.state.box.participants.getMap()
+      // Stable order across polls: the BoxMap read order is non-deterministic, so sort
+      // by address (deterministic) to stop the participants table reshuffling on refresh.
       return Array.from(map.entries())
         .map(([address, info]) => ({ address, ...info }))
-        .sort((a, b) => a.enrolled - b.enrolled)
+        .sort((a, b) => a.address.localeCompare(b.address))
     },
     [getTrustVariationClient],
   )
