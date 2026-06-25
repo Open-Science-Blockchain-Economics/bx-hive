@@ -1,13 +1,19 @@
 ---
-// Phase B smoke page — verifies BaseLayout, tokens, fonts, and the theme bridge.
+// Phase D smoke page — verifies SiteHeader island + Footer.astro chrome.
 // Replaced by the real marketing home in Phase E.
 import BaseLayout from '@/layouts/BaseLayout.astro'
+import SiteHeader from '@/components/layout/SiteHeader.tsx'
+import Footer from '@/components/layout/Footer.astro'
 ---
 
-<BaseLayout title="bxHive — Astro boot check">
-  <main class="min-h-screen bg-background text-foreground font-ui p-12">
-    <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">PHASE B · LAYOUT CHECK</span>
-    <h1 class="font-display italic text-[40px] mt-4">Tokens and fonts are wired.</h1>
-    <p class="text-ink-2 mt-2">Replaced by the real marketing home in Phase E.</p>
+<BaseLayout title="bxHive">
+  <SiteHeader client:only="react" />
+  <main class="min-h-[60vh] bg-background text-foreground font-ui px-6 md:px-12 lg:px-20 py-20">
+    <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">PHASE D · CHROME CHECK</span>
+    <h1 class="font-ui font-medium text-[40px] mt-4 tracking-tight">
+      Marketing <span class="font-display italic font-normal text-primary">chrome</span> renders.
+    </h1>
+    <p class="text-ink-2 mt-2">Header island (wallet + theme) and static footer. Replaced in Phase E.</p>
   </main>
+  <Footer />
 </BaseLayout>

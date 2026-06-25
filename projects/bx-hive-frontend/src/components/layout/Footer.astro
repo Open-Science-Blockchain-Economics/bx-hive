@@ -1,0 +1,15 @@
+---
+// Static footer for marketing/blog pages (port of layout/Footer.tsx).
+import Wordmark from '@/components/ds/Wordmark.astro'
+const year = new Date().getFullYear()
+---
+
+<footer class="mt-12 border-t border-border bg-background font-ui">
+  <div class="max-w-350 mx-auto flex items-center justify-between flex-wrap gap-3 px-7 py-6">
+    <Wordmark size={14} />
+    <div class="flex items-center gap-7 text-[12px] text-muted-foreground">
+      <span class="t-micro">Open Science · Blockchain · Economics</span>
+      <span>&copy; {year}</span>
+    </div>
+  </div>
+</footer>
