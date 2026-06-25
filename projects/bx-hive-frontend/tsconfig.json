@@ -19,6 +19,8 @@
     "moduleResolution": "Bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    // Astro's base sets this true, preserving the generated clients' type-only ABIReturn import (breaks hydration).
+    "verbatimModuleSyntax": false,
     "noEmit": true,
     "jsx": "react-jsx",
     "jsxImportSource": "react",

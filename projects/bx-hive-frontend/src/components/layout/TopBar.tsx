@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useNetwork, useWallet, type Wallet } from '@txnlab/use-wallet-react'
 import { Check, Copy, ExternalLink, FlaskConical, LogOut, Menu, Moon, Sun, User, X } from 'lucide-react'
 
@@ -248,7 +248,6 @@ function WalletPill({
 }
 
 export default function TopBar() {
-  const navigate = useNavigate()
   const location = useLocation()
   const { activeAddress, wallets } = useWallet()
   const { activeNetwork } = useNetwork()
@@ -261,8 +260,9 @@ export default function TopBar() {
       await activeWallet.disconnect()
     }
     clearActiveUser()
-    navigate('/')
-  }, [wallets, clearActiveUser, navigate])
+    // Exit the app island back to the marketing home.
+    window.location.href = '/'
+  }, [wallets, clearActiveUser])
 
   // Auto-close the mobile panel on route change.
   useEffect(() => {
@@ -274,10 +274,10 @@ export default function TopBar() {
   return (
     <>
       <header className="relative z-50 border-b border-border bg-background font-ui">
-        <div className="max-w-[1400px] mx-auto flex items-center gap-3 md:gap-6 px-4 md:px-7 py-3.5">
-          <NavLink to="/" className="flex items-center">
+        <div className="max-w-350 mx-auto flex items-center gap-3 md:gap-6 px-4 md:px-7 py-3.5">
+          <a href="/" className="flex items-center">
             <Wordmark size={16} />
-          </NavLink>
+          </a>
 
           <nav className="hidden md:flex ml-3 items-center gap-5">
             {activeUser && (

@@ -20,6 +20,8 @@ export default defineConfig({
   ...(isBuild ? { adapter: cloudflare({ platformProxy: { enabled: true } }) } : {}),
   integrations: [react()],
   vite: {
+    // Astro defaults to PUBLIC_; also expose the existing VITE_* app vars.
+    envPrefix: ['PUBLIC_', 'VITE_'],
     resolve: {
       alias: {
         '@': path.resolve('./src'),

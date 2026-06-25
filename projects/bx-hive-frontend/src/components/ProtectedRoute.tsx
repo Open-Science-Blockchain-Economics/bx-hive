@@ -34,11 +34,11 @@ export default function ProtectedRoute({ children, requiredRole }: ProtectedRout
     if (import.meta.env.VITE_E2E_MODE === 'true' && activeAddress) {
       return <SandboxAccountNotFound address={activeAddress} />
     }
-    return <Navigate to="/" replace />
+    return <Navigate to="/join" replace />
   }
 
   if (requiredRole && activeUser.role !== requiredRole) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/join" replace />
   }
 
   return <>{children}</>
