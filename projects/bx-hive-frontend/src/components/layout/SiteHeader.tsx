@@ -30,12 +30,6 @@ function HeaderInner() {
         </a>
 
         <div className="ml-auto flex items-center gap-3">
-          <a
-            href="/app"
-            className="hidden sm:inline-flex pb-0.5 text-[13px] tracking-[-0.005em] font-normal text-muted-foreground border-b border-transparent hover:text-foreground transition-colors"
-          >
-            Open app
-          </a>
           <ThemeToggle />
           {activeAddress ? (
             <WalletPill address={activeAddress} network={activeNetwork} onDisconnect={() => void handleDisconnect()} />

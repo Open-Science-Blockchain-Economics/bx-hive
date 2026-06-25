@@ -12,14 +12,13 @@ import ContactForm from '@/components/contact/ContactForm.tsx'
   <SiteHeader client:only="react" />
 
   <!-- Hero -->
-  <section class="px-6 md:px-12 lg:px-20 pt-20 pb-12 md:pt-28 md:pb-16 text-center">
+  <section class="px-6 md:px-12 lg:px-20 pt-24 pb-16 md:pt-32 md:pb-24 text-center">
     <div class="max-w-[760px] mx-auto">
-      <div class="font-mono text-[11px] uppercase tracking-[0.16em] text-primary mb-6">Contact · We read every message</div>
       <h1 class="font-ui font-medium text-[40px] md:text-[56px] leading-[1.05] tracking-[-0.025em]">
         Bring your hypothesis.<br />
         <span class="font-display italic font-normal text-primary">Let's talk</span> through it.
       </h1>
-      <p class="font-ui text-[17px] leading-[1.55] mt-6 text-ink-2 max-w-[620px] mx-auto">
+      <p class="font-ui text-[17px] leading-[1.55] mt-7 text-ink-2 max-w-[620px] mx-auto">
         Whether you're designing a study, joining one as a participant, or exploring an institutional pilot — tell us what you're working on
         and we'll route you to the right person.
       </p>
@@ -28,7 +27,7 @@ import ContactForm from '@/components/contact/ContactForm.tsx'
 
   <!-- Form -->
   <section class="px-6 md:px-12 lg:px-20 pb-24 md:pb-32">
-    <div class="max-w-[760px] mx-auto">
+    <div class="max-w-[640px] mx-auto">
       <ContactForm client:load />
     </div>
   </section>

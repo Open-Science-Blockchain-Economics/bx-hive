@@ -227,8 +227,8 @@ export default function ContactForm() {
         />
       </Field>
 
-      {/* Honeypot */}
-      <div aria-hidden="true" className="absolute -left-[9999px]">
+      {/* Honeypot — visually hidden, off tab order; bots fill it, humans don't. */}
+      <div aria-hidden="true" className="sr-only">
         <label>
           Leave this empty
           <input type="text" tabIndex={-1} autoComplete="off" value={hp} onChange={(e) => setHp(e.target.value)} />
