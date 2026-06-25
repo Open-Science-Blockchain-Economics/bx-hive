@@ -1,17 +1,13 @@
 ---
-// Phase A smoke page — replaced by the real marketing home in Phase E.
+// Phase B smoke page — verifies BaseLayout, tokens, fonts, and the theme bridge.
+// Replaced by the real marketing home in Phase E.
+import BaseLayout from '@/layouts/BaseLayout.astro'
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>bxHive — Astro boot check</title>
-  </head>
-  <body>
-    <main>
-      <h1>Astro is running.</h1>
-      <p>Phase A checkpoint. This page is replaced in Phase E.</p>
-    </main>
-  </body>
-</html>
+<BaseLayout title="bxHive — Astro boot check">
+  <main class="min-h-screen bg-background text-foreground font-ui p-12">
+    <span class="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">PHASE B · LAYOUT CHECK</span>
+    <h1 class="font-display italic text-[40px] mt-4">Tokens and fonts are wired.</h1>
+    <p class="text-ink-2 mt-2">Replaced by the real marketing home in Phase E.</p>
+  </main>
+</BaseLayout>
