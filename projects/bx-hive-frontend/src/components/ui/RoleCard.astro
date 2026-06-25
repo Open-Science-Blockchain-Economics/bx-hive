@@ -1,0 +1,32 @@
+---
+// Static version of ui/RoleCard.tsx for the marketing home.
+import Icon from '@/components/ds/Icon.astro'
+import PillBtn from '@/components/ui/PillBtn.astro'
+
+interface Props {
+  title: string
+  body: string
+  icon: 'about' | 'exp' | 'part'
+  cta: string
+  href: string
+}
+
+const { title, body, icon, cta, href } = Astro.props
+const iconName = icon === 'about' ? 'compass' : icon === 'exp' ? 'flask-conical' : 'user'
+---
+
+<div class="bg-card border border-border rounded-2xl p-8 flex flex-col gap-3">
+  <div class="size-9 rounded-sm bg-primary text-primary-foreground grid place-items-center mb-2">
+    <Icon name={iconName} size={18} strokeWidth={1.6} />
+  </div>
+  <div class="font-ui text-2xl font-medium tracking-[-0.012em] mt-1">
+    <span class="font-display italic font-normal">{title}</span>
+  </div>
+  <p class="font-ui text-[15px] leading-[1.5] text-ink-2 m-0">{body}</p>
+  <div class="mt-2">
+    <PillBtn size="sm" kind="ghost" class="-ml-4" href={href}>
+      {cta}
+      <Icon name="arrow-right" size={14} />
+    </PillBtn>
+  </div>
+</div>

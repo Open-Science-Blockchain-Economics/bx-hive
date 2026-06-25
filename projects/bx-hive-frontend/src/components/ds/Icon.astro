@@ -1,0 +1,40 @@
+---
+// Static lucide icons for marketing/blog .astro pages (no React island needed).
+// Paths copied from lucide-react; wrapper matches lucide's defaults.
+type IconName = 'arrow-right' | 'arrow-down' | 'download' | 'compass' | 'flask-conical' | 'user'
+
+interface Props {
+  name: IconName
+  size?: number
+  class?: string
+  strokeWidth?: number
+}
+
+const { name, size = 24, class: className, strokeWidth = 2 } = Astro.props
+
+const PATHS: Record<IconName, string> = {
+  'arrow-right': '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+  'arrow-down': '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+  download: '<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>',
+  compass:
+    '<circle cx="12" cy="12" r="10"/><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/>',
+  'flask-conical':
+    '<path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2"/><path d="M6.453 15h11.094"/><path d="M8.5 2h7"/>',
+  user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+}
+---
+
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width={strokeWidth}
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class={className}
+  aria-hidden="true"
+  set:html={PATHS[name]}
+/>
