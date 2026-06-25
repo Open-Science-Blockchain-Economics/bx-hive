@@ -1,0 +1,14 @@
+name = "bx-hive-frontend"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# The Astro Cloudflare adapter emits dist/server/wrangler.json at build time,
+# which references this file for name + compatibility settings. Deploy with:
+#   wrangler deploy --config dist/server/wrangler.json
+#
+# Secrets are configured in the Cloudflare dashboard (Settings → Variables and
+# Secrets) so they never live in the repo:
+#   RESEND_API_KEY            — secret, Resend REST API key for /api/contact
+#   TURNSTILE_SECRET_KEY      — secret, verifies Turnstile tokens server-side
+#   PUBLIC_TURNSTILE_SITE_KEY — public, surfaced to the browser bundle by Vite
+#                               at build time (must also be in the build env)
