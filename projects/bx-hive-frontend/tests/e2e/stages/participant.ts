@@ -4,11 +4,9 @@ import { TrustVariationClient } from '../../../src/contracts/TrustVariation'
 import type { KmdAccount } from '../fixtures/accounts'
 
 async function gotoParticipantDashboard(page: Page, participant: KmdAccount): Promise<void> {
-  await page.goto(`/app?e2e-account=${participant.address}`)
-  await page
-    .getByRole('link', { name: /^Dashboard$/i })
-    .first()
-    .click()
+  // Enter via /app/join (non-protected) so the ?e2e-account param survives for
+  // E2EAutoConnect; Join then redirects to the dashboard once the user loads.
+  await page.goto(`/app/join?e2e-account=${participant.address}`)
   await page.getByRole('heading', { name: /Dashboard$/i }).waitFor()
 }
 
