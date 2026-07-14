@@ -1,0 +1,48 @@
+---
+import { getCollection, render, type CollectionEntry } from 'astro:content'
+import type { GetStaticPaths } from 'astro'
+
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import SiteHeader from '@/components/layout/SiteHeader.tsx'
+import Footer from '@/components/layout/Footer.astro'
+
+type Post = CollectionEntry<'blog'>
+
+export const getStaticPaths = (async () => {
+  const posts = (await getCollection('blog')) as Post[]
+  return posts.filter((post) => !post.data.draft).map((post) => ({ params: { slug: post.id }, props: { post } }))
+}) satisfies GetStaticPaths
+
+const { post } = Astro.props as { post: Post }
+const { Content } = await render(post)
+
+const dateFmt = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+---
+
+<BaseLayout title={`${post.data.title} · bxHive`} description={post.data.description}>
+  <SiteHeader client:only="react" />
+
+  <article class="px-6 md:px-12 lg:px-20 pt-16 pb-20 md:pt-24 md:pb-28">
+    <div class="max-w-[760px] mx-auto">
+      <a
+        href="/blog"
+        class="font-mono text-[11px] uppercase tracking-[0.16em] text-muted-foreground hover:text-foreground transition-colors"
+      >
+        ← Blog
+      </a>
+      <div class="font-mono text-[11px] uppercase tracking-[0.16em] text-primary mt-8 mb-4">
+        {dateFmt.format(post.data.pubDate)}
+      </div>
+      <h1 class="font-ui font-medium text-[36px] md:text-[48px] leading-[1.08] tracking-[-0.025em]">{post.data.title}</h1>
+      <p class="font-ui text-[17px] leading-[1.55] text-ink-2 mt-5">{post.data.description}</p>
+
+      <div
+        class="prose prose-neutral mt-10 max-w-none prose-headings:font-ui prose-headings:font-medium prose-headings:tracking-[-0.012em] prose-a:text-primary"
+      >
+        <Content />
+      </div>
+    </div>
+  </article>
+
+  <Footer />
+</BaseLayout>

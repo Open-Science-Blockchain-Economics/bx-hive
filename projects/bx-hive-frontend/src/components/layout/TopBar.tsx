@@ -1,20 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useNetwork, useWallet, type Wallet } from '@txnlab/use-wallet-react'
 import { Check, Copy, ExternalLink, FlaskConical, LogOut, Menu, Moon, Sun, User, X } from 'lucide-react'
 
-import { Btn } from '@/components/ds/button'
 import { Dot } from '@/components/ds/dot'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ds/dropdown-menu'
 import { Wordmark } from '@/components/ds/wordmark'
 import ThemeToggle from '@/components/ThemeToggle'
+import { ConnectWalletButton, WalletPill } from '@/components/layout/nav-parts'
 import { useActiveUser } from '@/hooks/useActiveUser'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/providers/ThemeProvider'
@@ -167,88 +159,7 @@ function MobileNavPanel({ open, onClose, activeUser, dashboardPath, address, net
   )
 }
 
-function ConnectWalletButton() {
-  const { wallets } = useWallet()
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Btn variant="secondary" size="sm">
-          Connect wallet
-        </Btn>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[10rem]">
-        <DropdownMenuLabel>Available wallets</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {wallets?.map((wallet) => (
-          <DropdownMenuItem key={wallet.id} onSelect={() => void wallet.connect()}>
-            {wallet.metadata.name}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
-
-function WalletPill({
-  address,
-  network,
-  activeUser,
-  onDisconnect,
-}: {
-  address: string
-  network: string
-  activeUser: ActiveUser | null
-  onDisconnect: () => void
-}) {
-  const [copied, setCopied] = useState(false)
-  const handleCopy = useCallback(() => {
-    void navigator.clipboard.writeText(address).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
-  }, [address])
-
-  const RoleIcon = activeUser?.role === 'experimenter' ? FlaskConical : activeUser?.role === 'participant' ? User : null
-  const display = activeUser?.name ?? truncateAddress(address)
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={`Wallet menu: ${display}`}
-          className="inline-flex items-center gap-2 px-2.5 py-[5px] rounded-sm border border-border bg-card font-mono text-xs text-ink-2 hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Dot tone="pos" size={6} />
-          {RoleIcon && <RoleIcon className="size-3.5" />}
-          <span className="max-w-[140px] truncate">{display}</span>
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-[14rem]">
-        <DropdownMenuLabel className="font-mono text-[11px] text-muted-foreground">{truncateAddress(address)}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={handleCopy}>
-          {copied ? <Check className="size-4 text-pos" /> : <Copy className="size-4" />}
-          {copied ? 'Copied' : 'Copy address'}
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <a href={loraAccountUrl(network, address)} target="_blank" rel="noopener noreferrer">
-            <ExternalLink className="size-4" />
-            View on Lora
-          </a>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onSelect={onDisconnect}>
-          <LogOut className="size-4" />
-          Disconnect
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
-
 export default function TopBar() {
-  const navigate = useNavigate()
   const location = useLocation()
   const { activeAddress, wallets } = useWallet()
   const { activeNetwork } = useNetwork()
@@ -261,8 +172,9 @@ export default function TopBar() {
       await activeWallet.disconnect()
     }
     clearActiveUser()
-    navigate('/')
-  }, [wallets, clearActiveUser, navigate])
+    // Exit the app island back to the marketing home.
+    window.location.href = '/'
+  }, [wallets, clearActiveUser])
 
   // Auto-close the mobile panel on route change.
   useEffect(() => {
@@ -274,10 +186,10 @@ export default function TopBar() {
   return (
     <>
       <header className="relative z-50 border-b border-border bg-background font-ui">
-        <div className="max-w-[1400px] mx-auto flex items-center gap-3 md:gap-6 px-4 md:px-7 py-3.5">
-          <NavLink to="/" className="flex items-center">
+        <div className="max-w-350 mx-auto flex items-center gap-3 md:gap-6 px-4 md:px-7 py-3.5">
+          <a href="/" className="flex items-center">
             <Wordmark size={16} />
-          </NavLink>
+          </a>
 
           <nav className="hidden md:flex ml-3 items-center gap-5">
             {activeUser && (
@@ -311,7 +223,8 @@ export default function TopBar() {
               <WalletPill
                 address={activeAddress}
                 network={activeNetwork}
-                activeUser={activeUser}
+                role={activeUser?.role}
+                name={activeUser?.name}
                 onDisconnect={() => void handleDisconnect()}
               />
             ) : (

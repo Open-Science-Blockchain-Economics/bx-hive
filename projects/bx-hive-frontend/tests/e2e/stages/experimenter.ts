@@ -41,7 +41,11 @@ export async function createExperimentAndVariation(
   // user from the Registry (i.e. wallet is connected AND user is registered).
   // Without this wait, ProtectedRoute would redirect /dashboard/experimenter
   // back to / before the auto-connect completes.
-  await page.goto(`/?e2e-account=${experimenterAddress}`)
+  // Enter via /app/join — a non-protected route, so the ?e2e-account param
+  // survives (a ProtectedRoute redirect would strip it before E2EAutoConnect
+  // reads it). Once the wallet connects and the user loads, Join redirects to
+  // the dashboard, where the TopBar Dashboard link appears.
+  await page.goto(`/app/join?e2e-account=${experimenterAddress}`)
   await page
     .getByRole('link', { name: /^Dashboard$/i })
     .first()

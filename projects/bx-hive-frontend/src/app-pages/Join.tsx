@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useWallet } from '@txnlab/use-wallet-react'
 import { ArrowLeft, ArrowRight, Check, FlaskConical, Loader2, User } from 'lucide-react'
 
@@ -147,7 +147,7 @@ export default function Join() {
         <CrumbsList>
           <CrumbsItem>
             <CrumbsLink asChild>
-              <Link to="/">Home</Link>
+              <a href="/">Home</a>
             </CrumbsLink>
           </CrumbsItem>
           <CrumbsSeparator />
@@ -224,9 +224,9 @@ export default function Join() {
         <span className="font-ui text-[12px] text-muted-foreground">By continuing you agree to the research participation terms.</span>
         <div className="flex gap-2.5">
           <Btn asChild variant="ghost">
-            <Link to="/">
+            <a href="/">
               <ArrowLeft className="size-3.5" /> Back
-            </Link>
+            </a>
           </Btn>
           <Btn variant="primary" disabled={!canSubmit} onClick={() => void handleSubmit()}>
             {submitting ? (

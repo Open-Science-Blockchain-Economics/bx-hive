@@ -1,0 +1,46 @@
+---
+// Global document shell for every page (marketing, contact, blog, and the
+// /app/* island host). Loads design tokens + fonts and applies the persisted
+// theme before paint so static pages never flash the wrong theme.
+import '@fontsource-variable/source-serif-4/index.css'
+import '@fontsource-variable/source-serif-4/wght-italic.css'
+import '@fontsource-variable/inter-tight/index.css'
+import '@fontsource-variable/jetbrains-mono/index.css'
+import '@/styles/App.css'
+
+interface Props {
+  title?: string
+  description?: string
+}
+
+const { title = 'bxHive', description } = Astro.props
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <slot name="head" />
+    <script is:inline>
+      // Pre-React: apply stored theme/accent to <html> before any CSS loads to prevent FOUC.
+      ;(function () {
+        try {
+          var t = localStorage.getItem('bx-hive-theme')
+          var a = localStorage.getItem('bx-hive-accent')
+          document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light')
+          document.documentElement.setAttribute('data-accent', a === 'amber' || a === 'hive' || a === 'ink' ? a : 'cyan')
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'light')
+          document.documentElement.setAttribute('data-accent', 'cyan')
+        }
+      })()
+    </script>
+  </head>
+  <body class="bg-background text-foreground">
+    <slot />
+  </body>
+</html>

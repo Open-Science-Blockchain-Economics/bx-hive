@@ -1,0 +1,13 @@
+---
+// Host for the interactive dashboard SPA. The catch-all serves every /app/...
+// URL so react-router (basename '/app') owns sub-routing client-side, and a
+// deep-link refresh re-serves this shell instead of 404ing.
+export const prerender = false
+
+import BaseLayout from '@/layouts/BaseLayout.astro'
+import AppIsland from '@/components/AppIsland.tsx'
+---
+
+<BaseLayout title="bxHive">
+  <AppIsland client:only="react" />
+</BaseLayout>
