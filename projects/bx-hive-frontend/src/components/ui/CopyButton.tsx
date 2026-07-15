@@ -2,9 +2,10 @@ import { useState } from 'react'
 
 interface CopyButtonProps {
   text: string
+  label?: string
 }
 
-export default function CopyButton({ text }: CopyButtonProps) {
+export default function CopyButton({ text, label = 'Copy address' }: CopyButtonProps) {
   const [copied, setCopied] = useState(false)
 
   function handleCopy(e: React.MouseEvent) {
@@ -18,10 +19,10 @@ export default function CopyButton({ text }: CopyButtonProps) {
   return (
     <button
       type="button"
-      aria-label="Copy address"
+      aria-label={label}
       className="ml-1 inline-flex items-center justify-center w-6 h-6 rounded-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background"
       onClick={handleCopy}
-      title="Copy address"
+      title={label}
     >
       {copied ? '\u2713' : '\u2398'}
     </button>

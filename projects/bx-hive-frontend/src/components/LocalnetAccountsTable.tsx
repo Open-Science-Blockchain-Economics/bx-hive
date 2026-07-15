@@ -30,6 +30,11 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
 const selectClass =
   'h-9 rounded-sm border border-input bg-card px-2.5 text-[13px] text-foreground font-ui transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50'
 
+/** Auto-login URL for an account. Origin-relative so each environment yields its own link. */
+function devLoginUrl(address: string) {
+  return `${window.location.origin}/app/dev/login?account=${address}`
+}
+
 function FundDropdown({ onFund, isPending }: { onFund: (address: string, amount: number) => Promise<void>; isPending: boolean }) {
   const [open, setOpen] = useState(false)
   const [address, setAddress] = useState('')
@@ -175,6 +180,16 @@ function AccountRow({
             <span className="text-faint text-xs">—</span>
           )}
         </td>
+        <td className="px-3 py-2">
+          {account.registered ? (
+            <span className="inline-flex items-center">
+              <span className="text-muted-foreground text-xs">Login link</span>
+              <CopyButton text={devLoginUrl(account.address)} label="Copy login link" />
+            </span>
+          ) : (
+            <span className="text-faint text-xs">—</span>
+          )}
+        </td>
         <td className="px-3 py-2 text-right">
           <div className="inline-flex flex-col items-end gap-0.5 font-mono text-xs">
             <span className="inline-flex items-center gap-1">
@@ -218,7 +233,7 @@ function AccountRow({
       {/* Expandable registration form — shown when row is selected and unregistered */}
       {isSelected && !account.registered && (
         <tr className="bg-muted">
-          <td colSpan={5} className="py-3 px-3">
+          <td colSpan={6} className="py-3 px-3">
             <div className="flex items-center gap-3 flex-wrap">
               <Input
                 type="text"
@@ -308,6 +323,7 @@ export default function LocalnetAccountsTable() {
                 <th className="text-left t-micro px-3 py-2 hidden sm:table-cell w-12">#</th>
                 <th className="text-left t-micro px-3 py-2">Address</th>
                 <th className="text-left t-micro px-3 py-2">Role</th>
+                <th className="text-left t-micro px-3 py-2">Link</th>
                 <th className="text-right t-micro px-3 py-2">Balance</th>
                 <th className="text-right t-micro px-3 py-2">Status</th>
               </tr>
