@@ -18,6 +18,7 @@ import BatchDetails from './app-pages/BatchDetails'
 import CreateExperiment from './app-pages/CreateExperiment'
 import DesignSystemShowcase from './app-pages/DesignSystemShowcase'
 import DevLocalnet from './app-pages/DevLocalnet'
+import DevLogin from './app-pages/DevLogin'
 import ExperimentDetails from './app-pages/ExperimentDetails'
 import ExperimenterDashboard from './app-pages/ExperimenterDashboard'
 import Join from './app-pages/Join'
@@ -42,6 +43,11 @@ const devLayoutRoutes = isLocalEnv
       {
         path: 'dev/localnet',
         element: <DevLocalnet />,
+      },
+      // No ProtectedRoute — this is the pre-auth surface, and it renders its own errors.
+      {
+        path: 'dev/login',
+        element: <DevLogin />,
       },
     ]
   : []
