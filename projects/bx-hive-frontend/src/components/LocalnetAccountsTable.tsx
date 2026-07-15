@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { type LocalnetAccount, type LocalnetAccountRole, useLocalnetAccounts } from '../hooks/useLocalnetAccounts'
 import { truncateAddress } from '../utils/address'
 import { baseUnitsToWhole } from '../utils/amount'
+import { connectKmdAccount } from '../utils/kmdConnect'
 import { CopyButton } from './ui'
 
 function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
@@ -253,15 +254,15 @@ export default function LocalnetAccountsTable() {
   const { accounts, seeded, registerAccount, fundAccount, fundingInProgress, refresh } = useLocalnetAccounts()
   const { wallets, activeAddress } = useWallet()
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null)
+  const [connectError, setConnectError] = useState<string | null>(null)
 
   const handleConnect = async (address: string) => {
-    const kmdWallet = wallets?.find((w) => w.id === 'kmd')
-    if (!kmdWallet) return
-    if (kmdWallet.isConnected) {
-      await kmdWallet.disconnect()
+    setConnectError(null)
+    try {
+      await connectKmdAccount(wallets ?? [], address)
+    } catch (err) {
+      setConnectError(err instanceof Error ? err.message : 'Connect failed')
     }
-    await kmdWallet.connect()
-    kmdWallet.setActiveAccount(address)
   }
 
   if (import.meta.env.VITE_ENVIRONMENT !== 'local') return null
@@ -290,6 +291,12 @@ export default function LocalnetAccountsTable() {
       {!seeded && (
         <div role="alert" className="rounded-sm border border-warn/35 bg-warn-bg text-warn px-3 py-2.5 text-sm">
           No seeded accounts found. Run <code className="font-mono px-1 rounded bg-bg-alt">pnpm seed:localnet</code> then refresh.
+        </div>
+      )}
+
+      {connectError && (
+        <div role="alert" className="mb-3 rounded-sm border border-neg/35 bg-neg-bg text-neg px-3 py-2.5 text-sm">
+          {connectError}
         </div>
       )}
 
