@@ -6,23 +6,13 @@ import { Check, Copy, ExternalLink, FlaskConical, LogOut, Menu, Moon, Sun, User,
 import { Dot } from '@/components/ds/dot'
 import { Wordmark } from '@/components/ds/wordmark'
 import ThemeToggle from '@/components/ThemeToggle'
-import { ConnectWalletButton, WalletPill } from '@/components/layout/nav-parts'
+import { ConnectWalletButton, WalletPill, mobileRowClass, navLinkClass } from '@/components/layout/nav-parts'
 import { useActiveUser } from '@/hooks/useActiveUser'
 import { cn } from '@/lib/utils'
 import { useTheme } from '@/providers/ThemeProvider'
 import type { User as ActiveUser } from '@/types'
 import { truncateAddress } from '@/utils/address'
 import { loraAccountUrl } from '@/utils/lora'
-
-const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  cn(
-    'pb-0.5 border-b text-[13px] tracking-[-0.005em] transition-colors',
-    isActive
-      ? 'font-semibold text-foreground border-primary'
-      : 'font-normal text-muted-foreground border-transparent hover:text-foreground',
-  )
-
-const mobileRowClass = 'flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-muted w-full text-left'
 
 interface MobileNavPanelProps {
   open: boolean
