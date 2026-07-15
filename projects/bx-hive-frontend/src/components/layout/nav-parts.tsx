@@ -12,12 +12,23 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ds/dropdown-menu'
+import { cn } from '@/lib/utils'
 import type { UserRole } from '@/types'
 import { truncateAddress } from '@/utils/address'
 import { loraAccountUrl } from '@/utils/lora'
 
-// Shared wallet-connect controls used by both the dashboard TopBar and the
-// marketing SiteHeader so the navbar looks identical across the site.
+// Shared navbar pieces used by both the dashboard TopBar and the marketing
+// SiteHeader so the navbar looks identical across the site.
+
+export const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  cn(
+    'pb-0.5 border-b text-[13px] tracking-[-0.005em] transition-colors',
+    isActive
+      ? 'font-semibold text-foreground border-primary'
+      : 'font-normal text-muted-foreground border-transparent hover:text-foreground',
+  )
+
+export const mobileRowClass = 'flex items-center gap-3 px-4 py-3 text-sm text-foreground hover:bg-muted w-full text-left'
 
 export function ConnectWalletButton() {
   const { wallets } = useWallet()

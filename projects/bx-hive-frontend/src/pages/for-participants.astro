@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro'
-import SiteHeader from '@/components/layout/SiteHeader.tsx'
+import SiteHeader from '@/components/layout/SiteHeader.astro'
 import Footer from '@/components/layout/Footer.astro'
 import Icon from '@/components/ds/Icon.astro'
 import HexMark from '@/components/ds/HexMark.astro'
@@ -38,7 +38,7 @@ const START_STEPS = [
   title="For participants · bxHive"
   description="Participate in real behavioral research, contribute to a public dataset, and get paid in digital currency for your time."
 >
-  <SiteHeader client:only="react" />
+  <SiteHeader />
 
   <!-- Hero — mission + participant-card preview -->
   <section class="px-6 md:px-12 lg:px-20 pt-16 pb-20 md:pt-24 md:pb-28 border-b border-border">

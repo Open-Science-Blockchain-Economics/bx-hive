@@ -2,7 +2,7 @@
 import { getCollection, type CollectionEntry } from 'astro:content'
 
 import BaseLayout from '@/layouts/BaseLayout.astro'
-import SiteHeader from '@/components/layout/SiteHeader.tsx'
+import SiteHeader from '@/components/layout/SiteHeader.astro'
 import Footer from '@/components/layout/Footer.astro'
 
 type Post = CollectionEntry<'blog'>
@@ -14,7 +14,7 @@ const dateFmt = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'shor
 ---
 
 <BaseLayout title="Blog · bxHive" description="Notes on verifiable behavioral research and on-chain experiments from the bxHive team.">
-  <SiteHeader client:only="react" />
+  <SiteHeader />
 
   <section class="px-6 md:px-12 lg:px-20 pt-20 pb-12 md:pt-28 md:pb-16 border-b border-border">
     <div class="max-w-[1240px] mx-auto">

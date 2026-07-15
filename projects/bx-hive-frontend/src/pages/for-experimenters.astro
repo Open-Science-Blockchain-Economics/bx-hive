@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro'
-import SiteHeader from '@/components/layout/SiteHeader.tsx'
+import SiteHeader from '@/components/layout/SiteHeader.astro'
 import Footer from '@/components/layout/Footer.astro'
 import Icon from '@/components/ds/Icon.astro'
 import PillBtn from '@/components/ui/PillBtn.astro'
@@ -30,7 +30,7 @@ const DESIGN_SUMMARY: [string, string][] = [
   title="For experimenters · bxHive"
   description="An experiment platform designed for reproducibility — design treatments, fund them on-chain, and export the full run as a verifiable record."
 >
-  <SiteHeader client:only="react" />
+  <SiteHeader />
 
   <!-- Hero — mission + sample manifest -->
   <section class="px-6 md:px-12 lg:px-20 pt-16 pb-20 md:pt-24 md:pb-28 border-b border-border">

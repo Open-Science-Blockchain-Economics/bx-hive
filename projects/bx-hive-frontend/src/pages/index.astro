@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro'
-import SiteHeader from '@/components/layout/SiteHeader.tsx'
+import SiteHeader from '@/components/layout/SiteHeader.astro'
 import Footer from '@/components/layout/Footer.astro'
 import Icon from '@/components/ds/Icon.astro'
 import PillBtn from '@/components/ui/PillBtn.astro'
@@ -12,7 +12,7 @@ import ProtocolStages from '@/components/landing/ProtocolStages.astro'
   title="bxHive — verifiable behavioral research"
   description="bxHive is a platform for verifiable behavioral research. Join incentivized studies, contribute to open science, get rewarded — every decision lives on a public blockchain."
 >
-  <SiteHeader client:only="react" />
+  <SiteHeader />
 
   <!-- Hero -->
   <section class="px-6 md:px-12 lg:px-20 pt-16 pb-14 md:pt-30 md:pb-24 border-b border-border">

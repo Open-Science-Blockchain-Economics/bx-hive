@@ -3,7 +3,7 @@ import { getCollection, render, type CollectionEntry } from 'astro:content'
 import type { GetStaticPaths } from 'astro'
 
 import BaseLayout from '@/layouts/BaseLayout.astro'
-import SiteHeader from '@/components/layout/SiteHeader.tsx'
+import SiteHeader from '@/components/layout/SiteHeader.astro'
 import Footer from '@/components/layout/Footer.astro'
 
 type Post = CollectionEntry<'blog'>
@@ -20,7 +20,7 @@ const dateFmt = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: 'long
 ---
 
 <BaseLayout title={`${post.data.title} · bxHive`} description={post.data.description}>
-  <SiteHeader client:only="react" />
+  <SiteHeader />
 
   <article class="px-6 md:px-12 lg:px-20 pt-16 pb-20 md:pt-24 md:pb-28">
     <div class="max-w-[760px] mx-auto">

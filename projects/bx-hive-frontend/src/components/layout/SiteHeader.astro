@@ -1,0 +1,40 @@
+---
+// Static marketing header. Wordmark + nav render server-side so the header is
+// in the HTML at first paint; only the theme/wallet controls hydrate.
+import Wordmark from '@/components/ds/Wordmark.astro'
+import HeaderControls from '@/components/layout/HeaderControls.tsx'
+import { NAV_LINKS, isNavActive } from '@/components/layout/nav-links'
+
+const path = Astro.url.pathname
+---
+
+<header class="relative z-50 border-b border-border bg-background font-ui">
+  <div class="max-w-350 mx-auto flex items-center gap-3 md:gap-6 px-4 md:px-7 py-3.5">
+    <a href="/" class="flex items-center">
+      <Wordmark size={16} />
+    </a>
+
+    <nav class="hidden md:flex ml-3 items-center gap-5">
+      {
+        NAV_LINKS.map(({ label, href }) => (
+          <a
+            href={href}
+            class:list={[
+              'pb-0.5 border-b text-[13px] tracking-[-0.005em] transition-colors',
+              isNavActive(href, path)
+                ? 'font-semibold text-foreground border-primary'
+                : 'font-normal text-muted-foreground border-transparent hover:text-foreground',
+            ]}
+          >
+            {label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <!-- min-h reserves the controls' height so hydration can't shift the header. -->
+    <div class="ml-auto flex items-center gap-3 min-h-[34px]">
+      <HeaderControls client:load currentPath={path} />
+    </div>
+  </div>
+</header>

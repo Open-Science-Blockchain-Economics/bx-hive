@@ -11,6 +11,9 @@ import { cn } from '@/lib/utils'
 import { type LocalnetAccount, type LocalnetAccountRole, useLocalnetAccounts } from '../hooks/useLocalnetAccounts'
 import { truncateAddress } from '../utils/address'
 import { baseUnitsToWhole } from '../utils/amount'
+import { devLoginUrl } from '../utils/devLogin'
+import { connectKmdAccount } from '../utils/kmdConnect'
+import { toLocalnetCsv } from '../utils/localnetCsv'
 import { CopyButton } from './ui'
 
 function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
@@ -28,6 +31,15 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
 
 const selectClass =
   'h-9 rounded-sm border border-input bg-card px-2.5 text-[13px] text-foreground font-ui transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50'
+
+function downloadCsv(filename: string, csv: string) {
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
 
 function FundDropdown({ onFund, isPending }: { onFund: (address: string, amount: number) => Promise<void>; isPending: boolean }) {
   const [open, setOpen] = useState(false)
@@ -174,6 +186,16 @@ function AccountRow({
             <span className="text-faint text-xs">—</span>
           )}
         </td>
+        <td className="px-3 py-2">
+          {account.registered ? (
+            <span className="inline-flex items-center">
+              <span className="text-muted-foreground text-xs">Login link</span>
+              <CopyButton text={devLoginUrl(account.address)} label="Copy login link" />
+            </span>
+          ) : (
+            <span className="text-faint text-xs">—</span>
+          )}
+        </td>
         <td className="px-3 py-2 text-right">
           <div className="inline-flex flex-col items-end gap-0.5 font-mono text-xs">
             <span className="inline-flex items-center gap-1">
@@ -217,7 +239,7 @@ function AccountRow({
       {/* Expandable registration form — shown when row is selected and unregistered */}
       {isSelected && !account.registered && (
         <tr className="bg-muted">
-          <td colSpan={5} className="py-3 px-3">
+          <td colSpan={6} className="py-3 px-3">
             <div className="flex items-center gap-3 flex-wrap">
               <Input
                 type="text"
@@ -253,15 +275,20 @@ export default function LocalnetAccountsTable() {
   const { accounts, seeded, registerAccount, fundAccount, fundingInProgress, refresh } = useLocalnetAccounts()
   const { wallets, activeAddress } = useWallet()
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null)
+  const [connectError, setConnectError] = useState<string | null>(null)
 
   const handleConnect = async (address: string) => {
-    const kmdWallet = wallets?.find((w) => w.id === 'kmd')
-    if (!kmdWallet) return
-    if (kmdWallet.isConnected) {
-      await kmdWallet.disconnect()
+    setConnectError(null)
+    try {
+      await connectKmdAccount(wallets ?? [], address)
+    } catch (err) {
+      setConnectError(err instanceof Error ? err.message : 'Connect failed')
     }
-    await kmdWallet.connect()
-    kmdWallet.setActiveAccount(address)
+  }
+
+  const handleDownloadCsv = () => {
+    const date = new Date().toISOString().slice(0, 10)
+    downloadCsv(`localnet-accounts-${date}.csv`, toLocalnetCsv(accounts, window.location.origin))
   }
 
   if (import.meta.env.VITE_ENVIRONMENT !== 'local') return null
@@ -281,6 +308,11 @@ export default function LocalnetAccountsTable() {
         </div>
         <div className="flex items-center gap-2">
           <FundDropdown onFund={fundAccount} isPending={fundingInProgress} />
+          {seeded && (
+            <Btn variant="ghost" size="sm" onClick={handleDownloadCsv}>
+              Download CSV
+            </Btn>
+          )}
           <Btn variant="ghost" size="sm" onClick={() => void refresh()}>
             Refresh
           </Btn>
@@ -293,6 +325,12 @@ export default function LocalnetAccountsTable() {
         </div>
       )}
 
+      {connectError && (
+        <div role="alert" className="mb-3 rounded-sm border border-neg/35 bg-neg-bg text-neg px-3 py-2.5 text-sm">
+          {connectError}
+        </div>
+      )}
+
       {seeded && (
         <div className="overflow-x-auto rounded-sm border border-border">
           <table className="w-full text-sm">
@@ -301,6 +339,7 @@ export default function LocalnetAccountsTable() {
                 <th className="text-left t-micro px-3 py-2 hidden sm:table-cell w-12">#</th>
                 <th className="text-left t-micro px-3 py-2">Address</th>
                 <th className="text-left t-micro px-3 py-2">Role</th>
+                <th className="text-left t-micro px-3 py-2">Link</th>
                 <th className="text-right t-micro px-3 py-2">Balance</th>
                 <th className="text-right t-micro px-3 py-2">Status</th>
               </tr>

@@ -2,13 +2,16 @@ name = "bx-hive-frontend"
 compatibility_date = "2026-05-01"
 compatibility_flags = ["nodejs_compat"]
 
-# The Astro Cloudflare adapter emits dist/server/wrangler.json at build time,
-# which references this file for name + compatibility settings. Deploy with:
-#   wrangler deploy --config dist/server/wrangler.json
+# The Astro Cloudflare adapter emits dist/server/wrangler.json at build time from
+# this file. Note it FLATTENS the config and drops [env.*] sections, so `-e dev`
+# does not resolve here — target the dev worker with an explicit --name instead:
+#   pnpm run deploy       → bx-hive-frontend       (prod)
+#   pnpm run deploy:dev   → bx-hive-frontend-dev   (dev)
 #
-# Secrets are configured in the Cloudflare dashboard (Settings → Variables and
-# Secrets) so they never live in the repo:
-#   RESEND_API_KEY            — secret, Resend REST API key for /api/contact
-#   TURNSTILE_SECRET_KEY      — secret, verifies Turnstile tokens server-side
-#   PUBLIC_TURNSTILE_SITE_KEY — public, surfaced to the browser bundle by Vite
-#                               at build time (must also be in the build env)
+# Secrets are set per-worker in the Cloudflare dashboard (Settings → Variables
+# and Secrets) so they never live in the repo:
+#   RESEND_API_KEY       — secret, Resend REST API key for /api/contact
+#   TURNSTILE_SECRET_KEY — secret, verifies Turnstile tokens server-side
+#
+# PUBLIC_TURNSTILE_SITE_KEY is NOT a Worker secret — Vite inlines it into the
+# browser bundle at BUILD time, so it must be present in the build environment.
