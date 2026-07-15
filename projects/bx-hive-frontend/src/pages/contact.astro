@@ -1,6 +1,6 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro'
-import SiteHeader from '@/components/layout/SiteHeader.tsx'
+import SiteHeader from '@/components/layout/SiteHeader.astro'
 import Footer from '@/components/layout/Footer.astro'
 import ContactForm from '@/components/contact/ContactForm.tsx'
 ---
@@ -9,7 +9,7 @@ import ContactForm from '@/components/contact/ContactForm.tsx'
   title="Contact · bxHive"
   description="Bring your hypothesis. Let's talk through it. Whether you're designing a study, joining one, or exploring an institutional pilot — tell us what you're working on."
 >
-  <SiteHeader client:only="react" />
+  <SiteHeader />
 
   <!-- Hero -->
   <section class="px-6 md:px-12 lg:px-20 pt-24 pb-16 md:pt-32 md:pb-24 text-center">
