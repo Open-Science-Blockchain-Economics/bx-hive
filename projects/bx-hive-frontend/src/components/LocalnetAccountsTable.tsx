@@ -11,7 +11,9 @@ import { cn } from '@/lib/utils'
 import { type LocalnetAccount, type LocalnetAccountRole, useLocalnetAccounts } from '../hooks/useLocalnetAccounts'
 import { truncateAddress } from '../utils/address'
 import { baseUnitsToWhole } from '../utils/amount'
+import { devLoginUrl } from '../utils/devLogin'
 import { connectKmdAccount } from '../utils/kmdConnect'
+import { toLocalnetCsv } from '../utils/localnetCsv'
 import { CopyButton } from './ui'
 
 function Toast({ message, onDismiss }: { message: string; onDismiss: () => void }) {
@@ -30,9 +32,13 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
 const selectClass =
   'h-9 rounded-sm border border-input bg-card px-2.5 text-[13px] text-foreground font-ui transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50'
 
-/** Auto-login URL for an account. Origin-relative so each environment yields its own link. */
-function devLoginUrl(address: string) {
-  return `${window.location.origin}/app/dev/login?account=${address}`
+function downloadCsv(filename: string, csv: string) {
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
 }
 
 function FundDropdown({ onFund, isPending }: { onFund: (address: string, amount: number) => Promise<void>; isPending: boolean }) {
@@ -280,6 +286,11 @@ export default function LocalnetAccountsTable() {
     }
   }
 
+  const handleDownloadCsv = () => {
+    const date = new Date().toISOString().slice(0, 10)
+    downloadCsv(`localnet-accounts-${date}.csv`, toLocalnetCsv(accounts, window.location.origin))
+  }
+
   if (import.meta.env.VITE_ENVIRONMENT !== 'local') return null
 
   const registeredCount = accounts.filter((a) => a.registered).length
@@ -297,6 +308,11 @@ export default function LocalnetAccountsTable() {
         </div>
         <div className="flex items-center gap-2">
           <FundDropdown onFund={fundAccount} isPending={fundingInProgress} />
+          {seeded && (
+            <Btn variant="ghost" size="sm" onClick={handleDownloadCsv}>
+              Download CSV
+            </Btn>
+          )}
           <Btn variant="ghost" size="sm" onClick={() => void refresh()}>
             Refresh
           </Btn>
