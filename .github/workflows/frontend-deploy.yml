@@ -4,6 +4,7 @@ name: frontend-deploy
 #   dev  branch → bx-hive-frontend-dev
 #   main branch → bx-hive-frontend
 #
+#
 # The network config (VITE_*) is inlined into the browser bundle at BUILD time,
 # and .env.* files are gitignored, so the values come from GitHub Environment
 # secrets/variables here. RESEND_API_KEY / TURNSTILE_SECRET_KEY are NOT set here
