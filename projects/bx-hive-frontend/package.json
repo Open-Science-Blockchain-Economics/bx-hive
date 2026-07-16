@@ -90,6 +90,8 @@
     "deploy:dev": "pnpm run build:testnet && wrangler deploy --config dist/server/wrangler.json --name bx-hive-frontend-dev",
     "astro": "astro",
     "seed:localnet": "tsx --tsconfig tsconfig.scripts.json scripts/seed-localnet.ts",
+    "seed:localnet-dev": "tsx --tsconfig tsconfig.scripts.json scripts/seed-localnet.ts --mode localnet-dev",
+    "seed:localnet-prod": "tsx --tsconfig tsconfig.scripts.json scripts/seed-localnet.ts --mode localnet-prod",
     "test": "vitest",
     "test:run": "vitest --run",
     "test:integration": "vitest --config vitest.integration.config.ts --run",
