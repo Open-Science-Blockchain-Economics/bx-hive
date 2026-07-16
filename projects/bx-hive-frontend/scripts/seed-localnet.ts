@@ -3,13 +3,15 @@
  * LocalNet seeding script
  * Creates 25 funded accounts in KMD for testing.
  *
- * Usage: pnpm seed:localnet
+ * Usage: pnpm seed:localnet                  (.env — localnet on this machine)
+ *        pnpm seed:localnet-dev              (.env.localnet-dev — hosted localnet)
+ *        pnpm seed:localnet-prod             (.env.localnet-prod — hosted localnet)
  * Prerequisites: algokit localnet start && python -m smart_contracts deploy
  */
 
 import { AlgorandClient, algo } from '@algorandfoundation/algokit-utils'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
-import { resolve, dirname } from 'path'
+import { resolve, dirname, basename } from 'path'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -23,13 +25,26 @@ const TEST_WALLET_NAME = 'bx-hive-test-accounts'
 const USDC_TOTAL = 10_000_000_000_000_000n // 10 billion USDC in base units
 const USDC_DECIMALS = 6
 const USDC_AIRDROP_BASE_UNITS = 10_000n * 1_000_000n // 10,000 USDC per seeded account
-const ENV_FILE_PATH = resolve(__dirname, '../.env')
+/** `--mode localnet-dev` → `.env.localnet-dev`; no mode → `.env`. Mirrors astro's --mode. */
+function resolveEnvFile(): { path: string; mode?: string } {
+  const idx = process.argv.indexOf('--mode')
+  if (idx === -1) return { path: resolve(__dirname, '../.env') }
+  const mode = process.argv[idx + 1]
+  if (!mode) {
+    console.error('✖ --mode needs a value, e.g. --mode localnet-dev')
+    process.exit(1)
+  }
+  return { path: resolve(__dirname, `../.env.${mode}`), mode }
+}
+
+// Both read and written: the minted USDC id must land in the same file the run was configured from.
+const { path: ENV_FILE_PATH, mode: ENV_MODE } = resolveEnvFile()
 
 // ---------------------------------------------------------------------------
 // Minimal .env loader (avoids needing dotenv as a dependency)
 // ---------------------------------------------------------------------------
 function loadEnv() {
-  const envPath = resolve(__dirname, '../.env')
+  const envPath = ENV_FILE_PATH
   try {
     const contents = readFileSync(envPath, 'utf-8')
     for (const line of contents.split('\n')) {
@@ -47,7 +62,13 @@ function loadEnv() {
       }
     }
   } catch {
-    console.warn('⚠ Could not read .env — using existing process.env values')
+    // Falling through leaves the localhost defaults in place — i.e. seeding a different chain
+    // than the one asked for. Survivable for a missing `.env`, never for an explicit --mode.
+    if (ENV_MODE) {
+      console.error(`✖ Could not read ${envPath}`)
+      process.exit(1)
+    }
+    console.warn(`⚠ Could not read ${envPath} — using existing process.env values`)
   }
 }
 
@@ -101,7 +122,7 @@ async function mintOrReuseMockUsdc(algorand: AlgorandClient, dispenserAddr: stri
   })
   const assetId = BigInt(result.assetId)
   upsertEnvVar(ENV_FILE_PATH, 'VITE_USDC_ASSET_ID', assetId.toString())
-  console.log(`  Minted mock USDC asset ${assetId} and wrote VITE_USDC_ASSET_ID to .env`)
+  console.log(`  Minted mock USDC asset ${assetId} and wrote VITE_USDC_ASSET_ID to ${basename(ENV_FILE_PATH)}`)
   return assetId
 }
 
@@ -119,7 +140,10 @@ async function main() {
   const kmdPort = Number(env('VITE_KMD_PORT', '4002'))
   const kmdPassword = env('VITE_KMD_PASSWORD', '')
 
-  console.log(`🌱 Seeding LocalNet — creating ${ACCOUNT_COUNT} funded accounts...\n`)
+  console.log(`🌱 Seeding LocalNet — creating ${ACCOUNT_COUNT} funded accounts...`)
+  console.log(`  Config:    ${basename(ENV_FILE_PATH)}`)
+  console.log(`  Algod:     ${algodServer}:${algodPort}`)
+  console.log(`  KMD:       ${kmdServer}:${kmdPort}\n`)
 
   // AlgorandClient with KMD config for dispenser lookup and raw wallet ops
   const algorand = AlgorandClient.fromConfig({
@@ -160,6 +184,10 @@ async function main() {
   let count = 0
   try {
     for (let i = 1; i <= ACCOUNT_COUNT; i++) {
+      // KMD expires a handle ~60s after it was issued. Each account below costs several
+      // round trips, so against a remote KMD the loop outlives the handle — renew per account.
+      await kmd.renewWalletHandleToken({ walletHandleToken })
+
       // Create a new account inside the dedicated test wallet
       const { address } = await kmd.generateKey({ walletHandleToken })
       const newAddress = address.toString()
@@ -189,7 +217,9 @@ async function main() {
       console.log(`  ✓ Account ${i}: ${newAddress}`)
     }
   } finally {
-    await kmd.releaseWalletHandleToken({ walletHandleToken })
+    // Releasing is best-effort cleanup: if the loop failed because the handle died, releasing it
+    // throws too, and an error from `finally` would replace the one that actually explains the run.
+    await kmd.releaseWalletHandleToken({ walletHandleToken }).catch(() => {})
   }
 
   console.log(`\n✅ Done! ${count} accounts created in KMD wallet "${TEST_WALLET_NAME}".`)
