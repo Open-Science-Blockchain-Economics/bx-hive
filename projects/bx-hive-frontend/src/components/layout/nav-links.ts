@@ -1,7 +1,8 @@
 // Marketing nav, shared by SiteHeader.astro (desktop) and HeaderControls (mobile panel).
 export const NAV_LINKS = [
   { label: 'About', href: '/about' },
-  { label: 'Blog', href: '/blog' },
+  // Hidden until the blog has real content — the /blog route and pages still exist. Restore to re-list.
+  // { label: 'Blog', href: '/blog' },
   { label: 'Contact', href: '/contact' },
 ] as const
 
