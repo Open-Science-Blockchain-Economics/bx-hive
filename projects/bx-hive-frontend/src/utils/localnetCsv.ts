@@ -1,11 +1,7 @@
 import type { LocalnetAccount } from '../hooks/useLocalnetAccounts'
 import { baseUnitsToWhole } from './amount'
+import { escapeCell } from './csv'
 import { devLoginUrl } from './devLogin'
-
-/** Quotes a cell only when it would otherwise break the row. */
-function escapeCell(value: string): string {
-  return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
-}
 
 /** Header for the configured-asset column, e.g. USDC. Accounts not opted in leave it blank. */
 function assetHeader(accounts: LocalnetAccount[]): string {

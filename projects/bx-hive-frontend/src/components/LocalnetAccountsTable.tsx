@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import { type LocalnetAccount, type LocalnetAccountRole, useLocalnetAccounts } from '../hooks/useLocalnetAccounts'
 import { truncateAddress } from '../utils/address'
 import { baseUnitsToWhole } from '../utils/amount'
+import { downloadCsv } from '../utils/csv'
 import { devLoginUrl } from '../utils/devLogin'
 import { connectKmdAccount } from '../utils/kmdConnect'
 import { toLocalnetCsv } from '../utils/localnetCsv'
@@ -31,15 +32,6 @@ function Toast({ message, onDismiss }: { message: string; onDismiss: () => void 
 
 const selectClass =
   'h-9 rounded-sm border border-input bg-card px-2.5 text-[13px] text-foreground font-ui transition-colors outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50'
-
-function downloadCsv(filename: string, csv: string) {
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(url)
-}
 
 function FundDropdown({ onFund, isPending }: { onFund: (address: string, amount: number) => Promise<void>; isPending: boolean }) {
   const [open, setOpen] = useState(false)
