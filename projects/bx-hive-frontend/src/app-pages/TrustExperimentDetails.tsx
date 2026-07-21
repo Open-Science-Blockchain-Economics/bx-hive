@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Pause, Play } from 'lucide-react'
+import { ArrowLeft, Download, Pause, Play } from 'lucide-react'
 
 import { Chip } from '@/components/ds/badge'
 import { Btn } from '@/components/ds/button'
@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
 import VariationPanel from '../components/experimenter/trust-details/VariationPanel'
 import { LoadingSpinner, StatusDot } from '../components/ui'
-import { useAssetMetadata } from '../hooks/useAssetMetadata'
+import { fetchAssetMetadata, useAssetMetadata } from '../hooks/useAssetMetadata'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import { STATUS_ACTIVE, useTrustVariation } from '../hooks/useTrustVariation'
@@ -19,6 +19,8 @@ import type { Match, VariationConfig } from '../hooks/useTrustVariation'
 import { useExperimentManager } from '../hooks/useExperimentManager'
 import { queryKeys } from '../lib/queryKeys'
 import { truncateAddress } from '../utils/address'
+import { downloadCsv } from '../utils/csv'
+import { resolveVariationAssets, toTrustResultsCsv } from '../utils/trustResultsCsv'
 import { deriveExperimentStatus, statusDotColor, statusLabel, variationTooltip } from '../utils/variationStatus'
 
 interface ParticipantEntry {
@@ -87,6 +89,7 @@ export default function TrustExperimentDetails() {
   const queryClient = useQueryClient()
 
   const [selectedVarIdx, setSelectedVarIdx] = useState(0)
+  const [exporting, setExporting] = useState(false)
 
   const expConfig = getExpConfig(expId)
   const autoRefresh = expConfig.autoRefresh
@@ -172,6 +175,24 @@ export default function TrustExperimentDetails() {
   const varKey = selectedVar ? String(selectedVar.appId) : ''
   const expStatus = deriveExperimentStatus(Object.values(cfgs))
 
+  const handleDownloadResults = async () => {
+    setExporting(true)
+    try {
+      // Resolve each variation's payout-asset decimals/unit; tolerant of a single failed asset lookup.
+      const assets = await resolveVariationAssets(vars, cfgs, fetchAssetMetadata)
+      const date = new Date().toISOString().slice(0, 10)
+      downloadCsv(
+        `trust-experiment-${expId}-results-${date}.csv`,
+        toTrustResultsCsv({ variations: vars, participants: subs, matches, configs: cfgs, assets }),
+      )
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[results-csv] export failed', err)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   return (
     <div>
       {/* Title row: back + name + chips + actions */}
@@ -197,6 +218,15 @@ export default function TrustExperimentDetails() {
           <Chip tone="accent">TRUST · TG</Chip>
         </div>
         <div className="flex items-center gap-2">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Btn variant="secondary" size="sm" disabled={exporting} onClick={() => void handleDownloadResults()}>
+                <Download className="size-3.5" />
+                Download CSV
+              </Btn>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Download results for all variations as CSV</TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Btn
