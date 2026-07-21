@@ -1,0 +1,160 @@
+import type { VariationInfo } from '../hooks/useTrustExperiments'
+import { PHASE_COMPLETED, PHASE_TRUSTEE_DECISION } from '../hooks/useTrustVariation'
+import type { Match, VariationConfig } from '../hooks/useTrustVariation'
+import { baseUnitsToWhole } from './amount'
+import { escapeCell } from './csv'
+
+/** Per-variation payout-asset metadata needed to format amounts. */
+export interface VariationAssetInfo {
+  decimals: number
+  unitName: string
+}
+
+interface ParticipantEntry {
+  address: string
+  enrolled: number
+  assigned: number
+}
+
+/**
+ * Everything the results export needs, mirroring the details-page query shape:
+ * the three per-variation records are keyed by `String(appId)`, plus a parallel
+ * `assets` record resolving each variation's payout-asset decimals/unit name.
+ */
+export interface TrustResultsData {
+  variations: VariationInfo[]
+  participants: Record<string, ParticipantEntry[]>
+  matches: Record<string, Match[]>
+  configs: Record<string, VariationConfig>
+  assets: Record<string, VariationAssetInfo>
+}
+
+const HEADERS = [
+  'variation_id',
+  'variation_label',
+  'app_id',
+  'asset_id',
+  'unit_name',
+  'address',
+  'role',
+  'state',
+  'match_id',
+  'investment_whole',
+  'investment_base',
+  'return_whole',
+  'return_base',
+  'payout_whole',
+  'payout_base',
+  'created_at',
+  'completed_at',
+]
+
+/** Number of match-detail cells (state → completed_at); a match row's tail and an unassigned row's blanks both fill these. */
+const MATCH_CELL_COUNT = HEADERS.length - 7
+
+function formatWhole(base: bigint, decimals: number): string {
+  return baseUnitsToWhole(base, decimals).toFixed(decimals)
+}
+
+function formatTimestamp(ts: bigint): string {
+  return new Date(Number(ts) * 1000).toISOString()
+}
+
+/** Human-readable game state; mirrors MatchesTable's else-fallback to 'Investor deciding' for phase 0. */
+function matchState(phase: number): string {
+  if (phase === PHASE_COMPLETED) return 'Completed'
+  if (phase === PHASE_TRUSTEE_DECISION) return 'Trustee deciding'
+  return 'Investor deciding'
+}
+
+/**
+ * The 10 match-detail cells (state → completed_at) for one address's side of a
+ * match. Amounts are gated by phase, not value: 0 is a legal decision, so a
+ * blank cell means "not yet decided", never "decided zero".
+ */
+function matchCells(m: Match, payout: bigint, decimals: number): string[] {
+  const investmentDecided = m.phase >= PHASE_TRUSTEE_DECISION
+  const completed = m.phase === PHASE_COMPLETED
+  return [
+    matchState(m.phase),
+    String(m.matchId),
+    investmentDecided ? formatWhole(m.investment, decimals) : '',
+    investmentDecided ? String(m.investment) : '',
+    completed ? formatWhole(m.returnAmount, decimals) : '',
+    completed ? String(m.returnAmount) : '',
+    completed ? formatWhole(payout, decimals) : '',
+    completed ? String(payout) : '',
+    formatTimestamp(m.createdAt),
+    completed ? formatTimestamp(m.completedAt) : '',
+  ]
+}
+
+/**
+ * Serializes an experiment's results across all variations to CSV — one row per
+ * address. A completed match yields two rows (investor, then trustee), each
+ * carrying that side's on-chain payout; enrolled-but-unassigned participants
+ * appear as "Not assigned" rows. Variations whose config/asset failed to load
+ * upstream contribute no rows.
+ */
+export function toTrustResultsCsv(data: TrustResultsData): string {
+  const rows: string[][] = []
+
+  for (const v of [...data.variations].sort((a, b) => a.varId - b.varId)) {
+    const key = String(v.appId)
+    const cfg = data.configs[key]
+    const asset = data.assets[key]
+    if (!cfg || !asset) continue
+
+    const prefix = [String(v.varId), v.label, String(v.appId), String(cfg.assetId), asset.unitName]
+
+    const matches = [...(data.matches[key] ?? [])].sort((a, b) => a.matchId - b.matchId)
+    for (const m of matches) {
+      rows.push([...prefix, m.investor, 'Investor', ...matchCells(m, m.investorPayout, asset.decimals)])
+      rows.push([...prefix, m.trustee, 'Trustee', ...matchCells(m, m.trusteePayout, asset.decimals)])
+    }
+
+    const unassigned = (data.participants[key] ?? []).filter((p) => p.assigned === 0).sort((a, b) => a.address.localeCompare(b.address))
+    for (const p of unassigned) {
+      rows.push([...prefix, p.address, '', 'Not assigned', ...Array<string>(MATCH_CELL_COUNT - 1).fill('')])
+    }
+  }
+
+  return [HEADERS, ...rows].map((row) => row.map(escapeCell).join(',')).join('\r\n')
+}
+
+/** Minimal asset metadata the export needs; structurally satisfied by useAssetMetadata's AssetMetadata. */
+interface AssetMetadataLike {
+  decimals: number
+  unitName: string
+}
+
+/**
+ * Builds the `assets` record `toTrustResultsCsv` expects, resolving each
+ * variation's payout-asset decimals/unit name. Each distinct asset is fetched
+ * once. Fault-tolerant on purpose: a variation whose config is missing or whose
+ * asset lookup rejects is simply omitted (the serializer then skips it), so one
+ * unreachable ASA never aborts the rest of the export — matching the page
+ * query, which drops only the broken variation.
+ */
+export async function resolveVariationAssets(
+  variations: VariationInfo[],
+  configs: Record<string, VariationConfig>,
+  fetchMeta: (assetId: bigint) => Promise<AssetMetadataLike>,
+): Promise<Record<string, VariationAssetInfo>> {
+  const withCfg = variations.map((v) => ({ key: String(v.appId), cfg: configs[String(v.appId)] })).filter((e) => e.cfg !== undefined)
+  const distinctAssetIds = [...new Set(withCfg.map((e) => e.cfg.assetId))]
+  const settled = await Promise.allSettled(distinctAssetIds.map((id) => fetchMeta(id)))
+
+  const byAssetId = new Map<bigint, VariationAssetInfo>()
+  distinctAssetIds.forEach((id, i) => {
+    const result = settled[i]
+    if (result.status === 'fulfilled') byAssetId.set(id, { decimals: result.value.decimals, unitName: result.value.unitName })
+  })
+
+  const assets: Record<string, VariationAssetInfo> = {}
+  for (const e of withCfg) {
+    const info = byAssetId.get(e.cfg.assetId)
+    if (info) assets[e.key] = info
+  }
+  return assets
+}
