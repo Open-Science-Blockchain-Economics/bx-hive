@@ -1,5 +1,6 @@
 import { Loader2 } from 'lucide-react'
 
+import DebugInfo from '@/components/DebugInfo'
 import { Chip } from '@/components/ds/badge'
 import { Btn } from '@/components/ds/button'
 import { Panel } from '@/components/ds/card'
@@ -28,6 +29,7 @@ export default function JoinableExperimentCard({ group, variations, joining, joi
           {isFull && <p className="text-xs text-muted-foreground mt-1">No places left to join right now.</p>}
         </div>
         <div className="flex items-center gap-2">
+          <DebugInfo group={group} variations={variations} />
           {isFull ? <Chip tone="warn">Full</Chip> : <Chip tone="info">Open</Chip>}
         </div>
       </div>

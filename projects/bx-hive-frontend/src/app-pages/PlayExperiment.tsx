@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
+import DebugInfo from '@/components/DebugInfo'
 import { Btn } from '@/components/ds/button'
 import { Panel } from '@/components/ds/card'
 import TrustExperiment from '../components/experiment-types/trust/TrustExperiment'
@@ -73,7 +74,12 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
         title={isInvestor ? 'Investor Instructions' : 'Trustee Instructions'}
         markdownContent={instructionsMarkdown}
       />
-      <PageHeader title="Trust Game" backTo="/dashboard/participant" backTooltip="Back to Participant Dashboard" />
+      <PageHeader
+        title="Trust Game"
+        backTo="/dashboard/participant"
+        backTooltip="Back to Participant Dashboard"
+        badges={<DebugInfo appId={appId} config={data.config} match={data.match} />}
+      />
       <TrustExperiment
         appId={appId}
         match={data.match}

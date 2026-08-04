@@ -11,14 +11,15 @@ import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustVariation, PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '../hooks/useTrustVariation'
-import type { Match as OnChainMatch } from '../hooks/useTrustVariation'
+import type { Match as OnChainMatch, VariationConfig } from '../hooks/useTrustVariation'
 import { queryKeys } from '../lib/queryKeys'
 import { hasActiveVariation, pickVariationRoundRobin, type VariationSlot } from '../utils/distributeParticipants'
 
 interface OnChainMatchView {
-  appId: bigint
+  group: ExperimentGroup
+  variation: VariationInfo
+  config: VariationConfig
   match: OnChainMatch
-  assetId: bigint
 }
 
 interface OnChainExperimentView {
@@ -69,7 +70,7 @@ export default function ParticipantDashboard() {
           const match = await getPlayerMatch(v.appId, activeAddress!)
           if (match) {
             const cfg = await config(v.appId)
-            matchViews.push({ appId: v.appId, match, assetId: cfg.assetId })
+            matchViews.push({ group, variation: v, config: cfg, match })
             enrolled = true
             hasMatch = true
           }
@@ -170,8 +171,15 @@ export default function ParticipantDashboard() {
           <section>
             <Rule label="Trust Game — Active" className="mb-4" />
             <div className="grid gap-3">
-              {activeOnChain.map(({ appId, match }) => (
-                <ActiveMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
+              {activeOnChain.map(({ group, variation, config, match }) => (
+                <ActiveMatchCard
+                  key={String(variation.appId)}
+                  group={group}
+                  variation={variation}
+                  config={config}
+                  match={match}
+                  activeAddress={activeAddress!}
+                />
               ))}
             </div>
           </section>
@@ -211,8 +219,15 @@ export default function ParticipantDashboard() {
           <section>
             <Rule label="Trust Game — Completed" className="mb-4" />
             <div className="grid gap-3">
-              {completedOnChain.map(({ appId, match, assetId }) => (
-                <CompletedMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} assetId={assetId} />
+              {completedOnChain.map(({ group, variation, config, match }) => (
+                <CompletedMatchCard
+                  key={String(variation.appId)}
+                  group={group}
+                  variation={variation}
+                  config={config}
+                  match={match}
+                  activeAddress={activeAddress!}
+                />
               ))}
             </div>
           </section>
