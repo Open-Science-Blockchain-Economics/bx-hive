@@ -306,7 +306,10 @@ export default function CreateExperimentForm({
             </div>
             {!batchModeEnabled && (
               <InfoAlert learnMoreHref={DOCS_LINKS.maxPayout} className="mt-4">
-                Max payout per pair: <strong>{maxPayout} ALGO</strong>
+                Max payout per pair:{' '}
+                <strong>
+                  {maxPayout} {payoutAsset.unitName}
+                </strong>
               </InfoAlert>
             )}
           </Step>
