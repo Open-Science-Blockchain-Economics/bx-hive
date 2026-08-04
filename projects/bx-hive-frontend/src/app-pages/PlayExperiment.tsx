@@ -8,6 +8,7 @@ import TrustExperiment from '../components/experiment-types/trust/TrustExperimen
 import InstructionsModal from '../components/InstructionsModal'
 import { LoadingSpinner, PageHeader } from '../components/ui'
 import { useAlgorand } from '../hooks/useAlgorand'
+import { useAssetMetadata } from '../hooks/useAssetMetadata'
 import { useTrustVariation } from '../hooks/useTrustVariation'
 import type { VariationConfig } from '../hooks/useTrustVariation'
 import { queryKeys } from '../lib/queryKeys'
@@ -39,6 +40,10 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
     refetchInterval: REFRESH_INTERVAL_MS,
   })
 
+  // Synthetic ALGO metadata is returned for assetId=0n, so this hook is safe
+  // to call before the match query resolves.
+  const asset = useAssetMetadata(data?.config.assetId ?? 0n)
+
   if (isLoading) {
     return <LoadingSpinner />
   }
@@ -57,7 +62,7 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
   }
 
   const isInvestor = data.match.investor === activeAddress
-  const tokens = trustVariationTokens(data.config)
+  const tokens = trustVariationTokens(data.config, asset)
   const instructionsMarkdown = renderInstructions(isInvestor ? investorInstructions : trusteeInstructions, tokens)
 
   return (

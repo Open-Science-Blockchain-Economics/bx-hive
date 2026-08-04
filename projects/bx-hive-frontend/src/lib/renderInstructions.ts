@@ -11,15 +11,12 @@ export function renderInstructions(template: string, tokens: InstructionTokens):
   })
 }
 
-export function trustVariationTokens(config: VariationConfig): InstructionTokens {
-  const isAlgo = BigInt(config.assetId) === 0n
-  const fmt = isAlgo
-    ? (micro: bigint) => `${formatMicro(micro, 6)} ALGO`
-    : (micro: bigint) => {
-        // eslint-disable-next-line no-console
-        console.warn(`[instructions] non-ALGO asset ${config.assetId} — rendering raw micro-units`)
-        return `${micro.toString()} units`
-      }
+export function trustVariationTokens(config: VariationConfig, asset: { decimals: number; unitName: string }): InstructionTokens {
+  // An ASA created without a unit name yields '', which would otherwise leave a trailing space inside the template's bold markers.
+  const fmt = (amount: bigint) => {
+    const whole = formatMicro(amount, asset.decimals)
+    return asset.unitName ? `${whole} ${asset.unitName}` : whole
+  }
   return {
     e1: fmt(BigInt(config.e1)),
     e2: fmt(BigInt(config.e2)),
