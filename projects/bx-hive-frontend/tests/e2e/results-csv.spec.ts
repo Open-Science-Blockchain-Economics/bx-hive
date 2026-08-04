@@ -21,6 +21,11 @@ const COL = {
   investmentWhole: 10,
   payoutWhole: 14,
   payoutBase: 15,
+  e1Whole: 18,
+  e1Base: 19,
+  e2Whole: 20,
+  multiplier: 22,
+  unitWhole: 23,
 } as const
 
 test('experimenter downloads a results CSV with per-address payouts for a completed match', async ({
@@ -71,7 +76,7 @@ test('experimenter downloads a results CSV with per-address payouts for a comple
   const csv = await readFile(await download.path(), 'utf8')
   const [header, ...rows] = csv.split('\r\n')
   expect(header).toBe(
-    'variation_id,variation_label,app_id,asset_id,unit_name,address,user_name,role,state,match_id,investment_whole,investment_base,return_whole,return_base,payout_whole,payout_base,created_at,completed_at',
+    'variation_id,variation_label,app_id,asset_id,unit_name,address,user_name,role,state,match_id,investment_whole,investment_base,return_whole,return_base,payout_whole,payout_base,created_at,completed_at,e1_whole,e1_base,e2_whole,e2_base,multiplier,unit_whole,unit_base,max_participants,variation_status',
   )
 
   // investorPayout = E1 − investment + return = 2 − 1 + 2 = 3 ALGO
@@ -86,6 +91,14 @@ test('experimenter downloads a results CSV with per-address payouts for a comple
   expect(investor[COL.payoutWhole]).toBe('3.000000')
   expect(investor[COL.payoutBase]).toBe('3000000')
 
+  // The variation's parameters ride along on the row, so the payouts can be checked without a second file.
+  expect(investor[COL.e1Whole]).toBe(E1_ALGO.toFixed(6))
+  expect(investor[COL.e1Base]).toBe(String(E1_ALGO * 1_000_000))
+  expect(investor[COL.e2Whole]).toBe(E2_ALGO.toFixed(6))
+  expect(investor[COL.multiplier]).toBe(String(MULTIPLIER))
+  expect(investor[COL.unitWhole]).toBe(UNIT_ALGO.toFixed(6))
+
+  // trusteePayout = E2 + multiplier·investment − return = 0 + 3 − 2 = 1 ALGO
   const trusteeRow = rows.find((r) => r.includes(participant2.address))
   expect(trusteeRow, 'trustee row for participant2 should be present').toBeDefined()
   const trustee = trusteeRow!.split(',')
@@ -94,4 +107,5 @@ test('experimenter downloads a results CSV with per-address payouts for a comple
   expect(trustee[COL.state]).toBe('Completed')
   expect(trustee[COL.payoutWhole]).toBe('1.000000')
   expect(trustee[COL.payoutBase]).toBe('1000000')
+  expect(trustee[COL.multiplier]).toBe(String(MULTIPLIER))
 })

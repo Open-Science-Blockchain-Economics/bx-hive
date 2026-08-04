@@ -3,6 +3,7 @@ import { PHASE_COMPLETED, PHASE_TRUSTEE_DECISION } from '../hooks/useTrustVariat
 import type { Match, VariationConfig } from '../hooks/useTrustVariation'
 import { baseUnitsToWhole } from './amount'
 import { escapeCell, neutralizeFormula } from './csv'
+import { statusLabel } from './variationStatus'
 
 /** Per-variation payout-asset metadata needed to format amounts. */
 export interface VariationAssetInfo {
@@ -45,6 +46,19 @@ const MATCH_DETAIL_HEADERS = [
   'completed_at',
 ]
 
+/** The variation-parameter columns, in order; `configCells` emits exactly one cell per entry and every row carries them. */
+const CONFIG_HEADERS = [
+  'e1_whole',
+  'e1_base',
+  'e2_whole',
+  'e2_base',
+  'multiplier',
+  'unit_whole',
+  'unit_base',
+  'max_participants',
+  'variation_status',
+]
+
 const HEADERS = [
   'variation_id',
   'variation_label',
@@ -55,6 +69,7 @@ const HEADERS = [
   'user_name',
   'role',
   ...MATCH_DETAIL_HEADERS,
+  ...CONFIG_HEADERS,
 ]
 
 function formatWhole(base: bigint, decimals: number): string {
@@ -95,11 +110,32 @@ function matchCells(m: Match, payout: bigint, decimals: number): string[] {
 }
 
 /**
+ * The CONFIG_HEADERS cells for one variation, repeated on every row it emits so
+ * a row carries the parameters it was played under. `maxParticipants` goes out
+ * raw: the contract's 0 means unlimited, and inventing a label here would make
+ * the column non-numeric for the analyst.
+ */
+function configCells(cfg: VariationConfig, decimals: number): string[] {
+  return [
+    formatWhole(cfg.e1, decimals),
+    String(cfg.e1),
+    formatWhole(cfg.e2, decimals),
+    String(cfg.e2),
+    String(cfg.multiplier),
+    formatWhole(cfg.unit, decimals),
+    String(cfg.unit),
+    String(cfg.maxParticipants),
+    statusLabel(cfg),
+  ]
+}
+
+/**
  * Serializes an experiment's results across all variations to CSV — one row per
  * address. A completed match yields two rows (investor, then trustee), each
  * carrying that side's on-chain payout; enrolled-but-unassigned participants
- * appear as "Not assigned" rows. Variations whose config/asset failed to load
- * upstream contribute no rows.
+ * appear as "Not assigned" rows. Every row ends with its variation's parameters,
+ * so the file needs no second sheet to interpret. Variations whose config/asset
+ * failed to load upstream contribute no rows.
  */
 export function toTrustResultsCsv(data: TrustResultsData): string {
   const rows: string[][] = []
@@ -112,16 +148,25 @@ export function toTrustResultsCsv(data: TrustResultsData): string {
     if (!cfg || !asset) continue
 
     const prefix = [String(v.varId), neutralizeFormula(v.label), String(v.appId), String(cfg.assetId), asset.unitName]
+    const suffix = configCells(cfg, asset.decimals)
 
     const matches = [...(data.matches[key] ?? [])].sort((a, b) => a.matchId - b.matchId)
     for (const m of matches) {
-      rows.push([...prefix, m.investor, nameOf(m.investor), 'Investor', ...matchCells(m, m.investorPayout, asset.decimals)])
-      rows.push([...prefix, m.trustee, nameOf(m.trustee), 'Trustee', ...matchCells(m, m.trusteePayout, asset.decimals)])
+      rows.push([...prefix, m.investor, nameOf(m.investor), 'Investor', ...matchCells(m, m.investorPayout, asset.decimals), ...suffix])
+      rows.push([...prefix, m.trustee, nameOf(m.trustee), 'Trustee', ...matchCells(m, m.trusteePayout, asset.decimals), ...suffix])
     }
 
     const unassigned = (data.participants[key] ?? []).filter((p) => p.assigned === 0).sort((a, b) => a.address.localeCompare(b.address))
     for (const p of unassigned) {
-      rows.push([...prefix, p.address, nameOf(p.address), '', 'Not assigned', ...Array<string>(MATCH_DETAIL_HEADERS.length - 1).fill('')])
+      rows.push([
+        ...prefix,
+        p.address,
+        nameOf(p.address),
+        '',
+        'Not assigned',
+        ...Array<string>(MATCH_DETAIL_HEADERS.length - 1).fill(''),
+        ...suffix,
+      ])
     }
   }
 

@@ -1,7 +1,14 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import type { VariationInfo } from '../hooks/useTrustExperiments'
-import { PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '../hooks/useTrustVariation'
+import {
+  PHASE_COMPLETED,
+  PHASE_INVESTOR_DECISION,
+  PHASE_TRUSTEE_DECISION,
+  STATUS_ACTIVE,
+  STATUS_CLOSED,
+  STATUS_COMPLETED,
+} from '../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../hooks/useTrustVariation'
 import {
   exportedAddresses,
@@ -13,7 +20,10 @@ import {
 } from './trustResultsCsv'
 
 const HEADER =
-  'variation_id,variation_label,app_id,asset_id,unit_name,address,user_name,role,state,match_id,investment_whole,investment_base,return_whole,return_base,payout_whole,payout_base,created_at,completed_at'
+  'variation_id,variation_label,app_id,asset_id,unit_name,address,user_name,role,state,match_id,investment_whole,investment_base,return_whole,return_base,payout_whole,payout_base,created_at,completed_at,e1_whole,e1_base,e2_whole,e2_base,multiplier,unit_whole,unit_base,max_participants,variation_status'
+
+// First variation-parameter column; the nine that follow it end every row.
+const CONFIG_START = 18
 
 // 58-char opaque stand-ins for Algorand addresses; the serializer never parses them.
 const addr = (c: string) => c.repeat(58)
@@ -93,7 +103,7 @@ function singleVariationData(
 }
 
 describe('toTrustResultsCsv', () => {
-  it('emits the 18-column header and nothing else for a variation with no games or participants', () => {
+  it('emits the 27-column header and nothing else for a variation with no games or participants', () => {
     const rows = rowsOf(toTrustResultsCsv(singleVariationData()))
     expect(rows).toHaveLength(1)
     expect(rows[0]).toBe(HEADER)
@@ -195,7 +205,7 @@ describe('toTrustResultsCsv', () => {
     expect(cells[5]).toBe(UNASSIGNED)
     expect(cells[7]).toBe('') // role blank
     expect(cells[8]).toBe('Not assigned')
-    expect(cells.slice(9)).toEqual(['', '', '', '', '', '', '', '', '']) // match_id → completed_at all blank
+    expect(cells.slice(9, CONFIG_START)).toEqual(['', '', '', '', '', '', '', '', '']) // match_id → completed_at all blank
   })
 
   it('carries each address’s registered name on match and Not assigned rows alike', () => {
@@ -239,6 +249,66 @@ describe('toTrustResultsCsv', () => {
   it('leaves an ordinary user_name untouched', () => {
     const csv = toTrustResultsCsv(singleVariationData({ matches: [makeMatch()], users: { [INVESTOR]: 'Ada Lovelace' } }))
     expect(cellsOf(rowsOf(csv)[1])[6]).toBe('Ada Lovelace')
+  })
+
+  it('appends the variation parameters to match and Not assigned rows alike', () => {
+    const rows = rowsOf(toTrustResultsCsv(singleVariationData({ matches: [makeMatch()], participants: [makeParticipant()] })))
+    const params = ['2.000000', '2000000', '0.000000', '0', '3', '1.000000', '1000000', '10', 'Active']
+    expect(cellsOf(rows[1]).slice(CONFIG_START)).toEqual(params) // investor
+    expect(cellsOf(rows[2]).slice(CONFIG_START)).toEqual(params) // trustee
+    expect(cellsOf(rows[3]).slice(CONFIG_START)).toEqual(params) // an unassigned participant still reports what they enrolled under
+  })
+
+  it('gives each variation’s rows its own parameters, formatted with its own asset decimals', () => {
+    const v0 = makeVariation({ varId: 0, appId: 1077n, label: 'Baseline' })
+    const v1 = makeVariation({ varId: 1, appId: 2048n, label: 'HighStakes' })
+    const data: TrustResultsData = {
+      variations: [v0, v1],
+      matches: { '1077': [makeMatch()], '2048': [makeMatch()] },
+      participants: { '1077': [], '2048': [] },
+      configs: {
+        '1077': makeConfig(),
+        '2048': makeConfig({
+          e1: 500n,
+          e2: 250n,
+          multiplier: 5n,
+          unit: 50n,
+          assetId: 1008n,
+          status: STATUS_COMPLETED,
+          maxParticipants: 4n,
+        }),
+      },
+      assets: { '1077': ALGO_ASSET, '2048': { decimals: 2, unitName: 'USDC' } },
+      users: {},
+    }
+    const rows = rowsOf(toTrustResultsCsv(data))
+    expect(cellsOf(rows[1]).slice(CONFIG_START)).toEqual([
+      '2.000000',
+      '2000000',
+      '0.000000',
+      '0',
+      '3',
+      '1.000000',
+      '1000000',
+      '10',
+      'Active',
+    ])
+    expect(cellsOf(rows[3]).slice(CONFIG_START)).toEqual(['5.00', '500', '2.50', '250', '5', '0.50', '50', '4', 'Ended'])
+  })
+
+  it('emits a max_participants of 0 verbatim rather than relabelling the contract’s "unlimited"', () => {
+    const data = singleVariationData({ matches: [makeMatch()], config: makeConfig({ maxParticipants: 0n }) })
+    expect(cellsOf(rowsOf(toTrustResultsCsv(data))[1])[25]).toBe('0')
+  })
+
+  it('labels each on-chain status value', () => {
+    const labelOf = (status: number) => {
+      const data = singleVariationData({ matches: [makeMatch()], config: makeConfig({ status }) })
+      return cellsOf(rowsOf(toTrustResultsCsv(data))[1])[26]
+    }
+    expect(labelOf(STATUS_ACTIVE)).toBe('Active')
+    expect(labelOf(STATUS_CLOSED)).toBe('Closed')
+    expect(labelOf(STATUS_COMPLETED)).toBe('Ended')
   })
 
   it('groups multiple variations by ascending varId and formats each with its own asset decimals', () => {
