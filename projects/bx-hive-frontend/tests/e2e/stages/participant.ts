@@ -3,10 +3,18 @@ import type { Page } from '@playwright/test'
 import { TrustVariationClient } from '../../../src/contracts/TrustVariation'
 import type { KmdAccount } from '../fixtures/accounts'
 
-async function gotoParticipantDashboard(page: Page, participant: KmdAccount): Promise<void> {
+/**
+ * Connects the browser to `participant` and lands on their dashboard with the
+ * on-chain query already resolved (the heading replaces a loading spinner).
+ */
+export async function gotoParticipantDashboard(page: Page, participant: KmdAccount): Promise<void> {
   // Enter via /app/join (non-protected) so the ?e2e-account param survives for
   // E2EAutoConnect; Join then redirects to the dashboard once the user loads.
   await page.goto(`/app/join?e2e-account=${participant.address}`)
+  // A wallet left connected by an earlier stage can route to the experimenter
+  // dashboard first, whose heading also ends in "Dashboard" — wait on the URL so
+  // the heading below can only come from the participant's own dashboard.
+  await page.waitForURL('**/dashboard/participant')
   await page.getByRole('heading', { name: /Dashboard$/i }).waitFor()
 }
 
