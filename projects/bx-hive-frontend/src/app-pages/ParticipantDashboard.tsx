@@ -13,7 +13,7 @@ import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiment
 import { useTrustVariation, PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '../hooks/useTrustVariation'
 import type { Match as OnChainMatch } from '../hooks/useTrustVariation'
 import { queryKeys } from '../lib/queryKeys'
-import { pickVariationRoundRobin, type VariationSlot } from '../utils/distributeParticipants'
+import { hasActiveVariation, pickVariationRoundRobin, type VariationSlot } from '../utils/distributeParticipants'
 
 interface OnChainMatchView {
   appId: bigint
@@ -25,6 +25,7 @@ interface OnChainExperimentView {
   group: ExperimentGroup
   variations: VariationInfo[]
   slots: VariationSlot[]
+  registrationOpen: boolean
   isFull: boolean
   enrolled: boolean
   hasMatch: boolean
@@ -94,12 +95,14 @@ export default function ParticipantDashboard() {
               appId: v.appId,
               participantCount: count,
               maxParticipants: Number(cfg.maxParticipants),
+              status: cfg.status,
             }
           }),
         )
-        const isFull = pickVariationRoundRobin(slots) === null
+        const registrationOpen = hasActiveVariation(slots)
+        const isFull = registrationOpen && pickVariationRoundRobin(slots) === null
 
-        expViews.push({ group, variations: vars, slots, isFull, enrolled, hasMatch })
+        expViews.push({ group, variations: vars, slots, registrationOpen, isFull, enrolled, hasMatch })
       }
 
       return { matchViews, expViews }
@@ -147,7 +150,9 @@ export default function ParticipantDashboard() {
 
   const activeOnChain = onChainMatches.filter((v) => v.match.phase !== PHASE_COMPLETED)
   const completedOnChain = onChainMatches.filter((v) => v.match.phase === PHASE_COMPLETED)
-  const joinableExperiments = onChainExperiments.filter((e) => !e.enrolled && !e.hasMatch)
+  // Only the joinable list is gated on status: create_match has no status check, so someone already
+  // enrolled can still be paired after the experimenter closes registration.
+  const joinableExperiments = onChainExperiments.filter((e) => !e.enrolled && !e.hasMatch && e.registrationOpen)
   const enrolledWaiting = onChainExperiments.filter((e) => e.enrolled && !e.hasMatch)
 
   const hasAnything =

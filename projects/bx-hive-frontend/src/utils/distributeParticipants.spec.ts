@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
-import { pickVariationRoundRobin, type VariationSlot } from './distributeParticipants'
+import { STATUS_ACTIVE, STATUS_CLOSED, STATUS_COMPLETED } from '../hooks/useTrustVariation'
+import { hasActiveVariation, pickVariationRoundRobin, type VariationSlot } from './distributeParticipants'
 
-const s = (appId: bigint, participantCount: number, maxParticipants: number): VariationSlot => ({
+const s = (appId: bigint, participantCount: number, maxParticipants: number, status = STATUS_ACTIVE): VariationSlot => ({
   appId,
   participantCount,
   maxParticipants,
+  status,
 })
 
 describe('pickVariationRoundRobin', () => {
@@ -53,5 +55,43 @@ describe('pickVariationRoundRobin', () => {
     // two slots tied at 2 participants each. reduce starts at index 0, strictly-less comparison
     // means it stays on slot 1.
     expect(pickVariationRoundRobin([s(1n, 2, 0), s(2n, 2, 0)])).toBe(1n)
+  })
+
+  it('never picks a closed variation, however much room it has', () => {
+    expect(pickVariationRoundRobin([s(1n, 0, 0, STATUS_CLOSED)])).toBeNull()
+  })
+
+  it('never picks a completed variation', () => {
+    expect(pickVariationRoundRobin([s(1n, 0, 0, STATUS_COMPLETED)])).toBeNull()
+  })
+
+  it('routes to the active variation when a sibling is closed', () => {
+    // var 1 is closed and emptier, so the round-robin would prefer it on count alone.
+    expect(pickVariationRoundRobin([s(1n, 0, 0, STATUS_CLOSED), s(2n, 4, 0)])).toBe(2n)
+  })
+
+  it('ignores an incomplete pair in a closed variation', () => {
+    expect(pickVariationRoundRobin([s(1n, 1, 0, STATUS_CLOSED), s(2n, 0, 0)])).toBe(2n)
+  })
+})
+
+describe('hasActiveVariation', () => {
+  it('is false for an empty experiment', () => {
+    expect(hasActiveVariation([])).toBe(false)
+  })
+
+  it('is false when every variation is closed or completed, even with room to spare', () => {
+    // A closed-but-empty variation must not read as joinable; pickVariationRoundRobin returns null
+    // for it too, but that alone would be indistinguishable from "all full".
+    expect(hasActiveVariation([s(1n, 0, 10, STATUS_CLOSED), s(2n, 0, 0, STATUS_COMPLETED)])).toBe(false)
+  })
+
+  it('is true when an active variation exists', () => {
+    expect(hasActiveVariation([s(1n, 0, 0, STATUS_CLOSED), s(2n, 4, 0)])).toBe(true)
+  })
+
+  it('stays true for an active variation that is full, which is what distinguishes full from closed', () => {
+    expect(hasActiveVariation([s(1n, 5, 5)])).toBe(true)
+    expect(pickVariationRoundRobin([s(1n, 5, 5)])).toBeNull()
   })
 })

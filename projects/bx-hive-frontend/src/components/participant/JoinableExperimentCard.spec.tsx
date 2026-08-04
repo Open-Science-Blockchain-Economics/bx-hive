@@ -29,16 +29,16 @@ describe('JoinableExperimentCard', () => {
 
     expect(screen.getByText('Open')).toBeInTheDocument()
     expect(screen.queryByText('Full')).not.toBeInTheDocument()
-    expect(screen.queryByText(/All variations are full/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/No places left to join/i)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Join experiment/i })).toBeEnabled()
   })
 
-  it('renders a "Full" chip, an explanatory line, and a disabled Join button when full', () => {
+  it('renders a "Full" chip, an explanatory line, and a disabled Join button when there is no place to join', () => {
     render(<JoinableExperimentCard {...baseProps} isFull />)
 
     expect(screen.getByText('Full')).toBeInTheDocument()
     expect(screen.queryByText('Open')).not.toBeInTheDocument()
-    expect(screen.getByText(/All variations are full/i)).toBeInTheDocument()
+    expect(screen.getByText(/No places left to join/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Join experiment/i })).toBeDisabled()
   })
 

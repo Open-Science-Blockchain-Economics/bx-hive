@@ -24,9 +24,12 @@ export default function JoinableExperimentCard({ group, variations, joining, joi
           <p className="text-sm text-muted-foreground">
             Trust Game · Experiment ID: <span className="font-mono">{group.expId}</span>
           </p>
-          {isFull && <p className="text-xs text-muted-foreground mt-1">All variations are full.</p>}
+          {/* Deliberately vague on the cause: the open variations may be full while a closed sibling still has empty seats. */}
+          {isFull && <p className="text-xs text-muted-foreground mt-1">No places left to join right now.</p>}
         </div>
-        {isFull ? <Chip tone="warn">Full</Chip> : <Chip tone="info">Open</Chip>}
+        <div className="flex items-center gap-2">
+          {isFull ? <Chip tone="warn">Full</Chip> : <Chip tone="info">Open</Chip>}
+        </div>
       </div>
       {joinError && joining === null && <p className="text-sm text-neg mt-3">{joinError}</p>}
       <div className="flex justify-end mt-4">

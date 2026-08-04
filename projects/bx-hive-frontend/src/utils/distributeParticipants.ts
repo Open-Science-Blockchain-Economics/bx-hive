@@ -1,16 +1,28 @@
+import { STATUS_ACTIVE } from '../hooks/useTrustVariation'
+
 export interface VariationSlot {
   appId: bigint
   participantCount: number
   maxParticipants: number // 0 = unlimited
+  status: number
+}
+
+/**
+ * True when at least one variation still takes new participants, whether or not it has room left.
+ * Separates "every variation is full" from "registration is closed everywhere".
+ */
+export function hasActiveVariation(slots: VariationSlot[]): boolean {
+  return slots.some((s) => s.status === STATUS_ACTIVE)
 }
 
 /**
  * Picks the next variation using pair-based round-robin.
  * Completes a pair (2 participants) in a variation before moving to the next.
- * Returns null if all variations are full.
+ * Only ACTIVE variations are eligible — self_enroll asserts STATUS_ACTIVE, so routing anywhere else fails on-chain.
+ * Returns null if no ACTIVE variation has room.
  */
 export function pickVariationRoundRobin(slots: VariationSlot[]): bigint | null {
-  const available = slots.filter((s) => s.maxParticipants === 0 || s.participantCount < s.maxParticipants)
+  const available = slots.filter((s) => s.status === STATUS_ACTIVE && (s.maxParticipants === 0 || s.participantCount < s.maxParticipants))
   if (available.length === 0) return null
 
   // Prioritize variations with an incomplete pair (odd participant count)
