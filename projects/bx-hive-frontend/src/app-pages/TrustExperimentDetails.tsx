@@ -15,7 +15,7 @@ import { useAlgorand } from '../hooks/useAlgorand'
 import { fetchAssetMetadata, useAssetMetadata } from '../hooks/useAssetMetadata'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
-import { STATUS_ACTIVE, useTrustVariation } from '../hooks/useTrustVariation'
+import { STATUS_COMPLETED, useTrustVariation } from '../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../hooks/useTrustVariation'
 import { useExperimentManager } from '../hooks/useExperimentManager'
 import { queryKeys } from '../lib/queryKeys'
@@ -85,9 +85,10 @@ export default function TrustExperimentDetails() {
   const expId = Number(expIdParam ?? '0')
 
   const { getExperiment, listVariations } = useTrustExperiments()
-  const { getEnrolledParticipants, getMatches, getConfig, createMatch } = useTrustVariation()
+  const { getEnrolledParticipants, getMatches, getConfig, createMatch, closeRegistration, endVariation, getEscrowBalance } =
+    useTrustVariation()
   const { getExpConfig, setExpConfig, registerExperimentVariations } = useExperimentManager()
-  const { registryClient } = useAlgorand()
+  const { registryClient, activeAddress } = useAlgorand()
   const queryClient = useQueryClient()
 
   const [selectedVarIdx, setSelectedVarIdx] = useState(0)
@@ -147,22 +148,37 @@ export default function TrustExperimentDetails() {
     if (!variations || !configs) {
       return { autoMatchEligible: false, autoMatchDisabledReason: 'Loading variations…' }
     }
-    const hasActive = variations.some((v) => {
+    // A closed variation still pairs its enrolled participants; only an ended one cannot.
+    const hasMatchable = variations.some((v) => {
       const cfg = configs[String(v.appId)]
-      return cfg && Number(cfg.status) === STATUS_ACTIVE
+      return cfg && Number(cfg.status) !== STATUS_COMPLETED
     })
-    if (hasActive) {
+    if (hasMatchable) {
       return { autoMatchEligible: true, autoMatchDisabledReason: undefined }
     }
     return {
       autoMatchEligible: false,
-      autoMatchDisabledReason: 'Auto Match unavailable — no active variations.',
+      autoMatchDisabledReason: 'Auto Match unavailable — every variation has ended.',
     }
   }, [variations, configs])
 
   const createMatchMutation = useMutation({
     mutationFn: ({ appId, investor, trustee }: { appId: bigint; investor: string; trustee: string }) =>
       createMatch(appId, investor, trustee),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) })
+    },
+  })
+
+  const closeRegistrationMutation = useMutation({
+    mutationFn: (appId: bigint) => closeRegistration(appId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) })
+    },
+  })
+
+  const endVariationMutation = useMutation({
+    mutationFn: (appId: bigint) => endVariation(appId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) })
     },
@@ -176,6 +192,7 @@ export default function TrustExperimentDetails() {
   const selectedVar = vars[selectedVarIdx]
   const varKey = selectedVar ? String(selectedVar.appId) : ''
   const expStatus = deriveExperimentStatus(Object.values(cfgs))
+  const isOwner = activeAddress !== null && activeAddress === group.owner
 
   const handleDownloadResults = async () => {
     setExporting(true)
@@ -264,7 +281,7 @@ export default function TrustExperimentDetails() {
                 ? (autoMatchDisabledReason ?? 'Auto Match unavailable')
                 : autoMatch
                   ? 'Pause auto-matching'
-                  : 'Auto-match unassigned participants across all active variations (FIFO)'}
+                  : 'Auto-match unassigned participants across every variation that has not ended (FIFO)'}
             </TooltipContent>
           </Tooltip>
         </div>
@@ -306,14 +323,24 @@ export default function TrustExperimentDetails() {
           </div>
 
           {selectedVar && (
+            // Keyed so switching tabs remounts the panel; per-variation form and dialog state must not carry over.
             <VariationPanel
+              key={varKey}
               variation={selectedVar}
               participants={subs[varKey] ?? []}
               matches={matches[varKey] ?? []}
               config={cfgs[varKey]}
+              isOwner={isOwner}
               onCreateMatch={async (appId, investor, trustee) => {
                 await createMatchMutation.mutateAsync({ appId, investor, trustee })
               }}
+              onCloseRegistration={async (appId) => {
+                await closeRegistrationMutation.mutateAsync(appId)
+              }}
+              onEndVariation={async (appId) => {
+                await endVariationMutation.mutateAsync(appId)
+              }}
+              onGetEscrowBalance={getEscrowBalance}
             />
           )}
         </>

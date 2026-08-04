@@ -2,6 +2,7 @@ import { ExternalLink } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip'
+import { cn } from '@/lib/utils'
 import { useAssetMetadata } from '../../../hooks/useAssetMetadata'
 import type { VariationConfig } from '../../../hooks/useTrustVariation'
 import { baseUnitsToWhole } from '../../../utils/amount'
@@ -11,6 +12,7 @@ interface VariationConfigCardProps {
   config: VariationConfig | undefined
   appId: bigint
   participantCount: number
+  actions?: ReactNode
 }
 
 function LoraLink({ appId }: { appId: bigint }) {
@@ -75,18 +77,23 @@ function CapacityUnit({ participantCount, maxParticipants }: { participantCount:
   )
 }
 
-export default function VariationConfigCard({ config, appId, participantCount }: VariationConfigCardProps) {
+function CardHeader({ appId, actions, className }: { appId: bigint; actions: ReactNode; className?: string }) {
+  return (
+    <div className={cn('flex items-center gap-2', className)}>
+      <h3 className="t-micro">Parameters</h3>
+      <LoraLink appId={appId} />
+      {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
+    </div>
+  )
+}
+
+export default function VariationConfigCard({ config, appId, participantCount, actions }: VariationConfigCardProps) {
   // Synthetic ALGO metadata is returned for assetId=0n, so this hook is safe
   // to call even when config hasn't loaded yet.
   const { decimals, unitName } = useAssetMetadata(config?.assetId ?? 0n)
 
   if (!config) {
-    return (
-      <div className="flex items-center gap-2">
-        <h3 className="t-micro">Parameters</h3>
-        <LoraLink appId={appId} />
-      </div>
-    )
+    return <CardHeader appId={appId} actions={actions} />
   }
 
   const capacityValue =
@@ -94,10 +101,7 @@ export default function VariationConfigCard({ config, appId, participantCount }:
 
   return (
     <div className="bg-muted rounded-sm p-3">
-      <div className="flex items-center gap-2 mb-2">
-        <h3 className="t-micro">Parameters</h3>
-        <LoraLink appId={appId} />
-      </div>
+      <CardHeader appId={appId} actions={actions} className="mb-2" />
       <div className="overflow-x-auto">
         <div className="flex divide-x divide-border w-full">
           <Metric label="E1 Endowment" value={baseUnitsToWhole(config.e1, decimals).toFixed(3)} unit={unitName} />
