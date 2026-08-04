@@ -3,10 +3,17 @@ import { describe, expect, it, vi } from 'vitest'
 import type { VariationInfo } from '../hooks/useTrustExperiments'
 import { PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../hooks/useTrustVariation'
-import { resolveVariationAssets, toTrustResultsCsv, type TrustResultsData, type VariationAssetInfo } from './trustResultsCsv'
+import {
+  exportedAddresses,
+  resolveUserNames,
+  resolveVariationAssets,
+  toTrustResultsCsv,
+  type TrustResultsData,
+  type VariationAssetInfo,
+} from './trustResultsCsv'
 
 const HEADER =
-  'variation_id,variation_label,app_id,asset_id,unit_name,address,role,state,match_id,investment_whole,investment_base,return_whole,return_base,payout_whole,payout_base,created_at,completed_at'
+  'variation_id,variation_label,app_id,asset_id,unit_name,address,user_name,role,state,match_id,investment_whole,investment_base,return_whole,return_base,payout_whole,payout_base,created_at,completed_at'
 
 // 58-char opaque stand-ins for Algorand addresses; the serializer never parses them.
 const addr = (c: string) => c.repeat(58)
@@ -70,6 +77,7 @@ function singleVariationData(
     variation?: VariationInfo
     config?: VariationConfig
     asset?: VariationAssetInfo
+    users?: Record<string, string>
   } = {},
 ): TrustResultsData {
   const variation = opts.variation ?? makeVariation()
@@ -80,18 +88,19 @@ function singleVariationData(
     participants: { [key]: opts.participants ?? [] },
     configs: { [key]: opts.config ?? makeConfig() },
     assets: { [key]: opts.asset ?? ALGO_ASSET },
+    users: opts.users ?? {},
   }
 }
 
 describe('toTrustResultsCsv', () => {
-  it('emits the 17-column header and nothing else for a variation with no games or participants', () => {
+  it('emits the 18-column header and nothing else for a variation with no games or participants', () => {
     const rows = rowsOf(toTrustResultsCsv(singleVariationData()))
     expect(rows).toHaveLength(1)
     expect(rows[0]).toBe(HEADER)
   })
 
   it('emits only the header for fully empty data', () => {
-    const csv = toTrustResultsCsv({ variations: [], participants: {}, matches: {}, configs: {}, assets: {} })
+    const csv = toTrustResultsCsv({ variations: [], participants: {}, matches: {}, configs: {}, assets: {}, users: {} })
     expect(rowsOf(csv)).toEqual([HEADER])
   })
 
@@ -101,25 +110,25 @@ describe('toTrustResultsCsv', () => {
 
     const investor = cellsOf(rows[1])
     expect(investor[5]).toBe(INVESTOR)
-    expect(investor[6]).toBe('Investor')
-    expect(investor[7]).toBe('Completed')
-    expect(investor[8]).toBe('0') // match_id
-    expect(investor[13]).toBe('3.000000') // payout_whole — taken verbatim, not recomputed
-    expect(investor[14]).toBe('3000000') // payout_base
-    expect(investor[15]).toBe(CREATED_ISO)
-    expect(investor[16]).toBe(COMPLETED_ISO)
+    expect(investor[7]).toBe('Investor')
+    expect(investor[8]).toBe('Completed')
+    expect(investor[9]).toBe('0') // match_id
+    expect(investor[14]).toBe('3.000000') // payout_whole — taken verbatim, not recomputed
+    expect(investor[15]).toBe('3000000') // payout_base
+    expect(investor[16]).toBe(CREATED_ISO)
+    expect(investor[17]).toBe(COMPLETED_ISO)
 
     const trustee = cellsOf(rows[2])
     expect(trustee[5]).toBe(TRUSTEE)
-    expect(trustee[6]).toBe('Trustee')
-    expect(trustee[13]).toBe('1.000000') // trustee's own payout
-    expect(trustee[14]).toBe('1000000')
+    expect(trustee[7]).toBe('Trustee')
+    expect(trustee[14]).toBe('1.000000') // trustee's own payout
+    expect(trustee[15]).toBe('1000000')
 
     // Game-level values repeat on both rows.
-    expect(investor[9]).toBe('1.000000')
-    expect(trustee[9]).toBe('1.000000')
-    expect(investor[11]).toBe('2.000000')
-    expect(trustee[11]).toBe('2.000000')
+    expect(investor[10]).toBe('1.000000')
+    expect(trustee[10]).toBe('1.000000')
+    expect(investor[12]).toBe('2.000000')
+    expect(trustee[12]).toBe('2.000000')
   })
 
   it('blanks investment, return, payout and completed_at for a phase-0 match but keeps created_at', () => {
@@ -132,13 +141,13 @@ describe('toTrustResultsCsv', () => {
       completedAt: 0n,
     })
     const investor = cellsOf(rowsOf(toTrustResultsCsv(singleVariationData({ matches: [match] })))[1])
-    expect(investor[7]).toBe('Investor deciding')
-    expect(investor[9]).toBe('') // investment_whole
-    expect(investor[10]).toBe('') // investment_base
-    expect(investor[11]).toBe('') // return_whole
-    expect(investor[13]).toBe('') // payout_whole
-    expect(investor[16]).toBe('') // completed_at
-    expect(investor[15]).toBe(CREATED_ISO)
+    expect(investor[8]).toBe('Investor deciding')
+    expect(investor[10]).toBe('') // investment_whole
+    expect(investor[11]).toBe('') // investment_base
+    expect(investor[12]).toBe('') // return_whole
+    expect(investor[14]).toBe('') // payout_whole
+    expect(investor[17]).toBe('') // completed_at
+    expect(investor[16]).toBe(CREATED_ISO)
   })
 
   it('populates investment but blanks return/payout/completed_at for a phase-1 match', () => {
@@ -151,12 +160,12 @@ describe('toTrustResultsCsv', () => {
       completedAt: 0n,
     })
     const investor = cellsOf(rowsOf(toTrustResultsCsv(singleVariationData({ matches: [match] })))[1])
-    expect(investor[7]).toBe('Trustee deciding')
-    expect(investor[9]).toBe('1.000000')
-    expect(investor[10]).toBe('1000000')
-    expect(investor[11]).toBe('') // return_whole
-    expect(investor[13]).toBe('') // payout_whole
-    expect(investor[16]).toBe('') // completed_at
+    expect(investor[8]).toBe('Trustee deciding')
+    expect(investor[10]).toBe('1.000000')
+    expect(investor[11]).toBe('1000000')
+    expect(investor[12]).toBe('') // return_whole
+    expect(investor[14]).toBe('') // payout_whole
+    expect(investor[17]).toBe('') // completed_at
   })
 
   it('renders a zero investment as 0, not blank — 0 is a decision', () => {
@@ -169,8 +178,8 @@ describe('toTrustResultsCsv', () => {
       completedAt: 0n,
     })
     const investor = cellsOf(rowsOf(toTrustResultsCsv(singleVariationData({ matches: [match] })))[1])
-    expect(investor[9]).toBe('0.000000')
-    expect(investor[10]).toBe('0')
+    expect(investor[10]).toBe('0.000000')
+    expect(investor[11]).toBe('0')
   })
 
   it('emits a Not assigned row for an unassigned participant and none for an assigned one', () => {
@@ -184,9 +193,52 @@ describe('toTrustResultsCsv', () => {
     expect(rows).toHaveLength(2) // header + one unassigned
     const cells = cellsOf(rows[1])
     expect(cells[5]).toBe(UNASSIGNED)
-    expect(cells[6]).toBe('') // role blank
-    expect(cells[7]).toBe('Not assigned')
-    expect(cells.slice(8)).toEqual(['', '', '', '', '', '', '', '', '']) // match_id → completed_at all blank
+    expect(cells[7]).toBe('') // role blank
+    expect(cells[8]).toBe('Not assigned')
+    expect(cells.slice(9)).toEqual(['', '', '', '', '', '', '', '', '']) // match_id → completed_at all blank
+  })
+
+  it('carries each address’s registered name on match and Not assigned rows alike', () => {
+    const rows = rowsOf(
+      toTrustResultsCsv(
+        singleVariationData({
+          matches: [makeMatch()],
+          participants: [makeParticipant({ address: UNASSIGNED })],
+          users: { [INVESTOR]: 'Ada Lovelace', [TRUSTEE]: 'Grace Hopper', [UNASSIGNED]: 'Edsger Dijkstra' },
+        }),
+      ),
+    )
+    expect(cellsOf(rows[1])[6]).toBe('Ada Lovelace')
+    expect(cellsOf(rows[2])[6]).toBe('Grace Hopper')
+    expect(cellsOf(rows[3])[6]).toBe('Edsger Dijkstra')
+  })
+
+  it('leaves user_name blank for an address with no registry entry', () => {
+    const rows = rowsOf(toTrustResultsCsv(singleVariationData({ matches: [makeMatch()], users: { [INVESTOR]: 'Ada Lovelace' } })))
+    const trustee = cellsOf(rows[2])
+    expect(trustee[5]).toBe(TRUSTEE) // the address still identifies the row…
+    expect(trustee[6]).toBe('') // …and an unregistered name is blank, never the address repeated
+  })
+
+  it('quotes a user_name containing a comma and doubles embedded quotes', () => {
+    const csv = toTrustResultsCsv(singleVariationData({ matches: [makeMatch()], users: { [INVESTOR]: 'Doe, "Jane"' } }))
+    expect(rowsOf(csv)[1]).toContain('"Doe, ""Jane"""')
+  })
+
+  it('neutralizes a user_name a spreadsheet would evaluate as a formula', () => {
+    const csv = toTrustResultsCsv(singleVariationData({ matches: [makeMatch()], users: { [INVESTOR]: '=1+1' } }))
+    expect(cellsOf(rowsOf(csv)[1])[6]).toBe("'=1+1")
+  })
+
+  it('neutralizes a variation label a spreadsheet would evaluate as a formula', () => {
+    const variation = makeVariation({ label: '+Baseline' })
+    const csv = toTrustResultsCsv(singleVariationData({ variation, matches: [makeMatch()] }))
+    expect(cellsOf(rowsOf(csv)[1])[1]).toBe("'+Baseline")
+  })
+
+  it('leaves an ordinary user_name untouched', () => {
+    const csv = toTrustResultsCsv(singleVariationData({ matches: [makeMatch()], users: { [INVESTOR]: 'Ada Lovelace' } }))
+    expect(cellsOf(rowsOf(csv)[1])[6]).toBe('Ada Lovelace')
   })
 
   it('groups multiple variations by ascending varId and formats each with its own asset decimals', () => {
@@ -201,6 +253,7 @@ describe('toTrustResultsCsv', () => {
       participants: { '1077': [], '2048': [] },
       configs: { '1077': makeConfig({ assetId: 0n }), '2048': makeConfig({ assetId: 1008n }) },
       assets: { '1077': ALGO_ASSET, '2048': { decimals: 2, unitName: 'USDC' } },
+      users: {},
     }
     const rows = rowsOf(toTrustResultsCsv(data))
     // varId 0 first
@@ -211,9 +264,9 @@ describe('toTrustResultsCsv', () => {
     expect(v1Investor[0]).toBe('1')
     expect(v1Investor[3]).toBe('1008') // asset_id
     expect(v1Investor[4]).toBe('USDC')
-    expect(v1Investor[9]).toBe('1.50') // 150 base @ 2dp
-    expect(v1Investor[13]).toBe('1.50') // payout_whole
-    expect(v1Investor[14]).toBe('150') // payout_base
+    expect(v1Investor[10]).toBe('1.50') // 150 base @ 2dp
+    expect(v1Investor[14]).toBe('1.50') // payout_whole
+    expect(v1Investor[15]).toBe('150') // payout_base
   })
 
   it('sorts matches by match_id and unassigned participants by address, with unassigned rows last', () => {
@@ -225,9 +278,9 @@ describe('toTrustResultsCsv', () => {
         }),
       ),
     )
-    expect(cellsOf(rows[1])[8]).toBe('0')
-    expect(cellsOf(rows[3])[8]).toBe('1')
-    expect(cellsOf(rows[5])[8]).toBe('2')
+    expect(cellsOf(rows[1])[9]).toBe('0')
+    expect(cellsOf(rows[3])[9]).toBe('1')
+    expect(cellsOf(rows[5])[9]).toBe('2')
     expect(cellsOf(rows[7])[5]).toBe(ADDR_A)
     expect(cellsOf(rows[8])[5]).toBe(ADDR_B)
     expect(cellsOf(rows[9])[5]).toBe(ADDR_C)
@@ -242,7 +295,7 @@ describe('toTrustResultsCsv', () => {
   it('writes base-unit amounts as exact bigint strings beyond JS number precision', () => {
     const big = 9_007_199_254_740_993n // 2^53 + 1
     const investor = cellsOf(rowsOf(toTrustResultsCsv(singleVariationData({ matches: [makeMatch({ investorPayout: big })] })))[1])
-    expect(investor[14]).toBe('9007199254740993')
+    expect(investor[15]).toBe('9007199254740993')
   })
 
   it('skips a variation whose config or asset failed to load upstream', () => {
@@ -254,6 +307,7 @@ describe('toTrustResultsCsv', () => {
       participants: { [key]: [makeParticipant({ assigned: 0 })] },
       configs: {}, // missing
       assets: {}, // missing
+      users: {},
     }
     expect(rowsOf(toTrustResultsCsv(data))).toHaveLength(1)
   })
@@ -263,10 +317,10 @@ describe('toTrustResultsCsv', () => {
     // completed-phase columns must gate on phase, not value, so 0 never reads as "not yet decided".
     const match = makeMatch({ returnAmount: 0n, investorPayout: 0n, trusteePayout: 0n })
     const investor = cellsOf(rowsOf(toTrustResultsCsv(singleVariationData({ matches: [match] })))[1])
-    expect(investor[11]).toBe('0.000000') // return_whole
-    expect(investor[12]).toBe('0') // return_base
-    expect(investor[13]).toBe('0.000000') // payout_whole
-    expect(investor[14]).toBe('0') // payout_base
+    expect(investor[12]).toBe('0.000000') // return_whole
+    expect(investor[13]).toBe('0') // return_base
+    expect(investor[14]).toBe('0.000000') // payout_whole
+    expect(investor[15]).toBe('0') // payout_base
   })
 
   it('emits exactly header-width cells for investor, trustee and unassigned rows alike', () => {
@@ -291,13 +345,14 @@ describe('toTrustResultsCsv', () => {
       },
       configs: { '1077': makeConfig(), '2048': makeConfig() },
       assets: { '1077': ALGO_ASSET, '2048': ALGO_ASSET },
+      users: {},
     }
     const rows = rowsOf(toTrustResultsCsv(data))
     // header, v0 investor, v0 trustee, v0 unassigned, v1 investor, v1 trustee, v1 unassigned
     expect(rows).toHaveLength(7)
     expect(cellsOf(rows[3])[0]).toBe('0') // v0's unassigned row carries varId 0…
     expect(cellsOf(rows[3])[5]).toBe(ADDR_A)
-    expect(cellsOf(rows[3])[7]).toBe('Not assigned')
+    expect(cellsOf(rows[3])[8]).toBe('Not assigned')
     expect(cellsOf(rows[4])[0]).toBe('1') // …and precedes v1's block
     expect(cellsOf(rows[6])[0]).toBe('1')
     expect(cellsOf(rows[6])[5]).toBe(ADDR_B)
@@ -348,5 +403,74 @@ describe('resolveVariationAssets', () => {
     const v0 = makeVariation({ varId: 0, appId: 1077n })
     const assets = await resolveVariationAssets([v0], {}, fetcherFor({ '0': ALGO_ASSET }))
     expect(assets).toEqual({})
+  })
+})
+
+describe('exportedAddresses', () => {
+  it('collects both sides of every match and every unassigned participant, without duplicates', () => {
+    const data = singleVariationData({
+      matches: [makeMatch(), makeMatch({ matchId: 1, investor: ADDR_A, trustee: TRUSTEE })],
+      participants: [makeParticipant(), makeParticipant({ address: ADDR_B })],
+    })
+    expect(exportedAddresses(data).sort()).toEqual([ADDR_A, ADDR_B, INVESTOR, TRUSTEE, UNASSIGNED].sort())
+  })
+
+  it('omits participants who are already assigned, since they appear via their match', () => {
+    const data = singleVariationData({ participants: [makeParticipant({ address: ADDR_C, assigned: 1 })] })
+    expect(exportedAddresses(data)).toEqual([])
+  })
+
+  it('omits addresses from variations the serializer will skip', () => {
+    const variation = makeVariation()
+    const key = String(variation.appId)
+    const data = {
+      variations: [variation],
+      matches: { [key]: [makeMatch()] },
+      participants: { [key]: [] },
+      configs: {},
+      assets: { [key]: ALGO_ASSET },
+    }
+    expect(exportedAddresses(data)).toEqual([])
+  })
+})
+
+describe('resolveUserNames', () => {
+  it('maps each registered address to its name', async () => {
+    const registry: Record<string, { name: string }> = { [INVESTOR]: { name: 'Ada Lovelace' }, [TRUSTEE]: { name: 'Grace Hopper' } }
+    const names = await resolveUserNames([INVESTOR, TRUSTEE], (a) => Promise.resolve(registry[a]))
+    expect(names).toEqual({ [INVESTOR]: 'Ada Lovelace', [TRUSTEE]: 'Grace Hopper' })
+  })
+
+  it('reads one box per address and no more', async () => {
+    const fetchUser = vi.fn().mockResolvedValue({ name: 'Ada Lovelace' })
+    await resolveUserNames([INVESTOR, TRUSTEE], fetchUser)
+    expect(fetchUser).toHaveBeenCalledTimes(2)
+    expect(fetchUser).toHaveBeenCalledWith(INVESTOR)
+    expect(fetchUser).toHaveBeenCalledWith(TRUSTEE)
+  })
+
+  it('omits an unregistered address so its row exports blank', async () => {
+    const names = await resolveUserNames([INVESTOR, TRUSTEE], (a) => Promise.resolve(a === INVESTOR ? { name: 'Ada Lovelace' } : undefined))
+    expect(names).toEqual({ [INVESTOR]: 'Ada Lovelace' })
+  })
+
+  it('keeps the names it could read when one lookup rejects', async () => {
+    const names = await resolveUserNames([INVESTOR, TRUSTEE], (a) =>
+      a === INVESTOR ? Promise.resolve({ name: 'Ada Lovelace' }) : Promise.reject(new Error('box read failed')),
+    )
+    expect(names).toEqual({ [INVESTOR]: 'Ada Lovelace' })
+  })
+
+  it('degrades to blank names when no client is available to read with', async () => {
+    const names = await resolveUserNames([INVESTOR, TRUSTEE], () => {
+      throw new Error('Wallet not connected')
+    })
+    expect(names).toEqual({})
+  })
+
+  it('returns an empty record when there is nothing to look up', async () => {
+    const fetchUser = vi.fn()
+    expect(await resolveUserNames([], fetchUser)).toEqual({})
+    expect(fetchUser).not.toHaveBeenCalled()
   })
 })

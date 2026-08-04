@@ -13,7 +13,15 @@ const INVESTMENT_ALGO = 1
 const RETURN_ALGO = 2
 
 // Column indices in the exported CSV (see HEADERS in src/utils/trustResultsCsv.ts).
-const COL = { address: 5, role: 6, state: 7, investmentWhole: 9, payoutWhole: 13, payoutBase: 14 } as const
+const COL = {
+  address: 5,
+  userName: 6,
+  role: 7,
+  state: 8,
+  investmentWhole: 10,
+  payoutWhole: 14,
+  payoutBase: 15,
+} as const
 
 test('experimenter downloads a results CSV with per-address payouts for a completed match', async ({
   page,
@@ -63,7 +71,7 @@ test('experimenter downloads a results CSV with per-address payouts for a comple
   const csv = await readFile(await download.path(), 'utf8')
   const [header, ...rows] = csv.split('\r\n')
   expect(header).toBe(
-    'variation_id,variation_label,app_id,asset_id,unit_name,address,role,state,match_id,investment_whole,investment_base,return_whole,return_base,payout_whole,payout_base,created_at,completed_at',
+    'variation_id,variation_label,app_id,asset_id,unit_name,address,user_name,role,state,match_id,investment_whole,investment_base,return_whole,return_base,payout_whole,payout_base,created_at,completed_at',
   )
 
   // investorPayout = E1 − investment + return = 2 − 1 + 2 = 3 ALGO
@@ -71,16 +79,17 @@ test('experimenter downloads a results CSV with per-address payouts for a comple
   expect(investorRow, 'investor row for participant1 should be present').toBeDefined()
   const investor = investorRow!.split(',')
   expect(investor[COL.address]).toBe(participant1.address)
+  expect(investor[COL.userName]).toBe('E2E Participant 1') // the name the fixture registered on-chain
   expect(investor[COL.role]).toBe('Investor')
   expect(investor[COL.state]).toBe('Completed')
   expect(investor[COL.investmentWhole]).toBe('1.000000')
   expect(investor[COL.payoutWhole]).toBe('3.000000')
   expect(investor[COL.payoutBase]).toBe('3000000')
 
-  // trusteePayout = E2 + multiplier·investment − return = 0 + 3 − 2 = 1 ALGO
   const trusteeRow = rows.find((r) => r.includes(participant2.address))
   expect(trusteeRow, 'trustee row for participant2 should be present').toBeDefined()
   const trustee = trusteeRow!.split(',')
+  expect(trustee[COL.userName]).toBe('E2E Participant 2')
   expect(trustee[COL.role]).toBe('Trustee')
   expect(trustee[COL.state]).toBe('Completed')
   expect(trustee[COL.payoutWhole]).toBe('1.000000')

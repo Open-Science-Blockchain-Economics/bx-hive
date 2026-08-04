@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
 import VariationPanel from '../components/experimenter/trust-details/VariationPanel'
 import { LoadingSpinner, StatusDot } from '../components/ui'
+import { useAlgorand } from '../hooks/useAlgorand'
 import { fetchAssetMetadata, useAssetMetadata } from '../hooks/useAssetMetadata'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
@@ -20,7 +21,7 @@ import { useExperimentManager } from '../hooks/useExperimentManager'
 import { queryKeys } from '../lib/queryKeys'
 import { truncateAddress } from '../utils/address'
 import { downloadCsv } from '../utils/csv'
-import { resolveVariationAssets, toTrustResultsCsv } from '../utils/trustResultsCsv'
+import { exportedAddresses, resolveUserNames, resolveVariationAssets, toTrustResultsCsv } from '../utils/trustResultsCsv'
 import { deriveExperimentStatus, statusDotColor, statusLabel, variationTooltip } from '../utils/variationStatus'
 
 interface ParticipantEntry {
@@ -86,6 +87,7 @@ export default function TrustExperimentDetails() {
   const { getExperiment, listVariations } = useTrustExperiments()
   const { getEnrolledParticipants, getMatches, getConfig, createMatch } = useTrustVariation()
   const { getExpConfig, setExpConfig, registerExperimentVariations } = useExperimentManager()
+  const { registryClient } = useAlgorand()
   const queryClient = useQueryClient()
 
   const [selectedVarIdx, setSelectedVarIdx] = useState(0)
@@ -180,11 +182,14 @@ export default function TrustExperimentDetails() {
     try {
       // Resolve each variation's payout-asset decimals/unit; tolerant of a single failed asset lookup.
       const assets = await resolveVariationAssets(vars, cfgs, fetchAssetMetadata)
+      const rowData = { variations: vars, participants: subs, matches, configs: cfgs, assets }
+      // Names are looked up per participant; an unregistered or unreadable one exports blank.
+      const users = await resolveUserNames(exportedAddresses(rowData), async (address) => {
+        if (!registryClient) throw new Error('Wallet not connected')
+        return registryClient.state.box.users.value(address)
+      })
       const date = new Date().toISOString().slice(0, 10)
-      downloadCsv(
-        `trust-experiment-${expId}-results-${date}.csv`,
-        toTrustResultsCsv({ variations: vars, participants: subs, matches, configs: cfgs, assets }),
-      )
+      downloadCsv(`trust-experiment-${expId}-results-${date}.csv`, toTrustResultsCsv({ ...rowData, users }))
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[results-csv] export failed', err)
