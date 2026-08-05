@@ -8,6 +8,7 @@ import { Btn } from '@/components/ds/button'
 import { Dot } from '@/components/ds/dot'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip'
 import { cn } from '@/lib/utils'
+import CloseAllRegistrationButton from '../components/experimenter/trust-details/CloseAllRegistrationButton'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
 import VariationPanel from '../components/experimenter/trust-details/VariationPanel'
 import { LoadingSpinner, StatusDot } from '../components/ui'
@@ -15,7 +16,7 @@ import { useAlgorand } from '../hooks/useAlgorand'
 import { fetchAssetMetadata, useAssetMetadata } from '../hooks/useAssetMetadata'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
-import { STATUS_COMPLETED, useTrustVariation } from '../hooks/useTrustVariation'
+import { STATUS_ACTIVE, STATUS_COMPLETED, useTrustVariation } from '../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../hooks/useTrustVariation'
 import { useExperimentManager } from '../hooks/useExperimentManager'
 import { queryKeys } from '../lib/queryKeys'
@@ -85,8 +86,16 @@ export default function TrustExperimentDetails() {
   const expId = Number(expIdParam ?? '0')
 
   const { getExperiment, listVariations } = useTrustExperiments()
-  const { getEnrolledParticipants, getMatches, getConfig, createMatch, closeRegistration, endVariation, getEscrowBalance } =
-    useTrustVariation()
+  const {
+    getEnrolledParticipants,
+    getMatches,
+    getConfig,
+    createMatch,
+    closeRegistration,
+    closeExperimentRegistration,
+    endVariation,
+    getEscrowBalance,
+  } = useTrustVariation()
   const { getExpConfig, setExpConfig, registerExperimentVariations } = useExperimentManager()
   const { registryClient, activeAddress } = useAlgorand()
   const queryClient = useQueryClient()
@@ -177,6 +186,13 @@ export default function TrustExperimentDetails() {
     },
   })
 
+  const closeAllRegistrationMutation = useMutation({
+    mutationFn: (appIds: bigint[]) => closeExperimentRegistration(appIds),
+    // Settled, not success: the loop stops at the first failure, so a partial run still moved chain state.
+    // The promise is returned so a retry can't re-send app ids the refetch is about to drop.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) }),
+  })
+
   const endVariationMutation = useMutation({
     mutationFn: (appId: bigint) => endVariation(appId),
     onSuccess: () => {
@@ -193,6 +209,9 @@ export default function TrustExperimentDetails() {
   const varKey = selectedVar ? String(selectedVar.appId) : ''
   const expStatus = deriveExperimentStatus(Object.values(cfgs))
   const isOwner = activeAddress !== null && activeAddress === group.owner
+  const openVariationAppIds = vars.filter((v) => cfgs[String(v.appId)]?.status === STATUS_ACTIVE).map((v) => v.appId)
+  // A variation whose reads failed has no config at all; it is not closable here and must not be counted as already closed.
+  const unreadableVariationCount = vars.filter((v) => !cfgs[String(v.appId)]).length
 
   const handleDownloadResults = async () => {
     setExporting(true)
@@ -240,6 +259,14 @@ export default function TrustExperimentDetails() {
           <Chip tone="accent">TRUST · TG</Chip>
         </div>
         <div className="flex items-center gap-2">
+          <CloseAllRegistrationButton
+            openVariationCount={openVariationAppIds.length}
+            unreadableVariationCount={unreadableVariationCount}
+            isOwner={isOwner}
+            onCloseAll={async () => {
+              await closeAllRegistrationMutation.mutateAsync(openVariationAppIds)
+            }}
+          />
           <Tooltip>
             <TooltipTrigger asChild>
               <Btn variant="secondary" size="sm" disabled={exporting} onClick={() => void handleDownloadResults()}>

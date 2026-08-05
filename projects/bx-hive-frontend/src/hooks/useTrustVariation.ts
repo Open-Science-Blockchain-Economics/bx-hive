@@ -20,19 +20,19 @@ export const STATUS_COMPLETED = 2
  * Applies a per-variation call across every appId of an experiment.
  * Sequential by necessity: each call is a wallet-signed transaction, so firing
  * them together both stacks up signature prompts and races the same sender.
- * A failing variation doesn't stop the rest; the failures are reported at the end.
+ * Stops at the first failure rather than pressing on — these actions cannot be
+ * undone, and a rejected signature must not queue up prompts for the rest. The
+ * error names how far it got so the caller can report what did happen.
  */
 async function forEachVariation(appIds: bigint[], action: string, call: (appId: bigint) => Promise<void>): Promise<void> {
-  const failed: bigint[] = []
-  for (const appId of appIds) {
+  for (let i = 0; i < appIds.length; i++) {
     try {
-      await call(appId)
-    } catch {
-      failed.push(appId)
+      await call(appIds[i])
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err)
+      const done = i === 0 ? 'None were changed' : `${i} of ${appIds.length} done`
+      throw new Error(`Stopped at app ${appIds[i]}: could not ${action}. ${done}. ${reason}`)
     }
-  }
-  if (failed.length > 0) {
-    throw new Error(`Failed to ${action} for app ${failed.map(String).join(', ')}`)
   }
 }
 
