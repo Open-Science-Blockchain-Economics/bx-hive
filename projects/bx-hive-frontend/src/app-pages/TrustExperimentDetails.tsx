@@ -8,8 +8,7 @@ import { Btn } from '@/components/ds/button'
 import { Dot } from '@/components/ds/dot'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip'
 import { cn } from '@/lib/utils'
-import CloseAllRegistrationButton from '../components/experimenter/trust-details/CloseAllRegistrationButton'
-import ReopenAllRegistrationButton from '../components/experimenter/trust-details/ReopenAllRegistrationButton'
+import BulkRegistrationButton from '../components/experimenter/trust-details/BulkRegistrationButton'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
 import VariationPanel from '../components/experimenter/trust-details/VariationPanel'
 import { LoadingSpinner, StatusDot } from '../components/ui'
@@ -275,19 +274,16 @@ export default function TrustExperimentDetails() {
           <Chip tone="accent">TRUST · TG</Chip>
         </div>
         <div className="flex items-center gap-2">
-          <CloseAllRegistrationButton
-            openVariationCount={openVariationAppIds.length}
+          <BulkRegistrationButton
+            openVariationAppIds={openVariationAppIds}
+            closedVariationAppIds={closedVariationAppIds}
             unreadableVariationCount={unreadableVariationCount}
             isOwner={isOwner}
-            onCloseAll={async () => {
-              await closeAllRegistrationMutation.mutateAsync(openVariationAppIds)
+            onCloseAll={async (appIds) => {
+              await closeAllRegistrationMutation.mutateAsync(appIds)
             }}
-          />
-          <ReopenAllRegistrationButton
-            closedVariationCount={closedVariationAppIds.length}
-            isOwner={isOwner}
-            onReopenAll={async () => {
-              await reopenAllRegistrationMutation.mutateAsync(closedVariationAppIds)
+            onOpenAll={async (appIds) => {
+              await reopenAllRegistrationMutation.mutateAsync(appIds)
             }}
           />
           <Tooltip>
