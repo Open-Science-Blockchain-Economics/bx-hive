@@ -10,6 +10,7 @@ import InstructionsModal from '../components/InstructionsModal'
 import { LoadingSpinner, PageHeader } from '../components/ui'
 import { useAlgorand } from '../hooks/useAlgorand'
 import { useAssetMetadata } from '../hooks/useAssetMetadata'
+import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import { useTrustVariation } from '../hooks/useTrustVariation'
 import type { VariationConfig } from '../hooks/useTrustVariation'
 import { queryKeys } from '../lib/queryKeys'
@@ -21,9 +22,14 @@ import { renderInstructions, trustVariationTokens } from '../lib/renderInstructi
 
 const REFRESH_INTERVAL_MS = 5000
 
+// Stands in when the experiment name can't be read. Subjects must never be shown the
+// game type, so there is no falling back to it.
+const UNNAMED_EXPERIMENT = 'Experiment'
+
 function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddress: string }) {
   const [showInstructions, setShowInstructions] = useState(true)
-  const { getPlayerMatch, getConfig } = useTrustVariation()
+  const { getPlayerMatch, getConfig, getExperimentId } = useTrustVariation()
+  const { getExperiment } = useTrustExperiments()
 
   const {
     data,
@@ -41,10 +47,23 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
     refetchInterval: REFRESH_INTERVAL_MS,
   })
 
+  // Kept out of the polling query above: an experiment is named once, at creation.
+  const { data: experimentName } = useQuery({
+    queryKey: queryKeys.variationExperimentName(appId),
+    queryFn: async () => {
+      const expId = await getExperimentId(appId)
+      const group = await getExperiment(expId)
+      return group.name
+    },
+    staleTime: Infinity,
+  })
+
   // Synthetic ALGO metadata is returned for assetId=0n, so this hook is safe
   // to call before the match query resolves.
   const asset = useAssetMetadata(data?.config.assetId ?? 0n)
 
+  // Deliberately not gated on the name query: the title is cosmetic, and a slow or failed
+  // lookup must never withhold a game that is already loaded and playable.
   if (isLoading) {
     return <LoadingSpinner />
   }
@@ -75,7 +94,7 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
         markdownContent={instructionsMarkdown}
       />
       <PageHeader
-        title="Trust Game"
+        title={experimentName || UNNAMED_EXPERIMENT}
         backTo="/dashboard/participant"
         backTooltip="Back to Participant Dashboard"
         badges={<DebugInfo appId={appId} config={data.config} match={data.match} />}

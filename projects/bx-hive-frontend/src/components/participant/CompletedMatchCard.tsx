@@ -26,7 +26,7 @@ export default function CompletedMatchCard({ group, variation, config, match, ac
     <Panel>
       <div className="flex justify-between items-start gap-4">
         <div>
-          <h3 className="t-h2 mb-1">Trust Game</h3>
+          <h3 className="t-h2 mb-1">{group.name}</h3>
           <p className="text-xs text-muted-foreground inline-flex items-center gap-1.5">
             Payout:{' '}
             <span className="font-mono font-medium text-pos inline-flex items-center gap-1">

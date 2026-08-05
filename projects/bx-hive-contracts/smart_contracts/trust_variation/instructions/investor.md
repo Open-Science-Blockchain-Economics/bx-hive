@@ -1,12 +1,12 @@
 ---
 title: Investor Instructions
-description: Instructions shown to the Investor before playing the Trust Game.
+description: Instructions shown to the Investor before playing.
 version: "1.1.0"
 ---
 
 ## Your Role: Investor
 
-You have been assigned the role of **Investor** in this Trust Game.
+You have been assigned the role of **Investor** in this experiment.
 
 ### How It Works
 

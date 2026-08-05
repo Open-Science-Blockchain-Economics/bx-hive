@@ -24,7 +24,7 @@ export default function ActiveMatchCard({ group, variation, config, match, activ
     <Panel>
       <div className="flex justify-between items-start gap-4">
         <div>
-          <h3 className="t-h2 mb-1">Trust Game</h3>
+          <h3 className="t-h2 mb-1">{group.name}</h3>
           <p className="text-xs text-muted-foreground">
             Role: <span className="font-medium text-ink-2">{isInvestor ? 'Investor' : 'Trustee'}</span>
           </p>

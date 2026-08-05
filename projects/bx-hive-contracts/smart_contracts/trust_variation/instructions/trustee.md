@@ -1,12 +1,12 @@
 ---
 title: Trustee Instructions
-description: Instructions shown to the Trustee before playing the Trust Game.
+description: Instructions shown to the Trustee before playing.
 version: "1.1.0"
 ---
 
 ## Your Role: Trustee
 
-You have been assigned the role of **Trustee** in this Trust Game.
+You have been assigned the role of **Trustee** in this experiment.
 
 ### How It Works
 

@@ -288,6 +288,20 @@ export function useTrustVariation() {
   )
 
   /**
+   * Reads the exp_id of the experiment that owns this variation from global state.
+   */
+  const getExperimentId = useCallback(
+    async (appId: bigint): Promise<number> => {
+      const client = getTrustVariationClient(appId)
+      if (!client) throw new Error('Wallet not connected')
+      const expId = await client.state.global.expId()
+      if (expId === undefined) throw new Error('Variation has no experiment id')
+      return Number(expId)
+    },
+    [getTrustVariationClient],
+  )
+
+  /**
    * Fetches the unspent escrow (deposited minus paid out) in the payout asset's base units.
    */
   const getEscrowBalance = useCallback(
@@ -360,6 +374,7 @@ export function useTrustVariation() {
     getMatch,
     getPlayerMatch,
     getConfig,
+    getExperimentId,
     getParticipantCount,
     getEnrolledParticipants,
     getMatches,

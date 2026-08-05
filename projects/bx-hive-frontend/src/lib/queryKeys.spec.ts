@@ -14,6 +14,10 @@ describe('queryKeys', () => {
     expect(queryKeys.playerMatch(42n, 'ALICE')).toEqual(['player-match', '42', 'ALICE'])
   })
 
+  it('variationExperimentName stringifies bigint appId so the key is serializable', () => {
+    expect(queryKeys.variationExperimentName(42n)).toEqual(['variation-experiment-name', '42'])
+  })
+
   it('on-chain and local namespaces do not collide for the same identifier', () => {
     expect(queryKeys.onChainExperiments('ADDR')).not.toEqual(queryKeys.localExperiments('ADDR'))
     expect(queryKeys.participantOnChain('ADDR')).not.toEqual(queryKeys.participantLocal('ADDR'))
