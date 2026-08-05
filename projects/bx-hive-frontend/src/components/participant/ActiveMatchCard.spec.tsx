@@ -1,8 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import ActiveMatchCard from './ActiveMatchCard'
+
+// ViewInstructionsButton pulls asset metadata, which needs NetworkProvider + QueryClient;
+// stub the synthetic ALGO record so this spec stays focused on the card itself.
+vi.mock('@/hooks/useAssetMetadata', () => ({
+  useAssetMetadata: () => ({ assetId: 0n, decimals: 6, unitName: 'ALGO', name: 'Algorand', total: 0n }),
+}))
 import type { ExperimentGroup, VariationInfo } from '@/hooks/useTrustExperiments'
 import { PHASE_INVESTOR_DECISION, STATUS_ACTIVE } from '@/hooks/useTrustVariation'
 import type { Match, VariationConfig } from '@/hooks/useTrustVariation'

@@ -5,23 +5,24 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 
 interface InstructionsModalProps {
   isOpen: boolean
-  onAcknowledge: () => void
+  onClose: () => void
   title: string
   markdownContent: string
+  /**
+   * Forced modals can only be dismissed by the footer button — used the first time a
+   * subject reaches the game, so the instructions cannot be clicked past unread.
+   */
+  forced?: boolean
 }
 
-export default function InstructionsModal({ isOpen, onAcknowledge, title, markdownContent }: InstructionsModalProps) {
+export default function InstructionsModal({ isOpen, onClose, title, markdownContent, forced = false }: InstructionsModalProps) {
   return (
-    <Dialog
-      open={isOpen}
-      // Forced modal — only the acknowledge button dismisses, not ESC or outside click
-      onOpenChange={() => {}}
-    >
+    <Dialog open={isOpen} onOpenChange={(open) => (forced ? undefined : open || onClose())}>
       <DialogContent
         className="max-w-3xl"
-        showCloseButton={false}
-        onEscapeKeyDown={(e) => e.preventDefault()}
-        onPointerDownOutside={(e) => e.preventDefault()}
+        showCloseButton={!forced}
+        onEscapeKeyDown={(e) => forced && e.preventDefault()}
+        onPointerDownOutside={(e) => forced && e.preventDefault()}
       >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -30,8 +31,8 @@ export default function InstructionsModal({ isOpen, onAcknowledge, title, markdo
           <Markdown>{markdownContent}</Markdown>
         </div>
         <DialogFooter>
-          <Btn variant="primary" onClick={onAcknowledge}>
-            I understand — start game
+          <Btn variant="primary" onClick={onClose}>
+            {forced ? 'I understand — start game' : 'Close'}
           </Btn>
         </DialogFooter>
       </DialogContent>

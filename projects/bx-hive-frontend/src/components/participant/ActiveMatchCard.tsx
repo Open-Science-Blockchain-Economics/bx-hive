@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 
 import DebugInfo from '@/components/DebugInfo'
+import ViewInstructionsButton from '@/components/participant/ViewInstructionsButton'
 import { Chip } from '@/components/ds/badge'
 import { Btn } from '@/components/ds/button'
 import { Panel } from '@/components/ds/card'
@@ -36,7 +37,12 @@ export default function ActiveMatchCard({ group, variation, config, match, activ
           <Chip tone={isMyTurn ? 'warn' : 'neutral'}>{isMyTurn ? 'Your turn' : 'Waiting'}</Chip>
         </div>
       </div>
-      <div className="flex justify-end mt-4">
+      <div className="flex justify-end items-center gap-2 mt-4">
+        <ViewInstructionsButton
+          config={config}
+          roleLabels={roleLabels}
+          myLabel={isInvestor ? roleLabels.investorLabel : roleLabels.trusteeLabel}
+        />
         <Btn asChild variant={isMyTurn ? 'primary' : 'ghost'} size="sm">
           <Link to={`/play/${String(variation.appId)}`}>{isMyTurn ? 'Play' : 'View status'}</Link>
         </Btn>

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 
 import DebugInfo from '@/components/DebugInfo'
+import ViewInstructionsButton from '@/components/participant/ViewInstructionsButton'
 import { Btn } from '@/components/ds/button'
 import { Panel } from '@/components/ds/card'
 import TrustExperiment from '../components/experiment-types/trust/TrustExperiment'
@@ -102,7 +103,8 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
     <div>
       <InstructionsModal
         isOpen={showInstructions}
-        onAcknowledge={() => setShowInstructions(false)}
+        onClose={() => setShowInstructions(false)}
+        forced
         title={`Instructions — your role: ${myLabel}`}
         markdownContent={instructionsMarkdown}
       />
@@ -110,7 +112,12 @@ function OnChainTrustGame({ appId, activeAddress }: { appId: bigint; activeAddre
         title={experiment?.name || UNNAMED_EXPERIMENT}
         backTo="/dashboard/participant"
         backTooltip="Back to Participant Dashboard"
-        badges={<DebugInfo appId={appId} config={data.config} match={data.match} />}
+        badges={
+          <>
+            <ViewInstructionsButton config={data.config} roleLabels={roleLabels} myLabel={myLabel} variant="secondary" />
+            <DebugInfo appId={appId} config={data.config} match={data.match} />
+          </>
+        }
       />
       <TrustExperiment
         appId={appId}
