@@ -109,7 +109,7 @@ export async function playInvestor(
   await dismissInstructions(page)
   await page.getByRole('heading', { name: /Investor Decision/i }).waitFor()
   await selectAlgoButton(page, investmentAlgo)
-  await page.getByRole('button', { name: /Submit Investment Decision/i }).click()
+  await page.getByRole('button', { name: /Submit decision/i }).click()
   await waitForMatchPhase(algorand, variationAppId, participant.address, 1) // PHASE_TRUSTEE_DECISION
 }
 

@@ -45,10 +45,16 @@ const match: Match = {
   paidOut: 0,
 }
 
-function renderCard() {
+function renderCard(groupOverrides: Partial<ExperimentGroup> = {}) {
   return render(
     <MemoryRouter>
-      <ActiveMatchCard group={group} variation={variation} config={config} match={match} activeAddress={ACTIVE_ADDRESS} />
+      <ActiveMatchCard
+        group={{ ...group, ...groupOverrides }}
+        variation={variation}
+        config={config}
+        match={match}
+        activeAddress={ACTIVE_ADDRESS}
+      />
     </MemoryRouter>,
   )
 }
@@ -63,6 +69,19 @@ describe('ActiveMatchCard', () => {
 
   it('names the role the connected wallet holds in the match', () => {
     renderCard()
+
+    expect(screen.getByText('Investor')).toBeInTheDocument()
+  })
+
+  it('uses the label the experimenter gave the role', () => {
+    renderCard({ investorLabel: 'Decision Maker 1', trusteeLabel: 'Decision Maker 2' })
+
+    expect(screen.getByText('Decision Maker 1')).toBeInTheDocument()
+    expect(screen.queryByText('Investor')).not.toBeInTheDocument()
+  })
+
+  it('falls back to the canonical role name when the experiment carries no labels', () => {
+    renderCard({ investorLabel: '', trusteeLabel: '' })
 
     expect(screen.getByText('Investor')).toBeInTheDocument()
   })

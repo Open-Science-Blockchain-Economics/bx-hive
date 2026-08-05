@@ -7,6 +7,7 @@ import { Panel } from '@/components/ds/card'
 import type { ExperimentGroup, VariationInfo } from '@/hooks/useTrustExperiments'
 import { PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '@/hooks/useTrustVariation'
 import type { Match, VariationConfig } from '@/hooks/useTrustVariation'
+import { resolveRoleLabels } from '@/utils/roleLabels'
 
 interface ActiveMatchCardProps {
   group: ExperimentGroup
@@ -19,6 +20,7 @@ interface ActiveMatchCardProps {
 export default function ActiveMatchCard({ group, variation, config, match, activeAddress }: ActiveMatchCardProps) {
   const isInvestor = match.investor === activeAddress
   const isMyTurn = (isInvestor && match.phase === PHASE_INVESTOR_DECISION) || (!isInvestor && match.phase === PHASE_TRUSTEE_DECISION)
+  const roleLabels = resolveRoleLabels(group)
 
   return (
     <Panel>
@@ -26,7 +28,7 @@ export default function ActiveMatchCard({ group, variation, config, match, activ
         <div>
           <h3 className="t-h2 mb-1">{group.name}</h3>
           <p className="text-xs text-muted-foreground">
-            Role: <span className="font-medium text-ink-2">{isInvestor ? 'Investor' : 'Trustee'}</span>
+            Role: <span className="font-medium text-ink-2">{isInvestor ? roleLabels.investorLabel : roleLabels.trusteeLabel}</span>
           </p>
         </div>
         <div className="flex items-center gap-2">

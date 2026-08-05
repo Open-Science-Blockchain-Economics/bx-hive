@@ -14,15 +14,15 @@ interface InstructionsPluginOptions {
  * Vite plugin that exposes contract instruction markdown files as virtual modules.
  *
  * Usage:
- *   import content from 'virtual:instructions/trust-variation/investor'
+ *   import content from 'virtual:instructions/trust-variation/shared'
  *
  * The module ID after `virtual:instructions/` maps to:
  *   <contractsDir>/smart_contracts/<path>.md
  */
 export function instructionsPlugin(options: InstructionsPluginOptions): Plugin {
   function resolveFilePathClean(id: string): string {
-    // id is e.g. "trust-variation/investor"
-    // maps to: <contractsDir>/smart_contracts/trust_variation/instructions/investor.md
+    // id is e.g. "trust-variation/shared"
+    // maps to: <contractsDir>/smart_contracts/trust_variation/instructions/shared.md
     const parts = id.split('/')
     const contractDir = parts[0].replace(/-/g, '_') // trust-variation -> trust_variation
     const fileName = parts.slice(1).join('/')

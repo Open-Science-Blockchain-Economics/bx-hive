@@ -5,6 +5,7 @@ import { Btn } from '@/components/ds/button'
 import { Panel } from '@/components/ds/card'
 import { Rule } from '@/components/ds/separator'
 import { cn } from '@/lib/utils'
+import type { RoleLabels } from '../../../hooks/useTrustExperiments'
 import { useTrustVariation } from '../../../hooks/useTrustVariation'
 import { calculateInvestorRefund, calculateTrusteeReceived } from '../../../experiment-logic/trustExperiment'
 import { wholeToBaseUnits } from '../../../utils/amount'
@@ -19,6 +20,8 @@ interface InvestorInterfaceProps {
   decimals: number
   /** Unit name of the variation's payout asset (e.g. "ALGO", "USDC"). */
   unitName: string
+  /** Names the experimenter gave the two roles; already defaulted by the caller. */
+  roleLabels: RoleLabels
   onDecisionMade: () => void
 }
 
@@ -44,7 +47,17 @@ function Stage({ num, label, state }: StageProps) {
   )
 }
 
-export default function InvestorInterface({ appId, matchId, E1, m, UNIT, decimals, unitName, onDecisionMade }: InvestorInterfaceProps) {
+export default function InvestorInterface({
+  appId,
+  matchId,
+  E1,
+  m,
+  UNIT,
+  decimals,
+  unitName,
+  roleLabels,
+  onDecisionMade,
+}: InvestorInterfaceProps) {
   const { submitInvestorDecision } = useTrustVariation()
   const [investment, setInvestment] = useState(0)
   const [submitting, setSubmitting] = useState(false)
@@ -73,13 +86,13 @@ export default function InvestorInterface({ appId, matchId, E1, m, UNIT, decimal
 
   return (
     <Panel>
-      <h2 className="t-h1 mb-4">Investor Decision</h2>
+      <h2 className="t-h1 mb-4">{roleLabels.investorLabel} Decision</h2>
 
       <div role="alert" className="flex items-start gap-2.5 rounded-sm border border-info/35 bg-info-bg px-3 py-2.5 text-sm text-info mb-5">
         <Info className="size-4 shrink-0 mt-0.5" />
         <div>
-          <p className="font-medium">You are the Investor</p>
-          <p className="text-sm">Decide how much of your endowment to invest. Your investment will be multiplied by {m}.</p>
+          <p className="font-medium">Your role: {roleLabels.investorLabel}</p>
+          <p className="text-sm">Decide how much of your endowment to send. The amount you send will be multiplied by {m}.</p>
         </div>
       </div>
 
@@ -96,19 +109,19 @@ export default function InvestorInterface({ appId, matchId, E1, m, UNIT, decimal
           <div className="font-mono text-3xl font-medium leading-none tracking-[-0.01em] text-primary">
             {E1.toLocaleString()} {unitName}
           </div>
-          <div className="text-xs text-muted-foreground mt-1.5">to invest</div>
+          <div className="text-xs text-muted-foreground mt-1.5">to send</div>
         </Panel>
         <Panel padded={false} className="p-4">
           <div className="t-micro mb-1">Multiplier</div>
           <div className="font-mono text-3xl font-medium leading-none tracking-[-0.01em] text-foreground">x{m}</div>
-          <div className="text-xs text-muted-foreground mt-1.5">Applied to investment</div>
+          <div className="text-xs text-muted-foreground mt-1.5">Applied to the amount sent</div>
         </Panel>
       </div>
 
       <Rule label="Make Your Decision" className="mb-4" />
 
       <div className="mb-5">
-        <p className="text-sm font-medium mb-3">How much do you want to invest?</p>
+        <p className="text-sm font-medium mb-3">How much do you want to send?</p>
         {options.length <= 10 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {options.map((amount) => (
@@ -149,7 +162,7 @@ export default function InvestorInterface({ appId, matchId, E1, m, UNIT, decimal
         <h3 className="t-micro">Preview</h3>
         <div className="flex flex-col gap-1 text-sm">
           <div className="flex justify-between">
-            <span>You invest:</span>
+            <span>You send:</span>
             <span className="font-medium font-mono">{investment.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
@@ -158,10 +171,12 @@ export default function InvestorInterface({ appId, matchId, E1, m, UNIT, decimal
           </div>
           <Rule className="my-1" />
           <div className="flex justify-between">
-            <span>Trustee receives (x{m}):</span>
+            <span>
+              {roleLabels.trusteeLabel} receives (x{m}):
+            </span>
             <span className="font-medium font-mono text-primary">{trusteeReceives.toLocaleString()}</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">The Trustee will then decide how much to return to you.</p>
+          <p className="text-xs text-muted-foreground mt-1">{roleLabels.trusteeLabel} will then decide how much to return to you.</p>
         </div>
       </div>
 
@@ -178,7 +193,7 @@ export default function InvestorInterface({ appId, matchId, E1, m, UNIT, decimal
               <Loader2 className="size-4 animate-spin" /> Submitting…
             </>
           ) : (
-            'Submit Investment Decision'
+            'Submit decision'
           )}
         </Btn>
       </div>

@@ -16,6 +16,7 @@ import type { AssetMetadata } from '../../hooks/useAssetMetadata'
 import type { RoleLabels } from '../../hooks/useTrustExperiments'
 import type { ParameterVariation } from '../../types'
 import { baseUnitsToWhole } from '../../utils/amount'
+import { DEFAULT_ROLE_LABELS, resolveRoleLabels } from '../../utils/roleLabels'
 import { computeAlgoRequired, computeEscrowWhole, generateVariationCombinations, toVariationParams } from '../../utils/trustGameCalc'
 import InfoAlert from '../ui/InfoAlert'
 import FundingSummary from './FundingSummary'
@@ -30,11 +31,6 @@ const DOCS_LINKS = {
   participants: `${DOCS_BASE_URL}/participants/joining-experiments/#auto-assignment-to-variations`,
   maxPayout: `${DOCS_BASE_URL}/concepts/payout-calculations/`,
 } as const
-
-// Role names stored on the experiment when the experimenter leaves the fields blank.
-// The contract accepts an empty string, so the fallback has to happen here.
-const DEFAULT_INVESTOR_LABEL = 'Investor'
-const DEFAULT_TRUSTEE_LABEL = 'Trustee'
 
 type StepState = 'done' | 'active' | 'pending'
 
@@ -181,10 +177,8 @@ export default function CreateExperimentForm({
       const maxSub = Number(maxPerVariation) * 2
       const aId = payoutAsset.assetId
       const dec = payoutAsset.decimals
-      const labels: RoleLabels = {
-        investorLabel: investorLabel.trim() || DEFAULT_INVESTOR_LABEL,
-        trusteeLabel: trusteeLabel.trim() || DEFAULT_TRUSTEE_LABEL,
-      }
+      // The contract accepts empty strings, so blank fields are defaulted here.
+      const labels: RoleLabels = resolveRoleLabels({ investorLabel, trusteeLabel })
       if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
         const combos = generateVariationCombinations(parameters, variations)
         const { expId } = await createExperimentWithVariation(
@@ -322,7 +316,8 @@ export default function CreateExperimentForm({
             </Field>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Optional — the names recorded for the two roles. Left blank they stay {DEFAULT_INVESTOR_LABEL} and {DEFAULT_TRUSTEE_LABEL}.
+            Optional — the names recorded for the two roles. Left blank they stay {DEFAULT_ROLE_LABELS.investorLabel} and{' '}
+            {DEFAULT_ROLE_LABELS.trusteeLabel}.
           </p>
         </div>
       </Step>
