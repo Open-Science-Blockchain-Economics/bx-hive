@@ -9,6 +9,7 @@ import { Dot } from '@/components/ds/dot'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip'
 import { cn } from '@/lib/utils'
 import CloseAllRegistrationButton from '../components/experimenter/trust-details/CloseAllRegistrationButton'
+import ReopenAllRegistrationButton from '../components/experimenter/trust-details/ReopenAllRegistrationButton'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
 import VariationPanel from '../components/experimenter/trust-details/VariationPanel'
 import { LoadingSpinner, StatusDot } from '../components/ui'
@@ -16,7 +17,7 @@ import { useAlgorand } from '../hooks/useAlgorand'
 import { fetchAssetMetadata, useAssetMetadata } from '../hooks/useAssetMetadata'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
-import { STATUS_ACTIVE, STATUS_COMPLETED, useTrustVariation } from '../hooks/useTrustVariation'
+import { STATUS_ACTIVE, STATUS_CLOSED, STATUS_COMPLETED, useTrustVariation } from '../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../hooks/useTrustVariation'
 import { useExperimentManager } from '../hooks/useExperimentManager'
 import { queryKeys } from '../lib/queryKeys'
@@ -92,7 +93,9 @@ export default function TrustExperimentDetails() {
     getConfig,
     createMatch,
     closeRegistration,
+    reopenRegistration,
     closeExperimentRegistration,
+    reopenExperimentRegistration,
     endVariation,
     getEscrowBalance,
   } = useTrustVariation()
@@ -186,10 +189,22 @@ export default function TrustExperimentDetails() {
     },
   })
 
+  const reopenRegistrationMutation = useMutation({
+    mutationFn: (appId: bigint) => reopenRegistration(appId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) })
+    },
+  })
+
   const closeAllRegistrationMutation = useMutation({
     mutationFn: (appIds: bigint[]) => closeExperimentRegistration(appIds),
     // Settled, not success: the loop stops at the first failure, so a partial run still moved chain state.
     // The promise is returned so a retry can't re-send app ids the refetch is about to drop.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) }),
+  })
+
+  const reopenAllRegistrationMutation = useMutation({
+    mutationFn: (appIds: bigint[]) => reopenExperimentRegistration(appIds),
     onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) }),
   })
 
@@ -210,6 +225,7 @@ export default function TrustExperimentDetails() {
   const expStatus = deriveExperimentStatus(Object.values(cfgs))
   const isOwner = activeAddress !== null && activeAddress === group.owner
   const openVariationAppIds = vars.filter((v) => cfgs[String(v.appId)]?.status === STATUS_ACTIVE).map((v) => v.appId)
+  const closedVariationAppIds = vars.filter((v) => cfgs[String(v.appId)]?.status === STATUS_CLOSED).map((v) => v.appId)
   // A variation whose reads failed has no config at all; it is not closable here and must not be counted as already closed.
   const unreadableVariationCount = vars.filter((v) => !cfgs[String(v.appId)]).length
 
@@ -265,6 +281,13 @@ export default function TrustExperimentDetails() {
             isOwner={isOwner}
             onCloseAll={async () => {
               await closeAllRegistrationMutation.mutateAsync(openVariationAppIds)
+            }}
+          />
+          <ReopenAllRegistrationButton
+            closedVariationCount={closedVariationAppIds.length}
+            isOwner={isOwner}
+            onReopenAll={async () => {
+              await reopenAllRegistrationMutation.mutateAsync(closedVariationAppIds)
             }}
           />
           <Tooltip>
@@ -363,6 +386,9 @@ export default function TrustExperimentDetails() {
               }}
               onCloseRegistration={async (appId) => {
                 await closeRegistrationMutation.mutateAsync(appId)
+              }}
+              onReopenRegistration={async (appId) => {
+                await reopenRegistrationMutation.mutateAsync(appId)
               }}
               onEndVariation={async (appId) => {
                 await endVariationMutation.mutateAsync(appId)

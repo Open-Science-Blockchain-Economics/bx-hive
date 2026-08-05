@@ -23,6 +23,7 @@ interface VariationPanelProps {
   isOwner: boolean
   onCreateMatch: (appId: bigint, investor: string, trustee: string) => Promise<void>
   onCloseRegistration: (appId: bigint) => Promise<void>
+  onReopenRegistration: (appId: bigint) => Promise<void>
   onEndVariation: (appId: bigint) => Promise<void>
   onGetEscrowBalance: (appId: bigint) => Promise<bigint>
 }
@@ -35,6 +36,7 @@ export default function VariationPanel({
   isOwner,
   onCreateMatch,
   onCloseRegistration,
+  onReopenRegistration,
   onEndVariation,
   onGetEscrowBalance,
 }: VariationPanelProps) {
@@ -54,6 +56,7 @@ export default function VariationPanel({
               config={config}
               isOwner={isOwner}
               onCloseRegistration={onCloseRegistration}
+              onReopenRegistration={onReopenRegistration}
               onEndVariation={onEndVariation}
               onGetEscrowBalance={onGetEscrowBalance}
             />

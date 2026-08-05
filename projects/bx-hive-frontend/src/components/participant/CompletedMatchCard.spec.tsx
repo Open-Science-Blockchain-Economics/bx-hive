@@ -21,6 +21,8 @@ const group: ExperimentGroup = {
   name: 'Pilot',
   createdAt: 0n,
   variationCount: 1n,
+  investorLabel: 'Investor',
+  trusteeLabel: 'Trustee',
 }
 
 const variation: VariationInfo = { varId: 0, appId: 1001n, label: 'Baseline', createdAt: 0n }

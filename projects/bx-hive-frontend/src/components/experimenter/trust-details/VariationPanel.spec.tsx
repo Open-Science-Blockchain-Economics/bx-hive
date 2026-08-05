@@ -37,6 +37,7 @@ function renderPanel(status: number) {
       isOwner
       onCreateMatch={vi.fn()}
       onCloseRegistration={vi.fn()}
+      onReopenRegistration={vi.fn()}
       onEndVariation={vi.fn()}
       onGetEscrowBalance={vi.fn()}
     />,

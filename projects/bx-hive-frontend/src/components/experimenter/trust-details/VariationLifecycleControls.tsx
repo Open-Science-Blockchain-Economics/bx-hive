@@ -7,7 +7,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip'
 import { useAssetMetadata } from '../../../hooks/useAssetMetadata'
 import type { VariationConfig } from '../../../hooks/useTrustVariation'
-import { STATUS_ACTIVE, STATUS_COMPLETED } from '../../../hooks/useTrustVariation'
+import { STATUS_ACTIVE, STATUS_CLOSED, STATUS_COMPLETED } from '../../../hooks/useTrustVariation'
 import { baseUnitsToWhole } from '../../../utils/amount'
 import { statusLabel } from '../../../utils/variationStatus'
 
@@ -16,6 +16,7 @@ interface VariationLifecycleControlsProps {
   config: VariationConfig
   isOwner: boolean
   onCloseRegistration: (appId: bigint) => Promise<void>
+  onReopenRegistration: (appId: bigint) => Promise<void>
   onEndVariation: (appId: bigint) => Promise<void>
   onGetEscrowBalance: (appId: bigint) => Promise<bigint>
 }
@@ -27,12 +28,15 @@ export default function VariationLifecycleControls({
   config,
   isOwner,
   onCloseRegistration,
+  onReopenRegistration,
   onEndVariation,
   onGetEscrowBalance,
 }: VariationLifecycleControlsProps) {
   const { decimals, unitName } = useAssetMetadata(config.assetId)
   const [closing, setClosing] = useState(false)
   const [closeError, setCloseError] = useState('')
+  const [reopening, setReopening] = useState(false)
+  const [reopenError, setReopenError] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [ending, setEnding] = useState(false)
   const [endError, setEndError] = useState('')
@@ -73,6 +77,18 @@ export default function VariationLifecycleControls({
     }
   }
 
+  async function handleReopen() {
+    setReopening(true)
+    setReopenError('')
+    try {
+      await onReopenRegistration(appId)
+    } catch (err) {
+      setReopenError(err instanceof Error ? err.message : 'Failed to reopen registration')
+    } finally {
+      setReopening(false)
+    }
+  }
+
   async function handleEnd() {
     setEnding(true)
     setEndError('')
@@ -106,8 +122,18 @@ export default function VariationLifecycleControls({
                 </Btn>
               </TooltipTrigger>
               <TooltipContent side="bottom">
-                Blocks new enrolments; matches already created keep playing. Enrolment cannot be reopened.
+                Blocks new enrolments; matches already created keep playing. You can reopen it afterwards.
               </TooltipContent>
+            </Tooltip>
+          )}
+          {config.status === STATUS_CLOSED && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Btn variant="secondary" size="sm" disabled={reopening} onClick={() => void handleReopen()}>
+                  {reopening ? <Loader2 className="size-3.5 animate-spin" /> : 'Reopen registration'}
+                </Btn>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Lets new participants enrol again.</TooltipContent>
             </Tooltip>
           )}
           <Tooltip>
@@ -121,6 +147,7 @@ export default function VariationLifecycleControls({
         </>
       )}
       {closeError && <span className="text-neg text-xs">{closeError}</span>}
+      {reopenError && <span className="text-neg text-xs">{reopenError}</span>}
       <Dialog
         open={confirmOpen}
         onOpenChange={(open) => {

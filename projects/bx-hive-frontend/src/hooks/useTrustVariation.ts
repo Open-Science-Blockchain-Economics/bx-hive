@@ -20,8 +20,8 @@ export const STATUS_COMPLETED = 2
  * Applies a per-variation call across every appId of an experiment.
  * Sequential by necessity: each call is a wallet-signed transaction, so firing
  * them together both stacks up signature prompts and races the same sender.
- * Stops at the first failure rather than pressing on — these actions cannot be
- * undone, and a rejected signature must not queue up prompts for the rest. The
+ * Stops at the first failure rather than pressing on — each call moves chain
+ * state, and a rejected signature must not queue up prompts for the rest. The
  * error names how far it got so the caller can report what did happen.
  */
 async function forEachVariation(appIds: bigint[], action: string, call: (appId: bigint) => Promise<void>): Promise<void> {
@@ -317,7 +317,7 @@ export function useTrustVariation() {
 
   /**
    * Closes registration on a variation (owner-only), blocking further enrolment.
-   * Matches already created keep playing. Irreversible — nothing reopens a closed variation.
+   * Matches already created keep playing, and reopenRegistration undoes this.
    */
   const closeRegistration = useCallback(
     async (appId: bigint): Promise<void> => {
@@ -325,6 +325,20 @@ export function useTrustVariation() {
       const client = getTrustVariationClient(appId)
       if (!client) throw new Error('Wallet not connected')
       await client.send.closeRegistration({ args: {} })
+    },
+    [activeAddress, getTrustVariationClient],
+  )
+
+  /**
+   * Reopens registration on a closed variation (owner-only), letting new participants
+   * enrol again. The contract rejects this unless the variation is currently closed.
+   */
+  const reopenRegistration = useCallback(
+    async (appId: bigint): Promise<void> => {
+      if (!activeAddress) throw new Error('Wallet not connected')
+      const client = getTrustVariationClient(appId)
+      if (!client) throw new Error('Wallet not connected')
+      await client.send.reopenRegistration({ args: {} })
     },
     [activeAddress, getTrustVariationClient],
   )
@@ -357,6 +371,14 @@ export function useTrustVariation() {
   )
 
   /**
+   * Reopens registration on every closed variation of an experiment.
+   */
+  const reopenExperimentRegistration = useCallback(
+    (appIds: bigint[]): Promise<void> => forEachVariation(appIds, 'reopen registration', reopenRegistration),
+    [reopenRegistration],
+  )
+
+  /**
    * Ends every variation of an experiment, refunding each one's leftover escrow.
    */
   const endExperiment = useCallback(
@@ -381,8 +403,10 @@ export function useTrustVariation() {
     isParticipantEnrolled,
     getEscrowBalance,
     closeRegistration,
+    reopenRegistration,
     endVariation,
     closeExperimentRegistration,
+    reopenExperimentRegistration,
     endExperiment,
   }
 }

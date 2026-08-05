@@ -32,6 +32,8 @@ export interface VariationParams {
   assetId?: bigint
   name?: string
   label?: string
+  investorLabel?: string
+  trusteeLabel?: string
 }
 
 export interface SetupExperimentResult {
@@ -81,6 +83,8 @@ export async function setupExperiment(
     args: {
       name: params.name ?? 'integration-test',
       label: params.label ?? 'baseline',
+      investorLabel: params.investorLabel ?? 'Investor',
+      trusteeLabel: params.trusteeLabel ?? 'Trustee',
       e1: params.e1,
       e2: params.e2,
       multiplier: params.multiplier,

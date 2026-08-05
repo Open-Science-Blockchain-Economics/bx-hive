@@ -15,6 +15,7 @@ vi.mock('../../../hooks/useAssetMetadata', () => ({
 }))
 
 const onCloseRegistration = vi.fn()
+const onReopenRegistration = vi.fn()
 const onEndVariation = vi.fn()
 const onGetEscrowBalance = vi.fn()
 
@@ -37,6 +38,7 @@ function renderControls(status: number, isOwner = true): ReturnType<typeof rende
       config={makeConfig(status)}
       isOwner={isOwner}
       onCloseRegistration={onCloseRegistration}
+      onReopenRegistration={onReopenRegistration}
       onEndVariation={onEndVariation}
       onGetEscrowBalance={onGetEscrowBalance}
     />
@@ -51,6 +53,7 @@ const user = userEvent.setup({ pointerEventsCheck: 0 })
 describe('VariationLifecycleControls', () => {
   beforeEach(() => {
     onCloseRegistration.mockReset().mockResolvedValue(undefined)
+    onReopenRegistration.mockReset().mockResolvedValue(undefined)
     onEndVariation.mockReset().mockResolvedValue(undefined)
     onGetEscrowBalance.mockReset().mockResolvedValue(2_500_000n)
   })
@@ -60,6 +63,7 @@ describe('VariationLifecycleControls', () => {
 
     expect(screen.getByRole('button', { name: 'Close registration' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'End & refund' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reopen registration' })).not.toBeInTheDocument()
     expect(screen.queryByText('Closed')).not.toBeInTheDocument()
     expect(screen.queryByText('Ended')).not.toBeInTheDocument()
   })
@@ -69,6 +73,7 @@ describe('VariationLifecycleControls', () => {
 
     expect(screen.getByText('Closed')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Close registration' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reopen registration' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'End & refund' })).toBeInTheDocument()
   })
 
@@ -77,6 +82,7 @@ describe('VariationLifecycleControls', () => {
 
     expect(screen.getByText('Ended')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Close registration' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reopen registration' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'End & refund' })).not.toBeInTheDocument()
   })
 
@@ -85,6 +91,7 @@ describe('VariationLifecycleControls', () => {
 
     expect(screen.getByText('Closed')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Close registration' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reopen registration' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'End & refund' })).not.toBeInTheDocument()
   })
 
@@ -94,6 +101,25 @@ describe('VariationLifecycleControls', () => {
     await user.click(screen.getByRole('button', { name: 'Close registration' }))
 
     expect(onCloseRegistration).toHaveBeenCalledWith(42n)
+  })
+
+  it('reopens registration through the callback, without a confirmation step', async () => {
+    renderControls(STATUS_CLOSED)
+
+    await user.click(screen.getByRole('button', { name: 'Reopen registration' }))
+
+    expect(onReopenRegistration).toHaveBeenCalledWith(42n)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('surfaces a failed reopen and leaves the control usable', async () => {
+    onReopenRegistration.mockRejectedValueOnce(new Error('not the owner'))
+    renderControls(STATUS_CLOSED)
+
+    await user.click(screen.getByRole('button', { name: 'Reopen registration' }))
+
+    expect(await screen.findByText('not the owner')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reopen registration' })).toBeEnabled()
   })
 
   it('states the refund amount and ends the variation when confirmed', async () => {

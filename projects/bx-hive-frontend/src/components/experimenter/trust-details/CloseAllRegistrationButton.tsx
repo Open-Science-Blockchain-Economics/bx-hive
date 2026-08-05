@@ -78,8 +78,8 @@ export default function CloseAllRegistrationButton({
           </DialogHeader>
           {!nothingOpen && (
             <p className="text-sm text-muted-foreground">
-              Matches already created keep playing, and you can still pair anyone who has already enrolled. Enrolment cannot be reopened.
-              You will be asked to sign once per variation.
+              Matches already created keep playing, and you can still pair anyone who has already enrolled. You can reopen enrolment on any
+              variation afterwards. You will be asked to sign once per variation.
             </p>
           )}
           {unreadableVariationCount > 0 && (
