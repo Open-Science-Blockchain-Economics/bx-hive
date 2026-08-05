@@ -105,7 +105,11 @@ def test_full_experiment_flow(context: AlgopyTestContext, asset_id_param: int) -
     experiments.create(arc4.UInt64(registry.__app_id__))
     assert experiments.registry_app.value == registry.__app_id__
 
-    exp_id = experiments.create_experiment(arc4.String("Trust Study 2026"))
+    exp_id = experiments.create_experiment(
+        arc4.String("Trust Study 2026"),
+        arc4.String("Decision Maker 1"),
+        arc4.String("Decision Maker 2"),
+    )
     assert exp_id == arc4.UInt32(0)
     assert experiments.experiment_count.value == 1
 
@@ -113,6 +117,8 @@ def test_full_experiment_flow(context: AlgopyTestContext, asset_id_param: int) -
     assert stored_exp.name == arc4.String("Trust Study 2026")
     assert stored_exp.owner == arc4.Address(alice)
     assert stored_exp.variation_count == arc4.UInt64(0)
+    assert stored_exp.investor_label == arc4.String("Decision Maker 1")
+    assert stored_exp.trustee_label == arc4.String("Decision Maker 2")
 
     # ------------------------------------------------------------------
     # Layer 3: TrustVariation — instantiate and run game
@@ -209,7 +215,11 @@ def test_multiple_variations_independent(context: AlgopyTestContext) -> None:
 
     experiments = TrustExperiments()
     experiments.create(arc4.UInt64(0))
-    exp_id = experiments.create_experiment(arc4.String("Multi-Variation Study"))
+    exp_id = experiments.create_experiment(
+        arc4.String("Multi-Variation Study"),
+        arc4.String("Investor"),
+        arc4.String("Trustee"),
+    )
 
     # Variation A: multiplier=2
     var_a = TrustVariation()

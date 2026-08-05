@@ -1,6 +1,6 @@
 import { AlgoAmount, getApplicationAddress } from '@algorandfoundation/algokit-utils'
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import { STATUS_ACTIVE } from './useTrustVariation'
+import { STATUS_COMPLETED } from './useTrustVariation'
 import { useAlgorand } from './useAlgorand'
 
 // --- Config types ---
@@ -115,7 +115,8 @@ export function ExperimentManagerProvider({ children }: { children: ReactNode })
         const variations = expVariationsRef.current[expId] ?? []
 
         for (const variation of variations) {
-          if (variation.status !== STATUS_ACTIVE) continue
+          // Closed variations still accept create_match; only an ended one is off limits.
+          if (variation.status === STATUS_COMPLETED) continue
 
           const key = String(variation.appId)
           if (processingRef.current.has(key)) continue

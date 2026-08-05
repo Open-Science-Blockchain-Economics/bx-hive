@@ -6,6 +6,18 @@ import { useAlgorand } from './useAlgorand'
 
 export type { ExperimentGroup, VariationInfo }
 
+/**
+ * Names the experimenter gives the two roles. Passed as a pair rather than two
+ * bare strings so a caller cannot swap them: both are strings, and the ABI has
+ * no way to notice.
+ */
+export interface RoleLabels {
+  /** Shown for the player who sends first. */
+  investorLabel: string
+  /** Shown for the player who responds. */
+  trusteeLabel: string
+}
+
 export interface VariationParams {
   label: string
   /** E1 endowment in base units of the payout asset (E1 * 10^decimals) */
@@ -107,10 +119,10 @@ export function useTrustExperiments() {
    * Returns the exp_id (uint32).
    */
   const createExperiment = useCallback(
-    async (name: string): Promise<number> => {
+    async (name: string, labels: RoleLabels): Promise<number> => {
       if (!trustExperimentsClient || !activeAddress) throw new Error('Wallet not connected')
       const result = await trustExperimentsClient.send.createExperiment({
-        args: { name },
+        args: { name, investorLabel: labels.investorLabel, trusteeLabel: labels.trusteeLabel },
       })
       return result.return!
     },
@@ -125,7 +137,7 @@ export function useTrustExperiments() {
    * Returns { expId, appId }.
    */
   const createExperimentWithVariation = useCallback(
-    async (name: string, params: VariationParams): Promise<{ expId: number; appId: bigint }> => {
+    async (name: string, labels: RoleLabels, params: VariationParams): Promise<{ expId: number; appId: bigint }> => {
       if (!trustExperimentsClient || !algorand || !activeAddress) throw new Error('Wallet not connected')
       const legs = await buildCreateGroupLegs(algorand, trustExperimentsClient, activeAddress, params)
 
@@ -138,6 +150,8 @@ export function useTrustExperiments() {
           args: {
             name,
             label: params.label,
+            investorLabel: labels.investorLabel,
+            trusteeLabel: labels.trusteeLabel,
             e1: params.e1,
             e2: params.e2,
             multiplier: params.multiplier,

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Panel } from '@/components/ds/card'
 import { useAssetMetadata } from '../../../hooks/useAssetMetadata'
+import type { RoleLabels } from '../../../hooks/useTrustExperiments'
 import type { Match, VariationConfig } from '../../../hooks/useTrustVariation'
 import { PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '../../../hooks/useTrustVariation'
 import { baseUnitsToWhole } from '../../../utils/amount'
@@ -13,6 +14,8 @@ interface TrustExperimentProps {
   match: Match
   config: VariationConfig
   activeAddress: string
+  /** Names the experimenter gave the two roles; already defaulted by the caller. */
+  roleLabels: RoleLabels
   dataUpdatedAt: number
   refreshIntervalMs: number
   onRefresh: () => void
@@ -61,6 +64,7 @@ export default function TrustExperiment({
   match,
   config,
   activeAddress,
+  roleLabels,
   dataUpdatedAt,
   refreshIntervalMs,
   onRefresh,
@@ -85,6 +89,7 @@ export default function TrustExperiment({
         investorPayout={baseUnitsToWhole(match.investorPayout, decimals)}
         trusteePayout={baseUnitsToWhole(match.trusteePayout, decimals)}
         isInvestor={isInvestor}
+        roleLabels={roleLabels}
       />
     )
   }
@@ -100,13 +105,16 @@ export default function TrustExperiment({
           UNIT={UNIT}
           decimals={decimals}
           unitName={unitName}
+          roleLabels={roleLabels}
           onDecisionMade={onRefresh}
         />
       )
     }
+    // The label carries the role; the sentence uses a pronoun so it stays grammatical
+    // whatever noun phrase the experimenter chose.
     return (
-      <WaitingState title="Waiting for Investor" dataUpdatedAt={dataUpdatedAt} refreshIntervalMs={refreshIntervalMs}>
-        <p>The Investor is deciding how much to send you.</p>
+      <WaitingState title={`Waiting for ${roleLabels.investorLabel}`} dataUpdatedAt={dataUpdatedAt} refreshIntervalMs={refreshIntervalMs}>
+        <p>They are deciding how much to send you.</p>
       </WaitingState>
     )
   }
@@ -123,26 +131,27 @@ export default function TrustExperiment({
           UNIT={UNIT}
           decimals={decimals}
           investorDecision={baseUnitsToWhole(match.investment, decimals)}
+          roleLabels={roleLabels}
           onDecisionMade={onRefresh}
         />
       )
     }
     const invested = baseUnitsToWhole(match.investment, decimals)
     return (
-      <WaitingState title="Waiting for Trustee" dataUpdatedAt={dataUpdatedAt} refreshIntervalMs={refreshIntervalMs}>
+      <WaitingState title={`Waiting for ${roleLabels.trusteeLabel}`} dataUpdatedAt={dataUpdatedAt} refreshIntervalMs={refreshIntervalMs}>
         <p>
-          You invested{' '}
+          You sent{' '}
           <span className="font-mono font-semibold text-foreground">
             {invested.toLocaleString()} {unitName}
           </span>
           .
         </p>
         <p>
-          The Trustee received{' '}
+          They received{' '}
           <span className="font-mono font-semibold text-foreground">
             {(invested * m).toLocaleString()} {unitName}
           </span>{' '}
-          and is deciding how much to return.
+          and are deciding how much to return.
         </p>
       </WaitingState>
     )

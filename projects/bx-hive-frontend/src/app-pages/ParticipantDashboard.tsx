@@ -11,20 +11,22 @@ import { useAlgorand } from '../hooks/useAlgorand'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustVariation, PHASE_COMPLETED, PHASE_INVESTOR_DECISION, PHASE_TRUSTEE_DECISION } from '../hooks/useTrustVariation'
-import type { Match as OnChainMatch } from '../hooks/useTrustVariation'
+import type { Match as OnChainMatch, VariationConfig } from '../hooks/useTrustVariation'
 import { queryKeys } from '../lib/queryKeys'
-import { pickVariationRoundRobin, type VariationSlot } from '../utils/distributeParticipants'
+import { hasActiveVariation, pickVariationRoundRobin, type VariationSlot } from '../utils/distributeParticipants'
 
 interface OnChainMatchView {
-  appId: bigint
+  group: ExperimentGroup
+  variation: VariationInfo
+  config: VariationConfig
   match: OnChainMatch
-  assetId: bigint
 }
 
 interface OnChainExperimentView {
   group: ExperimentGroup
   variations: VariationInfo[]
   slots: VariationSlot[]
+  registrationOpen: boolean
   isFull: boolean
   enrolled: boolean
   hasMatch: boolean
@@ -68,7 +70,7 @@ export default function ParticipantDashboard() {
           const match = await getPlayerMatch(v.appId, activeAddress!)
           if (match) {
             const cfg = await config(v.appId)
-            matchViews.push({ appId: v.appId, match, assetId: cfg.assetId })
+            matchViews.push({ group, variation: v, config: cfg, match })
             enrolled = true
             hasMatch = true
           }
@@ -94,12 +96,14 @@ export default function ParticipantDashboard() {
               appId: v.appId,
               participantCount: count,
               maxParticipants: Number(cfg.maxParticipants),
+              status: cfg.status,
             }
           }),
         )
-        const isFull = pickVariationRoundRobin(slots) === null
+        const registrationOpen = hasActiveVariation(slots)
+        const isFull = registrationOpen && pickVariationRoundRobin(slots) === null
 
-        expViews.push({ group, variations: vars, slots, isFull, enrolled, hasMatch })
+        expViews.push({ group, variations: vars, slots, registrationOpen, isFull, enrolled, hasMatch })
       }
 
       return { matchViews, expViews }
@@ -147,7 +151,9 @@ export default function ParticipantDashboard() {
 
   const activeOnChain = onChainMatches.filter((v) => v.match.phase !== PHASE_COMPLETED)
   const completedOnChain = onChainMatches.filter((v) => v.match.phase === PHASE_COMPLETED)
-  const joinableExperiments = onChainExperiments.filter((e) => !e.enrolled && !e.hasMatch)
+  // Only the joinable list is gated on status: create_match has no status check, so someone already
+  // enrolled can still be paired after the experimenter closes registration.
+  const joinableExperiments = onChainExperiments.filter((e) => !e.enrolled && !e.hasMatch && e.registrationOpen)
   const enrolledWaiting = onChainExperiments.filter((e) => e.enrolled && !e.hasMatch)
 
   const hasAnything =
@@ -163,10 +169,17 @@ export default function ParticipantDashboard() {
       <div className="flex flex-col gap-8">
         {activeOnChain.length > 0 && (
           <section>
-            <Rule label="Trust Game — Active" className="mb-4" />
+            <Rule label="Active" className="mb-4" />
             <div className="grid gap-3">
-              {activeOnChain.map(({ appId, match }) => (
-                <ActiveMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} />
+              {activeOnChain.map(({ group, variation, config, match }) => (
+                <ActiveMatchCard
+                  key={String(variation.appId)}
+                  group={group}
+                  variation={variation}
+                  config={config}
+                  match={match}
+                  activeAddress={activeAddress!}
+                />
               ))}
             </div>
           </section>
@@ -174,7 +187,7 @@ export default function ParticipantDashboard() {
 
         {enrolledWaiting.length > 0 && (
           <section>
-            <Rule label="Trust Game — Enrolled" className="mb-4" />
+            <Rule label="Enrolled" className="mb-4" />
             <div className="grid gap-3">
               {enrolledWaiting.map(({ group }) => (
                 <EnrolledWaitingCard key={group.expId} group={group} />
@@ -185,7 +198,7 @@ export default function ParticipantDashboard() {
 
         {joinableExperiments.length > 0 && (
           <section>
-            <Rule label="Trust Game — Available" className="mb-4" />
+            <Rule label="Available" className="mb-4" />
             <div className="grid gap-3">
               {joinableExperiments.map(({ group, variations, slots, isFull }) => (
                 <JoinableExperimentCard
@@ -204,10 +217,17 @@ export default function ParticipantDashboard() {
 
         {completedOnChain.length > 0 && (
           <section>
-            <Rule label="Trust Game — Completed" className="mb-4" />
+            <Rule label="Completed" className="mb-4" />
             <div className="grid gap-3">
-              {completedOnChain.map(({ appId, match, assetId }) => (
-                <CompletedMatchCard key={String(appId)} appId={appId} match={match} activeAddress={activeAddress!} assetId={assetId} />
+              {completedOnChain.map(({ group, variation, config, match }) => (
+                <CompletedMatchCard
+                  key={String(variation.appId)}
+                  group={group}
+                  variation={variation}
+                  config={config}
+                  match={match}
+                  activeAddress={activeAddress!}
+                />
               ))}
             </div>
           </section>
@@ -215,9 +235,9 @@ export default function ParticipantDashboard() {
 
         {!hasAnything && (
           <section>
-            <Rule label="Trust Game" className="mb-4" />
+            <Rule label="Experiments" className="mb-4" />
             <Panel className="text-center py-10 text-muted-foreground">
-              <p className="t-small">No Trust Game experiments available yet.</p>
+              <p className="t-small">No experiments available yet.</p>
             </Panel>
           </section>
         )}

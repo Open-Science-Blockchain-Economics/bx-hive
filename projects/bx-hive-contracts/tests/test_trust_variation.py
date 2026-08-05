@@ -287,6 +287,29 @@ def test_create_match_already_assigned_fails(context: AlgopyTestContext) -> None
         _create_match(context, contract, investor.copy(), third.copy())
 
 
+def test_create_match_after_end_variation_fails(context: AlgopyTestContext) -> None:
+    """end_variation has refunded the escrow, so a new match could never pay out."""
+    contract = _make_variation(context)
+    investor, trustee, _ = _add_participants(context, contract)
+    contract.end_variation()
+
+    with pytest.raises(Exception, match="Variation ended"):
+        _create_match(context, contract, investor.copy(), trustee.copy())
+
+
+def test_create_match_after_close_registration_succeeds(context: AlgopyTestContext) -> None:
+    """Closed only stops new enrolment — already-enrolled participants stay matchable."""
+    contract = _make_variation(context)
+    investor, trustee, _ = _add_participants(context, contract)
+    contract.close_registration()
+
+    match_id = _create_match(context, contract, investor.copy(), trustee.copy())
+
+    assert match_id == arc4.UInt32(0)
+    assert contract.match_count.value == 1
+    assert contract.status.value == STATUS_CLOSED
+
+
 # -------------------------------------------------------------------------
 # submit_investor_decision
 # investor = ctx.default_sender → no create_group needed
@@ -335,6 +358,35 @@ def test_submit_investor_decision_not_multiple_fails(context: AlgopyTestContext)
 
     with pytest.raises(Exception, match="Not a multiple of unit"):
         contract.submit_investor_decision(match_id, arc4.UInt64(35))  # 35 % 10 != 0
+
+
+def test_submit_investor_decision_after_end_variation_fails(
+    context: AlgopyTestContext,
+) -> None:
+    """Without this guard the pair jams: the trustee can never complete the match."""
+    contract = _make_variation(context)
+    investor, trustee, _ = _add_participants(context, contract)
+    match_id = _create_match(context, contract, investor.copy(), trustee.copy())
+    contract.end_variation()
+
+    with pytest.raises(Exception, match="Variation ended"):
+        contract.submit_investor_decision(match_id, arc4.UInt64(40))
+
+
+def test_submit_investor_decision_after_close_registration_succeeds(
+    context: AlgopyTestContext,
+) -> None:
+    """Closed variations remain playable — the frontend relies on this."""
+    contract = _make_variation(context)
+    investor, trustee, _ = _add_participants(context, contract)
+    match_id = _create_match(context, contract, investor.copy(), trustee.copy())
+    contract.close_registration()
+
+    contract.submit_investor_decision(match_id, arc4.UInt64(40))
+
+    match = contract.matches[match_id].copy()
+    assert match.phase == arc4.UInt8(PHASE_TRUSTEE_DECISION)
+    assert match.investment == arc4.UInt64(40)
 
 
 # -------------------------------------------------------------------------
@@ -426,6 +478,71 @@ def test_withdraw_escrow_no_remaining_fails(context: AlgopyTestContext) -> None:
         contract.withdraw_escrow()
 
 
+def _deposit(ctx: AlgopyTestContext, contract: TrustVariation, amount: int) -> None:
+    app_addr = ctx.ledger.get_app(contract.__app_id__).address
+    contract.deposit_escrow(
+        ctx.any.txn.payment(sender=ctx.default_sender, receiver=app_addr, amount=amount)
+    )
+
+
+def test_withdraw_escrow_ends_the_variation(context: AlgopyTestContext) -> None:
+    """Reclaiming the pool must mark the variation ended.
+
+    Every play guard keys off status, so a drained variation left ACTIVE would still
+    accept matches that could never be paid out.
+    """
+    contract = _make_variation(context)
+    _deposit(context, contract, 500)
+
+    contract.withdraw_escrow()
+
+    assert contract.status.value == STATUS_COMPLETED
+    assert contract.escrow_deposited.value == contract.escrow_paid_out.value
+
+
+def test_create_match_after_withdraw_escrow_fails(context: AlgopyTestContext) -> None:
+    contract = _make_variation(context)
+    _deposit(context, contract, 500)
+    investor, trustee, _ = _add_participants(context, contract)
+    contract.withdraw_escrow()
+
+    with pytest.raises(Exception, match="Variation ended"):
+        _create_match(context, contract, investor.copy(), trustee.copy())
+
+
+def test_reopen_registration_after_withdraw_escrow_fails(context: AlgopyTestContext) -> None:
+    """A drained variation is COMPLETED, so it can never be reopened for new participants."""
+    contract = _make_variation(context)
+    _deposit(context, contract, 500)
+    contract.close_registration()
+    contract.withdraw_escrow()
+
+    with pytest.raises(Exception, match="Not closed"):
+        contract.reopen_registration()
+
+
+def test_escrow_balance_saturates_at_zero(context: AlgopyTestContext) -> None:
+    """Payouts can outrun recorded deposits when the app holds funds it never recorded.
+
+    A plain subtraction would underflow here and wedge every refund path permanently.
+    """
+    contract = _make_variation(context)
+    contract.escrow_deposited.value = UInt64(100)
+    contract.escrow_paid_out.value = UInt64(250)
+
+    assert contract.get_escrow_balance() == arc4.UInt64(0)
+
+
+def test_end_variation_survives_paid_out_exceeding_deposited(context: AlgopyTestContext) -> None:
+    contract = _make_variation(context)
+    contract.escrow_deposited.value = UInt64(100)
+    contract.escrow_paid_out.value = UInt64(250)
+
+    contract.end_variation()
+
+    assert contract.status.value == STATUS_COMPLETED
+
+
 # -------------------------------------------------------------------------
 # get_config / get_escrow_balance / close_registration
 # -------------------------------------------------------------------------
@@ -464,6 +581,73 @@ def test_close_registration(context: AlgopyTestContext) -> None:
     contract = _make_variation(context)
     contract.close_registration()
     assert contract.status.value == STATUS_CLOSED
+
+
+# -------------------------------------------------------------------------
+# reopen_registration
+# -------------------------------------------------------------------------
+
+
+def test_reopen_registration(context: AlgopyTestContext) -> None:
+    contract = _make_variation(context)
+    contract.close_registration()
+    contract.reopen_registration()
+    assert contract.status.value == STATUS_ACTIVE
+
+
+def test_reopen_registration_allows_enrollment_again(context: AlgopyTestContext) -> None:
+    """Closing blocks add_participants; reopening must unblock it."""
+    contract = _make_variation(context)
+    contract.close_registration()
+
+    app_addr = context.ledger.get_app(contract.__app_id__).address
+    acct = context.any.account()
+    participants: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(arc4.Address(acct))
+    blocked_mbr = context.any.txn.payment(
+        sender=context.default_sender, receiver=app_addr, amount=PARTICIPANT_MBR
+    )
+    with pytest.raises(Exception, match="Not active"):
+        contract.add_participants(participants, blocked_mbr)
+
+    contract.reopen_registration()
+
+    retry: arc4.DynamicArray[arc4.Address] = arc4.DynamicArray(arc4.Address(acct))
+    mbr = context.any.txn.payment(
+        sender=context.default_sender, receiver=app_addr, amount=PARTICIPANT_MBR
+    )
+    contract.add_participants(retry, mbr)
+    assert arc4.Address(acct) in contract.participants
+    assert contract.participant_count.value == 1
+
+
+def test_reopen_registration_when_active_fails(context: AlgopyTestContext) -> None:
+    contract = _make_variation(context)
+    with pytest.raises(Exception, match="Not closed"):
+        contract.reopen_registration()
+
+
+def test_reopen_registration_after_end_variation_fails(context: AlgopyTestContext) -> None:
+    """A COMPLETED variation has already refunded its escrow — no reopening."""
+    contract = _make_variation(context)
+    contract.close_registration()
+    contract.end_variation()
+    with pytest.raises(Exception, match="Not closed"):
+        contract.reopen_registration()
+
+
+def test_reopen_registration_wrong_caller_fails(context: AlgopyTestContext) -> None:
+    other = context.any.account()
+    contract = _make_variation(context, owner=other)
+
+    owner_call = context.any.txn.application_call(
+        sender=other, app_id=Application(contract.__app_id__)
+    )
+    with context.txn.create_group(gtxns=[owner_call], active_txn_index=0):
+        contract.close_registration()
+
+    # default_sender is not the owner
+    with pytest.raises(Exception, match="Not owner"):
+        contract.reopen_registration()
 
 
 # -------------------------------------------------------------------------

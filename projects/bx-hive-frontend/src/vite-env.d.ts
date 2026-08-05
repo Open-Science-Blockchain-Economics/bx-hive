@@ -1,10 +1,6 @@
 /// <reference types="vite/client" />
 
-declare module 'virtual:instructions/trust-variation/investor' {
-  const content: string
-  export default content
-}
-declare module 'virtual:instructions/trust-variation/trustee' {
+declare module 'virtual:instructions/trust-variation/shared' {
   const content: string
   export default content
 }

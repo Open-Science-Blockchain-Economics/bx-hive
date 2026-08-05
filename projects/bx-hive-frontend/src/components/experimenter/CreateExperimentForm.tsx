@@ -13,8 +13,10 @@ import { getVariationLabel } from '../../db'
 import { experimentTemplates, getTemplateById } from '../../experiment-logic/templates'
 import { useAlgorand } from '../../hooks/useAlgorand'
 import type { AssetMetadata } from '../../hooks/useAssetMetadata'
+import type { RoleLabels } from '../../hooks/useTrustExperiments'
 import type { ParameterVariation } from '../../types'
 import { baseUnitsToWhole } from '../../utils/amount'
+import { DEFAULT_ROLE_LABELS, resolveRoleLabels } from '../../utils/roleLabels'
 import { computeAlgoRequired, computeEscrowWhole, generateVariationCombinations, toVariationParams } from '../../utils/trustGameCalc'
 import InfoAlert from '../ui/InfoAlert'
 import FundingSummary from './FundingSummary'
@@ -99,7 +101,11 @@ function PayoffPreview({ e1, m }: { e1: number; m: number }) {
 
 interface CreateExperimentFormProps {
   walletBalanceAlgo: number | null
-  createExperimentWithVariation: (name: string, params: ReturnType<typeof toVariationParams>) => Promise<{ expId: number }>
+  createExperimentWithVariation: (
+    name: string,
+    labels: RoleLabels,
+    params: ReturnType<typeof toVariationParams>,
+  ) => Promise<{ expId: number }>
   createVariation: (expId: number, params: ReturnType<typeof toVariationParams>) => Promise<bigint>
   onCreated: () => void
 }
@@ -112,6 +118,8 @@ export default function CreateExperimentForm({
 }: CreateExperimentFormProps) {
   const [selectedTemplateId, setSelectedTemplateId] = useState(experimentTemplates[0]?.id || '')
   const [experimentName, setExperimentName] = useState('')
+  const [investorLabel, setInvestorLabel] = useState('')
+  const [trusteeLabel, setTrusteeLabel] = useState('')
   const [parameters, setParameters] = useState<Record<string, number | string>>({})
   const [batchModeEnabled, setBatchModeEnabled] = useState(false)
   const [variations, setVariations] = useState<ParameterVariation[]>([])
@@ -157,6 +165,8 @@ export default function CreateExperimentForm({
 
   function resetForm() {
     setExperimentName('')
+    setInvestorLabel('')
+    setTrusteeLabel('')
     setBatchModeEnabled(false)
     setVariations([])
     setMaxPerVariation('')
@@ -167,10 +177,13 @@ export default function CreateExperimentForm({
       const maxSub = Number(maxPerVariation) * 2
       const aId = payoutAsset.assetId
       const dec = payoutAsset.decimals
+      // The contract accepts empty strings, so blank fields are defaulted here.
+      const labels: RoleLabels = resolveRoleLabels({ investorLabel, trusteeLabel })
       if (batchModeEnabled && variations.length > 0 && variations.every((v) => v.values.length > 0)) {
         const combos = generateVariationCombinations(parameters, variations)
         const { expId } = await createExperimentWithVariation(
           experimentName.trim(),
+          labels,
           toVariationParams(combos[0], getVariationLabel(combos[0], variations), maxSub, computeEscrowWhole(combos[0], maxSub), aId, dec),
         )
         for (let i = 1; i < combos.length; i++) {
@@ -182,6 +195,7 @@ export default function CreateExperimentForm({
       } else {
         await createExperimentWithVariation(
           experimentName.trim(),
+          labels,
           toVariationParams(parameters, 'Default', maxSub, computeEscrowWhole(parameters, maxSub), aId, dec),
         )
       }
@@ -281,6 +295,30 @@ export default function CreateExperimentForm({
               placeholder="e.g., Trust Experiment – Spring 2025"
             />
           </Field>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <Field label="Investor label" hint="Sends first" htmlFor="investor-label">
+              <Input
+                id="investor-label"
+                type="text"
+                value={investorLabel}
+                onChange={(e) => setInvestorLabel(e.target.value)}
+                placeholder="e.g., Decision Maker 1"
+              />
+            </Field>
+            <Field label="Trustee label" hint="Responds" htmlFor="trustee-label">
+              <Input
+                id="trustee-label"
+                type="text"
+                value={trusteeLabel}
+                onChange={(e) => setTrusteeLabel(e.target.value)}
+                placeholder="e.g., Decision Maker 2"
+              />
+            </Field>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Optional — the names recorded for the two roles. Left blank they stay {DEFAULT_ROLE_LABELS.investorLabel} and{' '}
+            {DEFAULT_ROLE_LABELS.trusteeLabel}.
+          </p>
         </div>
       </Step>
 
@@ -306,7 +344,10 @@ export default function CreateExperimentForm({
             </div>
             {!batchModeEnabled && (
               <InfoAlert learnMoreHref={DOCS_LINKS.maxPayout} className="mt-4">
-                Max payout per pair: <strong>{maxPayout} ALGO</strong>
+                Max payout per pair:{' '}
+                <strong>
+                  {maxPayout} {payoutAsset.unitName}
+                </strong>
               </InfoAlert>
             )}
           </Step>

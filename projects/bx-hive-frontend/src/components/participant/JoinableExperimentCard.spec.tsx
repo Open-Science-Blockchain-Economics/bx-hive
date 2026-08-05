@@ -11,6 +11,8 @@ const group: ExperimentGroup = {
   name: 'Pilot',
   createdAt: 0n,
   variationCount: 1n,
+  investorLabel: 'Investor',
+  trusteeLabel: 'Trustee',
 }
 
 const variations: VariationInfo[] = [{ varId: 0, appId: 1001n, label: 'Baseline', createdAt: 0n }]
@@ -24,21 +26,34 @@ const baseProps = {
 }
 
 describe('JoinableExperimentCard', () => {
+  it('identifies the experiment by the name its experimenter chose, not by the game type', () => {
+    render(<JoinableExperimentCard {...baseProps} isFull={false} />)
+
+    expect(screen.getByRole('heading', { name: 'Pilot' })).toBeInTheDocument()
+    expect(screen.queryByText(/Trust Game/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps the experiment id so two experiments sharing a name stay distinguishable', () => {
+    render(<JoinableExperimentCard {...baseProps} isFull={false} />)
+
+    expect(screen.getByText(/Experiment ID/i)).toBeInTheDocument()
+  })
+
   it('renders an "Open" chip and an enabled Join button when not full', () => {
     render(<JoinableExperimentCard {...baseProps} isFull={false} />)
 
     expect(screen.getByText('Open')).toBeInTheDocument()
     expect(screen.queryByText('Full')).not.toBeInTheDocument()
-    expect(screen.queryByText(/All variations are full/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/No places left to join/i)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Join experiment/i })).toBeEnabled()
   })
 
-  it('renders a "Full" chip, an explanatory line, and a disabled Join button when full', () => {
+  it('renders a "Full" chip, an explanatory line, and a disabled Join button when there is no place to join', () => {
     render(<JoinableExperimentCard {...baseProps} isFull />)
 
     expect(screen.getByText('Full')).toBeInTheDocument()
     expect(screen.queryByText('Open')).not.toBeInTheDocument()
-    expect(screen.getByText(/All variations are full/i)).toBeInTheDocument()
+    expect(screen.getByText(/No places left to join/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Join experiment/i })).toBeDisabled()
   })
 

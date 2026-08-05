@@ -40,6 +40,10 @@ class ExperimentGroup(arc4.Struct, frozen=True):
     name: arc4.String
     created_at: arc4.UInt64
     variation_count: arc4.UInt64
+    # Participant-facing names for the two trust-game positions. Experimenters
+    # may substitute neutral wording; the positions themselves are fixed.
+    investor_label: arc4.String
+    trustee_label: arc4.String
 
 
 class VariationInfo(arc4.Struct, frozen=True):

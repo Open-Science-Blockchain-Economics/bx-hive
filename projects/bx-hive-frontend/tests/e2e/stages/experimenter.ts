@@ -105,3 +105,22 @@ export async function createExperimentAndVariation(
 
   return { expId, variationAppId }
 }
+
+/**
+ * Reconnects the browser to `experimenterAddress` and opens that experiment's
+ * detail page, waiting until its on-chain data has resolved.
+ */
+export async function openExperimentDetails(page: Page, experimenterAddress: string, expId: number): Promise<void> {
+  // Entering via /app/join keeps the ?e2e-account param (a ProtectedRoute
+  // redirect would strip it); the Dashboard link only renders once the
+  // experimenter user has loaded, so clicking it proves the wallet is connected
+  // and persisted before the hard navigation to the protected detail route.
+  await page.goto(`/app/join?e2e-account=${experimenterAddress}`)
+  await page
+    .getByRole('link', { name: /^Dashboard$/i })
+    .first()
+    .click()
+
+  await page.goto(`/app/experimenter/trust/${expId}`)
+  await page.getByRole('heading', { name: /Variation Details/i }).waitFor()
+}

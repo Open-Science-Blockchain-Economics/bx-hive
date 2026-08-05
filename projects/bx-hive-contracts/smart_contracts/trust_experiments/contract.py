@@ -80,7 +80,12 @@ class TrustExperiments(ARC4Contract):
             ).submit()
 
     @arc4.abimethod
-    def create_experiment(self, name: arc4.String) -> arc4.UInt32:
+    def create_experiment(
+        self,
+        name: arc4.String,
+        investor_label: arc4.String,
+        trustee_label: arc4.String,
+    ) -> arc4.UInt32:
         exp_id = arc4.UInt32(self.experiment_count.value)
         self.experiment_count.value += UInt64(1)
         self.experiments[exp_id] = ExperimentGroup(
@@ -89,6 +94,8 @@ class TrustExperiments(ARC4Contract):
             name=name,
             created_at=arc4.UInt64(Global.latest_timestamp),
             variation_count=arc4.UInt64(0),
+            investor_label=investor_label,
+            trustee_label=trustee_label,
         )
         return exp_id
 
@@ -215,6 +222,8 @@ class TrustExperiments(ARC4Contract):
             name=experiment.name,
             created_at=experiment.created_at,
             variation_count=arc4.UInt64(experiment.variation_count.as_uint64() + UInt64(1)),
+            investor_label=experiment.investor_label,
+            trustee_label=experiment.trustee_label,
         )
 
         return arc4.UInt64(new_app.id)
@@ -224,6 +233,8 @@ class TrustExperiments(ARC4Contract):
         self,
         name: arc4.String,
         label: arc4.String,
+        investor_label: arc4.String,
+        trustee_label: arc4.String,
         e1: arc4.UInt64,
         e2: arc4.UInt64,
         multiplier: arc4.UInt64,
@@ -268,6 +279,8 @@ class TrustExperiments(ARC4Contract):
             name=name,
             created_at=arc4.UInt64(Global.latest_timestamp),
             variation_count=arc4.UInt64(0),
+            investor_label=investor_label,
+            trustee_label=trustee_label,
         )
 
         # Create the first variation (var_id = 0)
@@ -349,6 +362,8 @@ class TrustExperiments(ARC4Contract):
             name=name,
             created_at=self.experiments[exp_id].created_at,
             variation_count=arc4.UInt64(1),
+            investor_label=investor_label,
+            trustee_label=trustee_label,
         )
 
         return exp_id, arc4.UInt64(new_app.id)

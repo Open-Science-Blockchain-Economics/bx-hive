@@ -8,19 +8,21 @@ import { Btn } from '@/components/ds/button'
 import { Dot } from '@/components/ds/dot'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ds/tooltip'
 import { cn } from '@/lib/utils'
+import BulkRegistrationButton from '../components/experimenter/trust-details/BulkRegistrationButton'
 import OverviewStrip from '../components/experimenter/trust-details/OverviewStrip'
 import VariationPanel from '../components/experimenter/trust-details/VariationPanel'
 import { LoadingSpinner, StatusDot } from '../components/ui'
+import { useAlgorand } from '../hooks/useAlgorand'
 import { fetchAssetMetadata, useAssetMetadata } from '../hooks/useAssetMetadata'
 import type { ExperimentGroup, VariationInfo } from '../hooks/useTrustExperiments'
 import { useTrustExperiments } from '../hooks/useTrustExperiments'
-import { STATUS_ACTIVE, useTrustVariation } from '../hooks/useTrustVariation'
+import { STATUS_ACTIVE, STATUS_CLOSED, STATUS_COMPLETED, useTrustVariation } from '../hooks/useTrustVariation'
 import type { Match, VariationConfig } from '../hooks/useTrustVariation'
 import { useExperimentManager } from '../hooks/useExperimentManager'
 import { queryKeys } from '../lib/queryKeys'
 import { truncateAddress } from '../utils/address'
 import { downloadCsv } from '../utils/csv'
-import { resolveVariationAssets, toTrustResultsCsv } from '../utils/trustResultsCsv'
+import { exportedAddresses, resolveUserNames, resolveVariationAssets, toTrustResultsCsv } from '../utils/trustResultsCsv'
 import { deriveExperimentStatus, statusDotColor, statusLabel, variationTooltip } from '../utils/variationStatus'
 
 interface ParticipantEntry {
@@ -84,8 +86,20 @@ export default function TrustExperimentDetails() {
   const expId = Number(expIdParam ?? '0')
 
   const { getExperiment, listVariations } = useTrustExperiments()
-  const { getEnrolledParticipants, getMatches, getConfig, createMatch } = useTrustVariation()
+  const {
+    getEnrolledParticipants,
+    getMatches,
+    getConfig,
+    createMatch,
+    closeRegistration,
+    reopenRegistration,
+    closeExperimentRegistration,
+    reopenExperimentRegistration,
+    endVariation,
+    getEscrowBalance,
+  } = useTrustVariation()
   const { getExpConfig, setExpConfig, registerExperimentVariations } = useExperimentManager()
+  const { registryClient, activeAddress } = useAlgorand()
   const queryClient = useQueryClient()
 
   const [selectedVarIdx, setSelectedVarIdx] = useState(0)
@@ -145,22 +159,56 @@ export default function TrustExperimentDetails() {
     if (!variations || !configs) {
       return { autoMatchEligible: false, autoMatchDisabledReason: 'Loading variations…' }
     }
-    const hasActive = variations.some((v) => {
+    // A closed variation still pairs its enrolled participants; only an ended one cannot.
+    const hasMatchable = variations.some((v) => {
       const cfg = configs[String(v.appId)]
-      return cfg && Number(cfg.status) === STATUS_ACTIVE
+      return cfg && Number(cfg.status) !== STATUS_COMPLETED
     })
-    if (hasActive) {
+    if (hasMatchable) {
       return { autoMatchEligible: true, autoMatchDisabledReason: undefined }
     }
     return {
       autoMatchEligible: false,
-      autoMatchDisabledReason: 'Auto Match unavailable — no active variations.',
+      autoMatchDisabledReason: 'Auto Match unavailable — every variation has ended.',
     }
   }, [variations, configs])
 
   const createMatchMutation = useMutation({
     mutationFn: ({ appId, investor, trustee }: { appId: bigint; investor: string; trustee: string }) =>
       createMatch(appId, investor, trustee),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) })
+    },
+  })
+
+  const closeRegistrationMutation = useMutation({
+    mutationFn: (appId: bigint) => closeRegistration(appId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) })
+    },
+  })
+
+  const reopenRegistrationMutation = useMutation({
+    mutationFn: (appId: bigint) => reopenRegistration(appId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) })
+    },
+  })
+
+  const closeAllRegistrationMutation = useMutation({
+    mutationFn: (appIds: bigint[]) => closeExperimentRegistration(appIds),
+    // Settled, not success: the loop stops at the first failure, so a partial run still moved chain state.
+    // The promise is returned so a retry can't re-send app ids the refetch is about to drop.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) }),
+  })
+
+  const reopenAllRegistrationMutation = useMutation({
+    mutationFn: (appIds: bigint[]) => reopenExperimentRegistration(appIds),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) }),
+  })
+
+  const endVariationMutation = useMutation({
+    mutationFn: (appId: bigint) => endVariation(appId),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.trustExperimentDetails(expId) })
     },
@@ -174,17 +222,25 @@ export default function TrustExperimentDetails() {
   const selectedVar = vars[selectedVarIdx]
   const varKey = selectedVar ? String(selectedVar.appId) : ''
   const expStatus = deriveExperimentStatus(Object.values(cfgs))
+  const isOwner = activeAddress !== null && activeAddress === group.owner
+  const openVariationAppIds = vars.filter((v) => cfgs[String(v.appId)]?.status === STATUS_ACTIVE).map((v) => v.appId)
+  const closedVariationAppIds = vars.filter((v) => cfgs[String(v.appId)]?.status === STATUS_CLOSED).map((v) => v.appId)
+  // A variation whose reads failed has no config at all; it is not closable here and must not be counted as already closed.
+  const unreadableVariationCount = vars.filter((v) => !cfgs[String(v.appId)]).length
 
   const handleDownloadResults = async () => {
     setExporting(true)
     try {
       // Resolve each variation's payout-asset decimals/unit; tolerant of a single failed asset lookup.
       const assets = await resolveVariationAssets(vars, cfgs, fetchAssetMetadata)
+      const rowData = { variations: vars, participants: subs, matches, configs: cfgs, assets }
+      // Names are looked up per participant; an unregistered or unreadable one exports blank.
+      const users = await resolveUserNames(exportedAddresses(rowData), async (address) => {
+        if (!registryClient) throw new Error('Wallet not connected')
+        return registryClient.state.box.users.value(address)
+      })
       const date = new Date().toISOString().slice(0, 10)
-      downloadCsv(
-        `trust-experiment-${expId}-results-${date}.csv`,
-        toTrustResultsCsv({ variations: vars, participants: subs, matches, configs: cfgs, assets }),
-      )
+      downloadCsv(`trust-experiment-${expId}-results-${date}.csv`, toTrustResultsCsv({ ...rowData, users }))
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('[results-csv] export failed', err)
@@ -218,6 +274,18 @@ export default function TrustExperimentDetails() {
           <Chip tone="accent">TRUST · TG</Chip>
         </div>
         <div className="flex items-center gap-2">
+          <BulkRegistrationButton
+            openVariationAppIds={openVariationAppIds}
+            closedVariationAppIds={closedVariationAppIds}
+            unreadableVariationCount={unreadableVariationCount}
+            isOwner={isOwner}
+            onCloseAll={async (appIds) => {
+              await closeAllRegistrationMutation.mutateAsync(appIds)
+            }}
+            onOpenAll={async (appIds) => {
+              await reopenAllRegistrationMutation.mutateAsync(appIds)
+            }}
+          />
           <Tooltip>
             <TooltipTrigger asChild>
               <Btn variant="secondary" size="sm" disabled={exporting} onClick={() => void handleDownloadResults()}>
@@ -259,7 +327,7 @@ export default function TrustExperimentDetails() {
                 ? (autoMatchDisabledReason ?? 'Auto Match unavailable')
                 : autoMatch
                   ? 'Pause auto-matching'
-                  : 'Auto-match unassigned participants across all active variations (FIFO)'}
+                  : 'Auto-match unassigned participants across every variation that has not ended (FIFO)'}
             </TooltipContent>
           </Tooltip>
         </div>
@@ -301,14 +369,27 @@ export default function TrustExperimentDetails() {
           </div>
 
           {selectedVar && (
+            // Keyed so switching tabs remounts the panel; per-variation form and dialog state must not carry over.
             <VariationPanel
+              key={varKey}
               variation={selectedVar}
               participants={subs[varKey] ?? []}
               matches={matches[varKey] ?? []}
               config={cfgs[varKey]}
+              isOwner={isOwner}
               onCreateMatch={async (appId, investor, trustee) => {
                 await createMatchMutation.mutateAsync({ appId, investor, trustee })
               }}
+              onCloseRegistration={async (appId) => {
+                await closeRegistrationMutation.mutateAsync(appId)
+              }}
+              onReopenRegistration={async (appId) => {
+                await reopenRegistrationMutation.mutateAsync(appId)
+              }}
+              onEndVariation={async (appId) => {
+                await endVariationMutation.mutateAsync(appId)
+              }}
+              onGetEscrowBalance={getEscrowBalance}
             />
           )}
         </>

@@ -10,6 +10,7 @@ interface Fixtures {
   experimenter: KmdAccount
   participant1: KmdAccount
   participant2: KmdAccount
+  participant3: KmdAccount
 }
 
 async function makeRegisteredAccount(algorand: AlgorandClient, role: number, name: string, fundAlgo: number): Promise<KmdAccount> {
@@ -40,6 +41,9 @@ export const test = base.extend<Fixtures>({
   },
   participant2: async ({ algorand }, use) => {
     await use(await makeRegisteredAccount(algorand, ROLE_PARTICIPANT, 'E2E Participant 2', 5))
+  },
+  participant3: async ({ algorand }, use) => {
+    await use(await makeRegisteredAccount(algorand, ROLE_PARTICIPANT, 'E2E Participant 3', 5))
   },
 })
 

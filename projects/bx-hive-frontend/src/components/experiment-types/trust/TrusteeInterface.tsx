@@ -5,6 +5,7 @@ import { Btn } from '@/components/ds/button'
 import { Panel } from '@/components/ds/card'
 import { Rule } from '@/components/ds/separator'
 import { cn } from '@/lib/utils'
+import type { RoleLabels } from '../../../hooks/useTrustExperiments'
 import { useTrustVariation } from '../../../hooks/useTrustVariation'
 import { calculateTrusteeReceived } from '../../../experiment-logic/trustExperiment'
 import { wholeToBaseUnits } from '../../../utils/amount'
@@ -19,6 +20,8 @@ interface TrusteeInterfaceProps {
   /** Decimals of the variation's payout asset (6 for ALGO/USDC). */
   decimals: number
   investorDecision: number
+  /** Names the experimenter gave the two roles; already defaulted by the caller. */
+  roleLabels: RoleLabels
   onDecisionMade: () => void
 }
 
@@ -56,6 +59,7 @@ export default function TrusteeInterface({
   UNIT,
   decimals,
   investorDecision,
+  roleLabels,
   onDecisionMade,
 }: TrusteeInterfaceProps) {
   const { submitTrusteeDecision } = useTrustVariation()
@@ -87,21 +91,21 @@ export default function TrusteeInterface({
 
   return (
     <Panel>
-      <h2 className="t-h1 mb-4">Trustee Decision</h2>
+      <h2 className="t-h1 mb-4">{roleLabels.trusteeLabel} Decision</h2>
 
       <div role="alert" className="flex items-start gap-2.5 rounded-sm border border-info/35 bg-info-bg px-3 py-2.5 text-sm text-info mb-5">
         <Info className="size-4 shrink-0 mt-0.5" />
         <div>
-          <p className="font-medium">You are the Trustee</p>
+          <p className="font-medium">Your role: {roleLabels.trusteeLabel}</p>
           <p className="text-sm">
-            The Investor sent you {investorDecision.toLocaleString()}. After multiplication (x{m}), you received {received.toLocaleString()}
-            .
+            {roleLabels.investorLabel} sent you {investorDecision.toLocaleString()}. After multiplication (x{m}), you received{' '}
+            {received.toLocaleString()}.
           </p>
         </div>
       </div>
 
       <div className="flex border-y border-border my-5 overflow-x-auto">
-        <Stage num="01" label="Investor sends" state="done" />
+        <Stage num="01" label={`${roleLabels.investorLabel} sends`} state="done" />
         <Stage num="02" label={`Multiplier ×${m}`} state="done" />
         <Stage num="03" label="Receive" state="done" />
         <Stage num="04" label="Return" state="active" />
@@ -116,7 +120,9 @@ export default function TrusteeInterface({
         <Panel padded={false} className="p-4 border-primary/35 bg-accent">
           <div className="t-micro mb-1">You Received</div>
           <div className="font-mono text-3xl font-medium leading-none tracking-[-0.01em] text-primary">{received.toLocaleString()}</div>
-          <div className="text-xs text-muted-foreground mt-1.5">From investor (x{m})</div>
+          <div className="text-xs text-muted-foreground mt-1.5">
+            From {roleLabels.investorLabel} (x{m})
+          </div>
         </Panel>
       </div>
 
@@ -124,7 +130,7 @@ export default function TrusteeInterface({
         <h3 className="t-micro mb-2">What Happened</h3>
         <div className="flex flex-col gap-1 text-sm">
           <div className="flex justify-between">
-            <span>Investor sent:</span>
+            <span>{roleLabels.investorLabel} sent:</span>
             <span className="font-medium font-mono">{investorDecision.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
@@ -137,7 +143,7 @@ export default function TrusteeInterface({
       <Rule label="Make Your Decision" className="mb-4" />
 
       <div className="mb-5">
-        <p className="text-sm font-medium mb-3">How much do you want to return to the Investor?</p>
+        <p className="text-sm font-medium mb-3">How much do you want to return to {roleLabels.investorLabel}?</p>
         {options.length <= 10 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {options.map((amount) => (
@@ -178,7 +184,7 @@ export default function TrusteeInterface({
         <h3 className="t-micro">Preview</h3>
         <div className="flex flex-col gap-1 text-sm">
           <div className="flex justify-between">
-            <span>You return to Investor:</span>
+            <span>You return to {roleLabels.investorLabel}:</span>
             <span className="font-medium font-mono">{returnAmount.toLocaleString()}</span>
           </div>
           <div className="flex justify-between">
@@ -190,8 +196,9 @@ export default function TrusteeInterface({
             <span>Your total payout:</span>
             <span className="font-mono text-pos">{(E2 + trusteeKeeps).toLocaleString()}</span>
           </div>
+          {/* "for X" rather than a possessive: an arbitrary label makes "X's" read badly. */}
           <div className="flex justify-between text-muted-foreground">
-            <span>Investor's total payout:</span>
+            <span>Total payout for {roleLabels.investorLabel}:</span>
             <span className="font-mono">{(E1 - investorDecision + returnAmount).toLocaleString()}</span>
           </div>
         </div>

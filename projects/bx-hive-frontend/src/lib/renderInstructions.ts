@@ -1,4 +1,5 @@
 import type { VariationConfig } from '../contracts/TrustVariation'
+import type { RoleLabels } from '../hooks/useTrustExperiments'
 
 export type InstructionTokens = Record<string, string>
 
@@ -11,20 +12,24 @@ export function renderInstructions(template: string, tokens: InstructionTokens):
   })
 }
 
-export function trustVariationTokens(config: VariationConfig): InstructionTokens {
-  const isAlgo = BigInt(config.assetId) === 0n
-  const fmt = isAlgo
-    ? (micro: bigint) => `${formatMicro(micro, 6)} ALGO`
-    : (micro: bigint) => {
-        // eslint-disable-next-line no-console
-        console.warn(`[instructions] non-ALGO asset ${config.assetId} — rendering raw micro-units`)
-        return `${micro.toString()} units`
-      }
+export function trustVariationTokens(
+  config: VariationConfig,
+  asset: { decimals: number; unitName: string },
+  roleLabels: RoleLabels,
+): InstructionTokens {
+  // An ASA created without a unit name yields '', which would otherwise leave a trailing space inside the template's bold markers.
+  const fmt = (amount: bigint) => {
+    const whole = formatMicro(amount, asset.decimals)
+    return asset.unitName ? `${whole} ${asset.unitName}` : whole
+  }
+  // Amount tokens already carry the unit name, so the template never names the unit itself.
   return {
     e1: fmt(BigInt(config.e1)),
     e2: fmt(BigInt(config.e2)),
     multiplier: String(config.multiplier),
     unit: fmt(BigInt(config.unit)),
+    investorLabel: roleLabels.investorLabel,
+    trusteeLabel: roleLabels.trusteeLabel,
   }
 }
 

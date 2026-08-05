@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import TrusteeInterface from './TrusteeInterface'
+import { DEFAULT_ROLE_LABELS } from '../../../utils/roleLabels'
 
 const mockSubmitTrusteeDecision = vi.fn()
 
@@ -21,8 +22,11 @@ const buttonsModeProps = {
   UNIT: 2,
   decimals: 6,
   investorDecision: 3,
+  roleLabels: DEFAULT_ROLE_LABELS,
   onDecisionMade: vi.fn(),
 }
+
+const customLabels = { investorLabel: 'Decision Maker 1', trusteeLabel: 'Decision Maker 2' }
 
 describe('TrusteeInterface', () => {
   beforeEach(() => {
@@ -53,6 +57,29 @@ describe('TrusteeInterface', () => {
     // Return 4 → trustee keeps 2 of the 6 received
     expect(screen.getByText('You return to Investor:').nextElementSibling).toHaveTextContent('4')
     expect(screen.getByText('You keep from received:').nextElementSibling).toHaveTextContent('2')
+  })
+
+  it('names both roles with the labels the experimenter chose', () => {
+    render(<TrusteeInterface {...buttonsModeProps} roleLabels={customLabels} />)
+
+    expect(screen.getByRole('heading', { name: 'Decision Maker 2 Decision' })).toBeInTheDocument()
+    expect(screen.getByText('Your role: Decision Maker 2')).toBeInTheDocument()
+    expect(screen.getByText(/Decision Maker 1 sent you 3/)).toBeInTheDocument()
+    expect(screen.getByText('Decision Maker 1 sends')).toBeInTheDocument()
+    expect(screen.getByText('Decision Maker 1 sent:')).toBeInTheDocument()
+    expect(screen.getByText('How much do you want to return to Decision Maker 1?')).toBeInTheDocument()
+    expect(screen.getByText('You return to Decision Maker 1:')).toBeInTheDocument()
+    expect(screen.getByText('Total payout for Decision Maker 1:')).toBeInTheDocument()
+    expect(screen.queryByText(/Investor|Trustee/)).not.toBeInTheDocument()
+  })
+
+  it('falls back to the canonical role names when the experiment carries no labels', () => {
+    render(<TrusteeInterface {...buttonsModeProps} roleLabels={DEFAULT_ROLE_LABELS} />)
+
+    expect(screen.getByRole('heading', { name: 'Trustee Decision' })).toBeInTheDocument()
+    expect(screen.getByText('Your role: Trustee')).toBeInTheDocument()
+    expect(screen.getByText('Investor sent:')).toBeInTheDocument()
+    expect(screen.getByText('Total payout for Investor:')).toBeInTheDocument()
   })
 
   it('submits the return as microAlgo and notifies onDecisionMade', async () => {

@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import InvestorInterface from './InvestorInterface'
+import { DEFAULT_ROLE_LABELS } from '../../../utils/roleLabels'
 
 const mockSubmitInvestorDecision = vi.fn()
 
@@ -21,8 +22,11 @@ const buttonsModeProps = {
   UNIT: 2,
   decimals: 6,
   unitName: 'ALGO',
+  roleLabels: DEFAULT_ROLE_LABELS,
   onDecisionMade: vi.fn(),
 }
+
+const customLabels = { investorLabel: 'Decision Maker 1', trusteeLabel: 'Decision Maker 2' }
 
 describe('InvestorInterface', () => {
   beforeEach(() => {
@@ -37,7 +41,7 @@ describe('InvestorInterface', () => {
     expect(screen.getByText('x3')).toBeInTheDocument()
   })
 
-  it('renders investment options as buttons when <= 10 options exist', () => {
+  it('renders send options as buttons when <= 10 options exist', () => {
     render(<InvestorInterface {...buttonsModeProps} />)
     // 6 options: 0, 2, 4, 6, 8, 10
     expect(screen.getByRole('button', { name: '0' })).toBeInTheDocument()
@@ -50,10 +54,28 @@ describe('InvestorInterface', () => {
 
     await user.click(screen.getByRole('button', { name: '6' }))
 
-    // Invest 6, keep 4, trustee receives 18 (6 * 3)
-    expect(screen.getByText('You invest:').nextElementSibling).toHaveTextContent('6')
+    // Send 6, keep 4, trustee receives 18 (6 * 3)
+    expect(screen.getByText('You send:').nextElementSibling).toHaveTextContent('6')
     expect(screen.getByText('You keep:').nextElementSibling).toHaveTextContent('4')
     expect(screen.getByText(/Trustee receives/).nextElementSibling).toHaveTextContent('18')
+  })
+
+  it('names both roles with the labels the experimenter chose', () => {
+    render(<InvestorInterface {...buttonsModeProps} roleLabels={customLabels} />)
+
+    expect(screen.getByRole('heading', { name: 'Decision Maker 1 Decision' })).toBeInTheDocument()
+    expect(screen.getByText('Your role: Decision Maker 1')).toBeInTheDocument()
+    expect(screen.getByText(/Decision Maker 2 receives/)).toBeInTheDocument()
+    expect(screen.getByText(/Decision Maker 2 will then decide/)).toBeInTheDocument()
+    expect(screen.queryByText(/Investor|Trustee/)).not.toBeInTheDocument()
+  })
+
+  it('falls back to the canonical role names when the experiment carries no labels', () => {
+    render(<InvestorInterface {...buttonsModeProps} roleLabels={DEFAULT_ROLE_LABELS} />)
+
+    expect(screen.getByRole('heading', { name: 'Investor Decision' })).toBeInTheDocument()
+    expect(screen.getByText('Your role: Investor')).toBeInTheDocument()
+    expect(screen.getByText(/Trustee receives/)).toBeInTheDocument()
   })
 
   it('submits the decision as microAlgo and calls onDecisionMade on success', async () => {
@@ -62,7 +84,7 @@ describe('InvestorInterface', () => {
     render(<InvestorInterface {...buttonsModeProps} onDecisionMade={onDecisionMade} />)
 
     await user.click(screen.getByRole('button', { name: '4' }))
-    await user.click(screen.getByRole('button', { name: /Submit Investment Decision/i }))
+    await user.click(screen.getByRole('button', { name: /Submit decision/i }))
 
     // 4 ALGO = 4_000_000 microAlgo
     expect(mockSubmitInvestorDecision).toHaveBeenCalledWith(42n, 1, 4_000_000n)
@@ -76,7 +98,7 @@ describe('InvestorInterface', () => {
     render(<InvestorInterface {...buttonsModeProps} onDecisionMade={onDecisionMade} />)
 
     await user.click(screen.getByRole('button', { name: '2' }))
-    await user.click(screen.getByRole('button', { name: /Submit Investment Decision/i }))
+    await user.click(screen.getByRole('button', { name: /Submit decision/i }))
 
     expect(await screen.findByText('chain rejected')).toBeInTheDocument()
     expect(onDecisionMade).not.toHaveBeenCalled()

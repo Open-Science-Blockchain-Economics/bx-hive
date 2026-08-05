@@ -12,6 +12,7 @@ from algopy import (
     arc4,
     gtxn,
     itxn,
+    subroutine,
     urange,
 )
 
@@ -122,7 +123,7 @@ class TrustVariation(ARC4Contract):
         assert Txn.sender == self.owner.value, "Not owner"
         assert self.status.value != UInt64(STATUS_COMPLETED), "Already ended"
 
-        remaining = self.escrow_deposited.value - self.escrow_paid_out.value
+        remaining = self._remaining_escrow()
         if remaining > UInt64(0):
             if self.asset_id.value == UInt64(0):
                 itxn.Payment(
@@ -183,6 +184,8 @@ class TrustVariation(ARC4Contract):
     @arc4.abimethod
     def create_match(self, investor: arc4.Address, trustee: arc4.Address, mbr_payment: gtxn.PaymentTransaction) -> arc4.UInt32:
         assert Txn.sender == self.owner.value, "Not owner"
+        # CLOSED is still matchable — closing only stops new enrolment.
+        assert self.status.value != UInt64(STATUS_COMPLETED), "Variation ended"
         assert mbr_payment.receiver == Global.current_application_address, "Wrong MBR receiver"
         assert mbr_payment.amount >= UInt64(MATCH_MBR), "Insufficient MBR"
         assert investor in self.participants, "Investor not enrolled"
@@ -226,12 +229,22 @@ class TrustVariation(ARC4Contract):
         assert self.status.value == UInt64(STATUS_ACTIVE), "Not active"
         self.status.value = UInt64(STATUS_CLOSED)
 
+    @arc4.abimethod
+    def reopen_registration(self) -> None:
+        assert Txn.sender == self.owner.value, "Not owner"
+        # Only CLOSED reopens. Both refund paths mark a drained variation COMPLETED, so this
+        # also refuses to reopen one whose escrow is gone and whose matches could never pay out.
+        assert self.status.value == UInt64(STATUS_CLOSED), "Not closed"
+        self.status.value = UInt64(STATUS_ACTIVE)
+
     # -------------------------------------------------------------------------
     # Participation
     # -------------------------------------------------------------------------
 
     @arc4.abimethod
     def submit_investor_decision(self, match_id: arc4.UInt32, investment: arc4.UInt64) -> None:
+        # CLOSED is still playable — closing only stops new enrolment.
+        assert self.status.value != UInt64(STATUS_COMPLETED), "Variation ended"
         assert match_id in self.matches, "Match not found"
         match = self.matches[match_id].copy()
 
@@ -311,7 +324,7 @@ class TrustVariation(ARC4Contract):
         assert Txn.sender == self.owner.value, "Not owner"
         assert self.paid_out_count.value == self.match_count.value, "Matches not all paid out"
 
-        remaining = self.escrow_deposited.value - self.escrow_paid_out.value
+        remaining = self._remaining_escrow()
         assert remaining > UInt64(0), "No remaining escrow"
 
         if self.asset_id.value == UInt64(0):
@@ -329,6 +342,21 @@ class TrustVariation(ARC4Contract):
             ).submit()
 
         self.escrow_deposited.value -= remaining
+        # Reclaiming the pool ends the variation. Every play guard keys off status, so leaving
+        # a drained variation ACTIVE would let matches be created that can never be paid out.
+        self.status.value = UInt64(STATUS_COMPLETED)
+
+    @subroutine
+    def _remaining_escrow(self) -> UInt64:
+        """Escrow still owed, saturating at zero.
+
+        Payouts can outrun `escrow_deposited` when the app holds funds it never recorded —
+        an over-paid MBR leg, or an ASA sent straight to the opted-in app account. A plain
+        subtraction would then underflow and wedge every refund path permanently.
+        """
+        if self.escrow_deposited.value > self.escrow_paid_out.value:
+            return self.escrow_deposited.value - self.escrow_paid_out.value
+        return UInt64(0)
 
     # -------------------------------------------------------------------------
     # Queries
@@ -362,4 +390,4 @@ class TrustVariation(ARC4Contract):
 
     @arc4.abimethod(readonly=True)
     def get_escrow_balance(self) -> arc4.UInt64:
-        return arc4.UInt64(self.escrow_deposited.value - self.escrow_paid_out.value)
+        return arc4.UInt64(self._remaining_escrow())
