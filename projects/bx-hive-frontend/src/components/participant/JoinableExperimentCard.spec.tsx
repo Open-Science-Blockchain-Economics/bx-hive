@@ -24,6 +24,19 @@ const baseProps = {
 }
 
 describe('JoinableExperimentCard', () => {
+  it('identifies the experiment by the name its experimenter chose, not by the game type', () => {
+    render(<JoinableExperimentCard {...baseProps} isFull={false} />)
+
+    expect(screen.getByRole('heading', { name: 'Pilot' })).toBeInTheDocument()
+    expect(screen.queryByText(/Trust Game/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps the experiment id so two experiments sharing a name stay distinguishable', () => {
+    render(<JoinableExperimentCard {...baseProps} isFull={false} />)
+
+    expect(screen.getByText(/Experiment ID/i)).toBeInTheDocument()
+  })
+
   it('renders an "Open" chip and an enabled Join button when not full', () => {
     render(<JoinableExperimentCard {...baseProps} isFull={false} />)
 

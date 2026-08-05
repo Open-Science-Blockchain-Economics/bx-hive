@@ -169,7 +169,7 @@ export default function ParticipantDashboard() {
       <div className="flex flex-col gap-8">
         {activeOnChain.length > 0 && (
           <section>
-            <Rule label="Trust Game — Active" className="mb-4" />
+            <Rule label="Active" className="mb-4" />
             <div className="grid gap-3">
               {activeOnChain.map(({ group, variation, config, match }) => (
                 <ActiveMatchCard
@@ -187,7 +187,7 @@ export default function ParticipantDashboard() {
 
         {enrolledWaiting.length > 0 && (
           <section>
-            <Rule label="Trust Game — Enrolled" className="mb-4" />
+            <Rule label="Enrolled" className="mb-4" />
             <div className="grid gap-3">
               {enrolledWaiting.map(({ group }) => (
                 <EnrolledWaitingCard key={group.expId} group={group} />
@@ -198,7 +198,7 @@ export default function ParticipantDashboard() {
 
         {joinableExperiments.length > 0 && (
           <section>
-            <Rule label="Trust Game — Available" className="mb-4" />
+            <Rule label="Available" className="mb-4" />
             <div className="grid gap-3">
               {joinableExperiments.map(({ group, variations, slots, isFull }) => (
                 <JoinableExperimentCard
@@ -217,7 +217,7 @@ export default function ParticipantDashboard() {
 
         {completedOnChain.length > 0 && (
           <section>
-            <Rule label="Trust Game — Completed" className="mb-4" />
+            <Rule label="Completed" className="mb-4" />
             <div className="grid gap-3">
               {completedOnChain.map(({ group, variation, config, match }) => (
                 <CompletedMatchCard
@@ -235,9 +235,9 @@ export default function ParticipantDashboard() {
 
         {!hasAnything && (
           <section>
-            <Rule label="Trust Game" className="mb-4" />
+            <Rule label="Experiments" className="mb-4" />
             <Panel className="text-center py-10 text-muted-foreground">
-              <p className="t-small">No Trust Game experiments available yet.</p>
+              <p className="t-small">No experiments available yet.</p>
             </Panel>
           </section>
         )}

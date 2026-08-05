@@ -22,8 +22,9 @@ export default function JoinableExperimentCard({ group, variations, joining, joi
       <div className="flex justify-between items-start gap-4">
         <div>
           <h3 className="t-h2 mb-1">{group.name}</h3>
+          {/* The id disambiguates two experiments sharing a name; the game type is deliberately absent. */}
           <p className="text-sm text-muted-foreground">
-            Trust Game · Experiment ID: <span className="font-mono">{group.expId}</span>
+            Experiment ID: <span className="font-mono">{group.expId}</span>
           </p>
           {/* Deliberately vague on the cause: the open variations may be full while a closed sibling still has empty seats. */}
           {isFull && <p className="text-xs text-muted-foreground mt-1">No places left to join right now.</p>}
